@@ -1,0 +1,44 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# --- Virtual environment (never shared, never committed) ---
+.venv/
+
+# --- Test / type / lint caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# --- Environment & secrets: NEVER commit real secrets ---
+.env
+.env.*
+!.env.example
+credentials.json
+token.json
+client_secret*.json
+*.pem
+*.key
+*.p12
+ngrok.yml
+
+# --- Runtime state and logs (regenerated per game, never tracked) ---
+runtime/logs/
+runtime/state/
+
+# --- Local authoritative spec copy (large binary, never tracked) ---
+.project-spec/
+
+# --- OS / editor / Windows metadata artifacts ---
+*:Zone.Identifier
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

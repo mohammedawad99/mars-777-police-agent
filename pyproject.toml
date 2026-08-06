@@ -1,0 +1,49 @@
+[project]
+name = "mars-777-police-agent"
+version = "0.0.0"
+description = "Police agent (group MaRs-777) for the 2026 Distributed Police-Thief P2P final project. Foundation only."
+readme = "README.md"
+requires-python = "==3.12.*"
+license = { text = "UNLICENSED" }
+authors = [{ name = "Mohamed Awad", email = "m7md.awad.1999@gmail.com" }]
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mars777_police"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8,<9",
+    "pytest-cov>=5,<7",
+    "ruff>=0.6,<1.0",
+    "mypy>=1.11,<2.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q --cov --cov-report=term-missing --cov-fail-under=90"
+
+[tool.coverage.run]
+branch = true
+source = ["mars777_police"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 90
