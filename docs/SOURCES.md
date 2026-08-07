@@ -27,6 +27,24 @@ state, never committed.
 ## Warning
 
 **No rule, numeric value, status, or JSON schema may be reconstructed from
-memory.** Every such element must be extracted from the book with a page/section
-citation during the dedicated specification stage. The full 160-page extraction
-has **not** been performed yet.
+memory.** Every such element is extracted from the book with a page/section
+citation.
+
+## Extraction status (Stage 1A)
+
+The full 160-page extraction **has** been performed (specification-only, no
+implementation) and lives under `docs/spec/`:
+
+- `AUTHORITY_RULES.md` - reading conventions, hierarchy, citation format.
+- `PAGE_COVERAGE.md` - all 160 PDF pages accounted for.
+- `REQUIREMENT_CATALOG.md` - 79 source-cited requirements across 18 domains.
+- `APPENDIX_E_CROSSWALK.md` - all 55 mandatory entries mapped.
+- `APPENDIX_F_NUMERIC_INVENTORY.md` - every binding numeric value.
+- `HIGH_RISK_REQUIREMENTS.md` - compliance-risk audit.
+- `JSON_SOURCE_MAP.md` - sources for the four JSON docs (no schema yet; Stage 1C).
+
+Plus expanded `../CONFLICT_REGISTER.md` and `../REQUIREMENTS_TRACEABILITY.md`.
+All of it was independently cross-audited (Stage 1B) and **accepted by supervising
+review (PASS)** as the approved specification baseline. Numeric values are governed
+by **Appendix F**; the four JSON contracts are deferred to **Stage 1C** (not
+started) and their field/key/nesting details remain REVIEW REQUIRED.
