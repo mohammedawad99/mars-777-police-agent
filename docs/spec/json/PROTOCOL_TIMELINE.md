@@ -1,6 +1,6 @@
 # Protocol Timeline — group MaRs-777
 
-**Status: DRAFT (Stage 1D). Specification only. Pending review.** This timeline is
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED. Specification only.** This timeline is
 the authority for deciding when each field first exists (esp. whether `verdict`
 can be pre-commit — it can: it is the commit-time `intent` classification).
 Sources: Ch 5 §5.3–5.5 (PDF p.50–56), Ch 7 §7.4 (p.72–74), Ch 9 (p.85–96), App B/C/F.

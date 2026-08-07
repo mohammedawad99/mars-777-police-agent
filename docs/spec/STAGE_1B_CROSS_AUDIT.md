@@ -2,7 +2,7 @@
 
 **Status: REVIEWED — Stage 1B supervising review PASS. Independent re-derivation
 from the PDF, with corrections applied to the Stage 1A artifacts. This corrected
-baseline is the approved input to Stage 1C (not yet started).**
+baseline is the approved input to Stage 1C (now reviewed and LOCKED).**
 
 Source: `.project-spec/police_thief_p2p.pdf` v3.0.0, SHA-256 `7c9e1d…dd02e`, 160
 pages (re-verified). This audit re-derived Appendices E and F directly, **without

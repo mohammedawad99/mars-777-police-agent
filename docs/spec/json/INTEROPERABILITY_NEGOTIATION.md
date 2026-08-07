@@ -1,6 +1,6 @@
 # Interoperability Negotiation Contract (NDEC) — group MaRs-777
 
-**Status: DRAFT (Stage 1D). Specification only. Pending review.**
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED. Specification only; no code/schema/JSON artifact.**
 
 Every legitimate **NEGOTIATED-PRE-MATCH** dependency — representations two peers
 must agree on to complete/verify a counted match. **Not** used to negotiate FIXED

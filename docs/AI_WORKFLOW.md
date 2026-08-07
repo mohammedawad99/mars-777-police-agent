@@ -29,7 +29,7 @@
   logic, JSON schema, or protocol code was written. All extracted requirements
   cite book pages. The Stage 1B independent cross-audit and the **supervising
   review (PASS)** have since accepted this corrected baseline; the four JSON
-  contracts are deferred to Stage 1C (not started).
+  contracts were built and reviewed in Stage 1C/1D/1D.1 (now **LOCKED**).
 - Stage 1B independently re-audited the Stage 1A artifacts against the PDF and
   applied corrections (Appendix F has **32** parameter rows — 14 FIXED / 9 MINIMUM
   / 9 NEGOTIABLE — not 26; `technical_loss` 0/0 is binding via Ch 3 + App E #48 but
@@ -41,13 +41,14 @@
   `docs/spec/json/` — specification only, no JSON files/schemas/serializers/code.
   Every field is provenance-classified (SOURCE-EXPLICIT / SOURCE-SEMANTIC /
   PROJECT-CONTRACT / EXAMPLE-ONLY / REVIEW-REQUIRED); project decisions are JDEC-001…011.
-  Contracts are **subject to supervising review**; **implementation has not begun**;
-  **Stage 1D** will independently audit them before any synchronization or implementation.
+  Contracts were **reviewed and approved** (Stage-1 lock); **implementation has not
+  begun**; **Stage 1D** independently audited them (below) before any synchronization
+  or implementation.
 - Stage 1D independently audited and **locked** the contracts for interoperability:
   `verdict` = `intent` (C-08); `game_uid` confirmed **source-named** (kept); `state`
   PROJECT-LOCKED; `config_sha256` non-self-referential; every interop dependency is
-  SOURCE-LOCKED, PROJECT-LOCKED, or NEGOTIATED-PRE-MATCH — **0 blocking**. Still
-  specification-only; no code/schema/commit/sibling access; pending review.
+  SOURCE-LOCKED, PROJECT-LOCKED, or NEGOTIATED-PRE-MATCH — **0 blocking**.
+  Specification-only; no code/schema/sibling access; **reviewed and LOCKED**.
 - Stage 1D.1 **corrected** the cryptographic/reporting contract: Step-0 and the config
   signature exchange are **keyed authentication with a pre-supplied key** (SOURCE-
   REQUIRED; HMAC-SHA256 default = PROJECT-CONTRACT, JDEC-013) — **not** unkeyed SHA-256
@@ -56,4 +57,5 @@
   (Ch 9 vs App E #35) is recorded as **C-09** with the strictest 0-both rule. Registers:
   NDEC-001…007, JDEC-001…013, INV-01…15. The crypto taxonomy is kept precise
   (HASH ≠ MAC ≠ PKI signature ≠ mutual acknowledgement); **no key material** in any
-  artifact. Specification-only; no code/schema/commit/sibling access; pending review.
+  artifact. Specification-only; no code/schema/sibling access; **reviewed and LOCKED**
+  (committed at Stage 1-CLOSE; status relabel at Stage 1-CLOSE.1).

@@ -1,7 +1,7 @@
 # Result Contract — `result_<game_id>.json` — group MaRs-777
 
-**Status: DRAFT (Stage 1C). Contract specification only — no JSON file, no schema,
-no code. Pending review.**
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED. Contract
+specification only — no JSON file, no schema, no code.**
 
 The final results report for a game/series: per-sub-game and cumulative scores,
 for league scoring by the lecturer. **This is the binding report emailed** (as a

@@ -1,6 +1,6 @@
 # Cross-Artifact Invariants — group MaRs-777
 
-**Status: DRAFT (Stage 1C). Specification only. Pending review.**
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED. Specification only; no code/schema/JSON artifact.**
 
 Invariants that must hold **across** the four artifacts. Each is classified by
 provenance; none is invented without source support.

@@ -1,6 +1,6 @@
 # Versioning Audit — group MaRs-777
 
-**Status: DRAFT (Stage 1C). Specification only. Pending review.**
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED. Specification only; no code/schema/JSON artifact.**
 
 ## Every `schema_version` occurrence in the book
 

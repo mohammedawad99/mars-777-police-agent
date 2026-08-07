@@ -2,9 +2,10 @@
 
 **Status: REVIEWED — Stage 1B supervising review PASS. This is a SOURCE MAP, NOT a schema.**
 No JSON Schema is produced here. No fields are invented. The actual contracts
-are constructed only in **Stage 1C** (not started), using this approved map as
-input. Approval does NOT authorize invented JSON fields or schemas; the
-field-level REVIEW REQUIRED items below remain genuinely unresolved.
+were constructed in **Stage 1C/1D/1D.1** (now reviewed and LOCKED), using this
+approved map as input. Approval does NOT authorize invented JSON fields or schemas;
+this map deliberately leaves field-level items open and the **now-locked JSON
+contracts** (`docs/spec/json/`) resolve them.
 
 Four mandatory JSON document types are attached to the book as examples and
 described in Chapter 9 (PDF p.94–95 / book 78–79), named via Appendix F Table 20

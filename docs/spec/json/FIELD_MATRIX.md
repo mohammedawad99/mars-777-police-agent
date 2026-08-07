@@ -1,6 +1,6 @@
 # Master Field Matrix — group MaRs-777
 
-**Status: DRAFT (Stage 1C). Specification only. Pending review.**
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED. Specification only; no code/schema/JSON artifact.**
 
 Every candidate field across all four artifacts, exactly once. Status ∈ {LOCKED,
 LOCKED-PROJECT, NEGOTIATED-PRE-MATCH, PROJECT-DECISION, REVIEW-REQUIRED,

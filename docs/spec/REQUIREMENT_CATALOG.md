@@ -1,9 +1,9 @@
 # Requirement Catalog — group MaRs-777
 
 **Status: REVIEWED — Stage 1B supervising review PASS. Approved specification
-baseline (input to Stage 1C). Implementation remains prohibited; the four JSON
-contracts are still unresolved (Stage 1C). Modality counts were approved: MUST 76,
-MUST NOT 9, SHOULD 4, MAY 2 = 91.**
+baseline (input to Stage 1C). Implementation remains prohibited (NOT STARTED); the
+four JSON contracts were reviewed and LOCKED (Stage 1C/1D/1D.1). Modality counts
+were approved: MUST 76, MUST NOT 9, SHOULD 4, MAY 2 = 91.**
 
 Source-grounded requirements extracted from the **entire** book v3.0.0 (not only
 Appendices E/F). One independently-testable requirement per ID. Modality per

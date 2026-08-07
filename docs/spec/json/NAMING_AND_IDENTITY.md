@@ -1,6 +1,6 @@
 # Naming & Identity Contract — group MaRs-777
 
-**Status: DRAFT (Stage 1C). Specification only. Pending review.**
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED. Specification only; no code/schema/JSON artifact.**
 
 Source-backed rules for artifact filenames and identifiers. Sources: App F Table
 20 (PDF p.157), Ch 9 §9.3.3 (PDF p.95), App F §2.3 (PDF p.156), App E #53 / Ch 5

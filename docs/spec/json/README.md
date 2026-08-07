@@ -1,7 +1,7 @@
 # JSON Contract Index — group MaRs-777
 
-**Status: DRAFT (Stage 1C). SPECIFICATION-CONTRACT only — no JSON files, schemas,
-serializers, or code. Pending supervising review (Stage 1D independent audit).**
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED.
+SPECIFICATION-CONTRACT only — no JSON files, schemas, serializers, or code.**
 
 Source of truth: book v3.0.0 (`.project-spec/police_thief_p2p.pdf`, SHA-256
 `7c9e1d…dd02e`). This directory specifies **contracts** for the four mandatory

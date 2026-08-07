@@ -1,6 +1,6 @@
 # Requirements Traceability Matrix - group MaRs-777
 
-> **Status: DRAFT (expanded in Stage 1A).** Seeded foundation rows (F-0xx)
+> **Status: REVIEWED — Stage-1 baseline LOCKED (supervising review PASS); rows extend in later stages.** Seeded foundation rows (F-0xx)
 > retained; catalog requirements (Stage 1A extraction) added with catalog IDs.
 > Stage 1A statuses are one of: **EXTRACTED**, **REVIEW REQUIRED**, **CONFLICT**,
 > **NOT APPLICABLE**. Nothing is IMPLEMENTED or VERIFIED. Full details and

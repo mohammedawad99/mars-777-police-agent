@@ -1,6 +1,6 @@
 # Project-Contract Decision Register (JDEC) — group MaRs-777
 
-**Status: DRAFT (Stage 1C). Specification only. Pending review.**
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED. Specification only; no code/schema/JSON artifact.**
 
 Every PROJECT-CONTRACT choice, made **only** where the book leaves the
 representation open (academic-freedom basis, PDF p.5 / book v). None overrides a

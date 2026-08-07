@@ -1,7 +1,8 @@
 # Log Contract — `log_<game_id>_g<NN>.json` — group MaRs-777
 
-**Status: DRAFT (Stage 1C). Contract specification only — no JSON file, no schema,
-no code. Pending review.** This is the most integrity-sensitive contract.
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED. Contract
+specification only — no JSON file, no schema, no code.** This is the most
+integrity-sensitive contract.
 
 Per-sub-game record enabling full cryptographic verification in the Replay Viewer:
 Commit-Reveal commitments, acknowledgements, moves, hints, and — at final audit —

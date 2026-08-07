@@ -1,6 +1,6 @@
 # Canonicalization Contract — group MaRs-777
 
-**Status: DRAFT (Stage 1C). Specifies behavior; does NOT implement it. Pending review.**
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED. Specifies behavior; does NOT implement it.**
 
 Three distinct layers. Sources: Ch 5 §5.3 (PDF p.50–53), Ch 5 §5.4 (p.55), Ch 7
 §7.4–7.5 (p.72–74), App B §B.2–B.3 (p.127–129), App E #17–19.

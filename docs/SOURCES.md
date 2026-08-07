@@ -46,5 +46,5 @@ implementation) and lives under `docs/spec/`:
 Plus expanded `../CONFLICT_REGISTER.md` and `../REQUIREMENTS_TRACEABILITY.md`.
 All of it was independently cross-audited (Stage 1B) and **accepted by supervising
 review (PASS)** as the approved specification baseline. Numeric values are governed
-by **Appendix F**; the four JSON contracts are deferred to **Stage 1C** (not
-started) and their field/key/nesting details remain REVIEW REQUIRED.
+by **Appendix F**; the four JSON contracts were built and reviewed in
+**Stage 1C/1D/1D.1** (now **LOCKED**) with their field/key/nesting details resolved.

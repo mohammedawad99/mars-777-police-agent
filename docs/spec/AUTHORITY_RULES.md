@@ -1,8 +1,8 @@
 # Source Authority Rules — group MaRs-777
 
-**Status: REVIEWED — Stage 1B supervising review PASS. Approved specification
-baseline (input to Stage 1C). JSON contracts remain unresolved; implementation
-remains prohibited; Stage 1C has not started.**
+**Status: REVIEWED — Stage 1B supervising review PASS; Stage-1 JSON contracts now
+reviewed and LOCKED (Stage 1C/1D/1D.1). Implementation remains prohibited
+(NOT STARTED).**
 
 This document records the interpretation rules that govern how every other
 Stage 1 specification artifact reads the authoritative book. It does not

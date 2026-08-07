@@ -1,7 +1,7 @@
 # Config Contract — `config_<game_id>_g<NN>.json` — group MaRs-777
 
-**Status: DRAFT (Stage 1C). Contract specification only — no JSON file, no schema,
-no code. Pending review.**
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED. Contract
+specification only — no JSON file, no schema, no code.**
 
 The signed shared "constitution" for one sub-game: the agreed physics/scoring,
 **byte-identical** on both peers, cryptographically locked. **Appendix B (PDF

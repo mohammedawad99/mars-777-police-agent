@@ -1,7 +1,7 @@
 # Stage 1D — Final JSON Contract Audit & Interoperability Lock — group MaRs-777
 
-**Status: DRAFT (Stage 1D). Independent audit + corrections of the Stage 1C
-contracts against the PDF. Specification only. Pending review.**
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED. Independent
+audit + corrections of the Stage 1C contracts against the PDF. Specification only.**
 
 Source: book v3.0.0, SHA-256 `7c9e1d…dd02e`, 160 pages (re-verified). Baseline
 HEAD `2113e68`. This audit locks the four contracts for interoperable

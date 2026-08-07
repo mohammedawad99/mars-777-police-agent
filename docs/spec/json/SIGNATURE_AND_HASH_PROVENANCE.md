@@ -1,6 +1,6 @@
 # Signature & Hash Provenance Audit — group MaRs-777
 
-**Status: DRAFT (Stage 1C). Specification only — no crypto implementation. Pending review.**
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED. Specification only — no crypto implementation.**
 
 Every signature/hash the book requires, resolved as far as the source permits.
 Where the book does not state a JSON key, scheme, or storage location, that aspect

@@ -1,6 +1,6 @@
 # Interoperability Blockers — group MaRs-777
 
-**Status: DRAFT (Stage 1D). Specification only. Pending review.**
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED. Specification only; no code/schema/JSON artifact.**
 
 Every former Stage-1C REVIEW-REQUIRED item, resolved. Classes: **RESOLVED-SOURCE**,
 **RESOLVED-PROJECT**, **RESOLVED-NEGOTIATION**, **BLOCKING**. PASS is forbidden if

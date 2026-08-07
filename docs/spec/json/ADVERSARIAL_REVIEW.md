@@ -1,6 +1,6 @@
 # Adversarial Contract Review — group MaRs-777
 
-**Status: DRAFT (Stage 1C). Specification only. Pending review.**
+**Status: REVIEWED — Stage-1 supervising review PASS; baseline LOCKED. Specification only; no code/schema/JSON artifact.**
 
 Deliberate adversarial pass over the four contracts, asking the required probe
 questions for each field class. Findings are risks to resolve in Stage 1D /
