@@ -15,6 +15,10 @@
 | 0D | Repository protection assessment (branch protection unavailable on plan) | Referenced |
 | 1A | Authoritative book extraction & requirement catalog (specification only) | Referenced |
 | 1B | Independent specification cross-audit & correction (App F counts, technical_loss, num_games) | Referenced |
+| 1B-CLOSE | Reviewed specification baseline commit + push | Referenced |
+| 1C | Four JSON artifact **contracts** (specification only; provenance-classified) | Referenced |
+| 1D | Final JSON contract audit & interoperability lock (verdict/intent, game_uid, NDEC) | Referenced |
+| 1D.1 | Cryptographic & reporting contract corrections (Step-0/config **keyed authentication** K1/K2, result self-containment K3, reporting-sanction conflict C-09/K4) | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

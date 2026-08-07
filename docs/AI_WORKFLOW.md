@@ -36,4 +36,24 @@
   is **not** an Appendix F row; `num_games` is **6, FIXED**; exact catalog modality
   MUST 76 / MUST NOT 9 / SHOULD 4 / MAY 2). Still specification-only; no code,
   schema, commit, or sibling access. Stage 1B review = PASS; the corrected
-  baseline is approved for Stage 1C (not started).
+  baseline is approved for Stage 1C.
+- Stage 1C defined **contracts** for the four mandatory JSON artifacts in
+  `docs/spec/json/` — specification only, no JSON files/schemas/serializers/code.
+  Every field is provenance-classified (SOURCE-EXPLICIT / SOURCE-SEMANTIC /
+  PROJECT-CONTRACT / EXAMPLE-ONLY / REVIEW-REQUIRED); project decisions are JDEC-001…011.
+  Contracts are **subject to supervising review**; **implementation has not begun**;
+  **Stage 1D** will independently audit them before any synchronization or implementation.
+- Stage 1D independently audited and **locked** the contracts for interoperability:
+  `verdict` = `intent` (C-08); `game_uid` confirmed **source-named** (kept); `state`
+  PROJECT-LOCKED; `config_sha256` non-self-referential; every interop dependency is
+  SOURCE-LOCKED, PROJECT-LOCKED, or NEGOTIATED-PRE-MATCH — **0 blocking**. Still
+  specification-only; no code/schema/commit/sibling access; pending review.
+- Stage 1D.1 **corrected** the cryptographic/reporting contract: Step-0 and the config
+  signature exchange are **keyed authentication with a pre-supplied key** (SOURCE-
+  REQUIRED; HMAC-SHA256 default = PROJECT-CONTRACT, JDEC-013) — **not** unkeyed SHA-256
+  digests and **not** invented PKI; the emailed result is **self-contained** (FastMCP +
+  cryptographically-signed hardware declarations, K3); the reporting-sanction conflict
+  (Ch 9 vs App E #35) is recorded as **C-09** with the strictest 0-both rule. Registers:
+  NDEC-001…007, JDEC-001…013, INV-01…15. The crypto taxonomy is kept precise
+  (HASH ≠ MAC ≠ PKI signature ≠ mutual acknowledgement); **no key material** in any
+  artifact. Specification-only; no code/schema/commit/sibling access; pending review.

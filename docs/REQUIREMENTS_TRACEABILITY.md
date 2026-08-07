@@ -107,6 +107,49 @@
 | SUB-004 | Two repos: cross-link + 2 + 4 links | PDF p.96,149 (E-49) | Mandatory | Submission | README/JSON | link-count checks | links | EXTRACTED | H-14 |
 | SUB-005 | Appendix C Table 6 checklist complete | PDF p.136 | Mandatory | Submission | Submission | checklist gate | checklist | EXTRACTED | H-14 |
 
+## Stage 1C — JSON contract references (specification-level, not implemented)
+
+The JSON / crypto / reporting requirement families are now **CONTRACT-DEFINED** in
+`docs/spec/json/` (no code). Statuses here remain specification-level
+(CONTRACT-DEFINED / PROJECT-DECISION / REVIEW-REQUIRED) — **none is IMPLEMENTED or
+runtime-VERIFIED**.
+
+| Requirement family | Contract document(s) | Status |
+|---|---|---|
+| JSON-001..004 (four JSON docs, structure) | `json/{README,CONFIG,DECLARATION,LOG,RESULT}_CONTRACT.md`, `json/FIELD_MATRIX.md` | CONTRACT-DEFINED |
+| JSON-003 exact field names | `json/*_CONTRACT.md` + `json/PROJECT_CONTRACT_DECISIONS.md` | PROJECT-DECISION (some fields REVIEW-REQUIRED) |
+| CRYPTO-001/002/003/008/009 (commit-reveal, canonical hash) | `json/LOG_CONTRACT.md`, `json/CANONICALIZATION_CONTRACT.md` | CONTRACT-DEFINED |
+| CRYPTO-006 / PERF-002 (Step-0, token lock) | `json/DECLARATION_CONTRACT.md`, `json/SIGNATURE_AND_HASH_PROVENANCE.md` | CONTRACT-DEFINED (Stage 1D.1 K1: **keyed authentication** `step0_auth`, HMAC-SHA256 default JDEC-013; primitive negotiable, requirement SOURCE) |
+| REPLAY-002 (per-step verify) | `json/LOG_CONTRACT.md` §E | CONTRACT-DEFINED |
+| REPORT-001/002, LEAGUE-002 (result report, mutual approval) | `json/RESULT_CONTRACT.md` | CONTRACT-DEFINED; `result_sha256` = SHA-256-backed mutual acknowledgement (NDEC-006); missing/contradictory ⇒ 0 both (C-09); FastMCP + signed hardware mandatory (K3) |
+| GIT-003 (`github_commit`) | `json/DECLARATION_CONTRACT.md`, `json/RESULT_CONTRACT.md` | CONTRACT-DEFINED (SOURCE-EXPLICIT key) |
+| GAME-006 scoring incl. technical_loss | `json/CONFIG_CONTRACT.md`, `json/RESULT_CONTRACT.md` | CONTRACT-DEFINED (technical_loss provenance C-07 preserved) |
+
+Cross-artifact invariants: `json/CROSS_ARTIFACT_INVARIANTS.md` (INV-01…INV-15).
+Project decisions: `json/PROJECT_CONTRACT_DECISIONS.md` (JDEC-001…JDEC-013).
+
+**Stage 1D (interoperability lock):** the contracts were independently audited and
+locked for interoperable implementation. `json/STAGE_1D_AUDIT.md` (D1–D5),
+`json/PROTOCOL_TIMELINE.md`, `json/INTEROPERABILITY_NEGOTIATION.md` (NDEC-001…007),
+`json/INTEROPERABILITY_BLOCKERS.md` (**0 blocking**). Key resolutions: `verdict` =
+`intent` (C-08); `state` PROJECT-LOCKED (JDEC-012); `config_sha256` non-self-referential;
+`game_uid` SOURCE-EXPLICIT (kept).
+
+**Stage 1D.1 (crypto & reporting corrections):** **K1** Step-0 and **K2** the config
+signature exchange are **keyed authentication with a pre-supplied key** (SOURCE-
+REQUIRED — Ch 5 p.55–56, App B p.128), **not** unkeyed SHA-256 digests and **not**
+invented PKI; project default HMAC-SHA256 (JDEC-013, PROJECT-CONTRACT); envelopes
+`step0_auth`/`config_auth` `{auth_alg,key_id,auth_tag}`, non-self-referential,
+domain-separated (NDEC-005/007; INV-14/15). **K3** the emailed result is
+**self-contained** — FastMCP endpoints + cryptographically-signed hardware
+declarations (`hardware_auth`) are mandatory (INV-10/12/13). **K4** the
+reporting-sanction conflict (Ch 9 per-side non-credit vs App E #35 game-void/0-both)
+is recorded as **C-09** with the strictest 0-both rule (INV-11). `result_sha256`
+mutual approval is SHA-256-backed acknowledgement (NDEC-006). **No key material** in
+any artifact. Statuses remain specification-level; **nothing IMPLEMENTED**. Maps to
+CRYPTO-006 (signed Step-0), CRYPTO-001/002 (commit-reveal), LEAGUE-002/REPORT-001/002
+(reporting), PERF-002 (token lock).
+
 **Completeness (updated Stage 1B):** every MUST / MUST NOT catalog requirement
 appears above (exact modality of the full catalog: MUST 76, MUST NOT 9, SHOULD 4,
 MAY 2 = 91). SHOULD/MAY rows are marked "Optional". **CONFLICT rows:** GAME-007

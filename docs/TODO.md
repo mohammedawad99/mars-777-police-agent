@@ -16,9 +16,13 @@
 - [x] Stage 1B - independent cross-audit + corrections (App F 32 rows / 14-9-9; technical_loss provenance; num_games closed; exact modality counts). See `docs/spec/STAGE_1B_CROSS_AUDIT.md`.
 
 - [x] Stage 1B supervising review = **PASS**; corrected specification baseline approved as input to Stage 1C.
+- [x] Stage 1B-CLOSE - reviewed specification baseline committed + pushed (CI green Ubuntu+Windows).
+- [x] Stage 1C - four JSON **contracts** defined in `docs/spec/json/` (specification only; no schema/code).
+- [x] Stage 1D - independent contract audit + interoperability lock (verdict=intent, state PROJECT-LOCKED, config_sha256 non-self-ref, game_uid SOURCE, NDEC-001…006; 0 blocking). See `docs/spec/json/STAGE_1D_AUDIT.md`.
+- [x] Stage 1D.1 - cryptographic & reporting contract corrections (spec-only, no code/commit): **K1** Step-0 = **keyed** authentication with a pre-supplied key (HMAC-SHA256 default, JDEC-013; not a bare hash); **K2** config **signature exchange** beyond `config_sha256` (NDEC-007); **K3** result self-contained — FastMCP endpoints + signed hardware declarations (`hardware_auth`) mandatory; **K4** reporting-sanction conflict Ch 9 vs E-35 documented as **C-09** (strictest 0-both adopted); **K5** `game_uid` kept; **K6** `verdict`=`intent` (C-08) kept. NDEC-001…007, JDEC-001…013, INV-01…15. **No key material anywhere.**
 
 ## In progress
-- [ ] Stage 1B-CLOSE - commit + push the reviewed specification baseline (this stage).
+- [ ] Supervising review of Stage 1C/1D/1D.1; then commit the specification + JSON-contract baseline, then controlled sync of reviewed common spec to the thief repo. No implementation until PRD/architecture phase.
 
 ## Pending
 - [ ] Branch protection / rulesets - **blocked**: unavailable on the current GitHub

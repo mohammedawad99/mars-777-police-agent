@@ -153,7 +153,7 @@ semantic field, key unknown, **EX** = example-only key (appears only in a sample
 - **declaration:** `schema_version` — **EX** (App B config sample only); Step-0 hardware set (OS/CPU/RAM/GPU/model) — **ES**; `github_commit` — **EK** (named PDF p.56); token cap — **ES**; team/member/repo/MCP identities — **ES**; times — **ES**. Signature/key provenance — **RR**.
 - **config (`config/game.json`):** all section+field keys **EK** (App B §B.3 prints them: `schema_version`, `agreed_between`, `board_and_agents.*`, `world.*`, `movement_and_barriers.*`, `scoring.*`, `pheromones.*`, `network_and_league.*`, `rate_limiter_gatekeeper.*`). `config_sha256`/signature location — **RR**. `agreed_between` — **EK** (example values `["group-a","group-b"]` are **EX**).
 - **log:** nonce/reveal record fields (State, Move, Intent, Nonce + hint, verdict, step, role, sub_game) — **ES** (named in prose, no JSON keys); the sample `f"{nonce}|{move}"` payload — **EX** (explicitly simplified). Exact entry layout — **RR**.
-- **result:** four repository links — **ES**; per-sub-game score + cumulative — **ES**; `github_commit` — **EK**; total tokens — **ES**; mutual-approval/SHA-256 signatures — **ES**. Exact nesting — **RR**.
+- **result:** four repository links — **ES**; per-sub-game score + cumulative — **ES**; `github_commit` — **EK**; total tokens — **ES**; SHA-256-backed mutual approval (`result_sha256`; not a signature — see the corrected taxonomy in `json/SIGNATURE_AND_HASH_PROVENANCE.md`) — **ES**. Exact nesting — **RR**.
 
 No schema constructed. No nesting invented.
 

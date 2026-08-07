@@ -26,7 +26,10 @@ against the book and found **not** to be a genuine conflict.
 
 - **Example game count vs binding series length** → **C-05 (CONFIRMED)**.
 - **Example timeout/watchdog values vs Appendix F** → **C-02 (CONFIRMED)**.
-- **Reporting sanctions** → checked (E-32/33/34/35, Ch 9 PDF p.94–95): consistent across chapter and appendix. **NOT CONFIRMED** as a conflict.
+- **Reporting sanctions** → **C-09 (CONFIRMED, Stage 1D.1)** — see below. **This
+  supersedes the Stage-1A "NOT CONFIRMED / consistent" note, which was wrong:** Ch 9
+  p.94 and App E #35 prescribe *different* sanctions for the same reporting failure
+  (per-side non-credit vs. game-void/0-both). The stricter Appendix-E behaviour governs.
 - **LLM tactical movement examples vs stated default mode** → **C-03 (NOT CONFIRMED** — rule + explicit exception).
 - **Illustrative board dimensions vs binding minimum** → **C-01 (CONFIRMED)**.
 - **Simplified hash examples vs complete real protocol records** → **C-04 (NOT CONFIRMED** — book flags the simplification).
@@ -43,3 +46,28 @@ none is decided unilaterally.
 **Stage 1B corrections (this pass):** added C-07 (technical_loss App F omission);
 closed C-05 (num_games = 6, FIXED); confirmed C-01/C-02 resolved by App F; C-03/C-04
 remain NOT CONFIRMED.
+
+| C-08 | **`verdict` vs `intent` terminology (sealed record)** (Stage 1D) | Ch 5 p.53 English code comment: sealed record "(hint, **verdict**, step, role, sub_game)" | Ch 5 p.50 Hebrew prose: sealed record adds "hint, **intent classification (סיווג הכוונה)**, step, role" | No | Book resolves by alignment: the two lists are position-for-position identical ⇒ `verdict` = intent classification = the truth/lie tag = the core `intent` | **NOT a conflict; source terminology ambiguity:** `verdict` and `intent` denote the same commit-time classification. The sealed payload uses **`intent`** (8-field set); **no separate `verdict` field**. The post-reveal legality/capture "verdict" is a *different* object (PROTOCOL_TIMELINE event 9). | High | Do not add a separate `verdict` field to the hashed payload (would diverge the hash). | Resolved (D1); recorded to prevent a future re-split |
+
+| C-09 | **Reporting-failure sanction: chapter vs Appendix E** (Stage 1D.1) | **Ch 9 §9.3.3 p.94:** "אם לא יתקבל דוח מאחד הצדדים, אותו צד לא יזוכה בניקוד" — if a report is not received from **one** side, **that side** is not credited (a **one-sided, per-team** non-credit; the reporting side can still score) | **App E #35 p.147:** "דיווח סותר גורם ל**פסילת המשחק וציון 0 לשתי הקבוצות**" — a **contradictory** report voids the **whole game**, **0 to both** teams | **No** (a sanction/severity conflict, not a numeric value) | Non-numeric; App F does not arbitrate. Resolve by the **stricter, safer** rule and by scope: missing-from-one-side (Ch 9) and contradictory (E-35) are partly different triggers, but where they overlap the **harsher E-35 game-void/0-both** governs | **CONFIRMED conflict (severity/scope):** the two texts are **not** the same sanction. We adopt the **strictest composite**: **(a)** a required report missing from **either** team **or (b)** contradictory reports ⇒ **game invalid, 0 to both** (E-35). We do **not** rely on the milder Ch 9 per-side non-credit when E-35's harsher rule can apply. Both teams must send **matching** reports (equal `result_sha256`, `mutual_agreement:true`) or neither is credited. | High | Result/report validation MUST treat any missing-or-contradictory report as **0 to both**; never silently credit one side. Surfaced in `RESULT_CONTRACT.md`, NDEC-006, INV-11, and the adversarial cases. | Open (book-internal severity conflict; strictest rule adopted, flagged for lecturer) |
+
+**Stage 1D.1 correction (this pass):** added **C-09** (reporting-failure sanction:
+Ch 9 per-side non-credit vs App E #35 game-void/0-both). The Stage-1A high-risk-class
+line that called reporting sanctions "consistent / NOT CONFIRMED" is **corrected** —
+it **is** a genuine non-numeric conflict; the stricter E-35 rule is binding. No
+numeric authority is involved (App F is silent), so this is resolved by
+severity/scope, not by Appendix F.
+
+**Stage 1D note:** `game_uid` is **source-named** (Ch 9 p.95), not a project
+invention — Stage 1C's PROJECT-CONTRACT label was corrected to SOURCE-EXPLICIT
+(kept). Added **C-08** (verdict = intent). No other new conflict; C-07 preserved and
+surfaced in the config/result contracts. Unspecified interop representations are
+now LOCKED-PROJECT or NEGOTIATED-PRE-MATCH (NDEC-001…006), not open conflicts.
+
+**Stage 1C note:** the four JSON contracts (`docs/spec/json/`) were defined without
+discovering any **new** source conflict. C-07 (technical_loss) is preserved and
+surfaced in `CONFIG_CONTRACT.md`/`RESULT_CONTRACT.md`; C-04 (simplified commit
+example vs full sealed record) is handled in `LOG_CONTRACT.md` (the simplified Ch-5
+4-field and Ch-7 `nonce|move` examples are EXAMPLE-ONLY, not the real format).
+Unspecified JSON key names / signature storage are **REVIEW-REQUIRED**, not
+conflicts (silence ≠ conflict).
