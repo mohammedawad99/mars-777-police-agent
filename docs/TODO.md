@@ -30,7 +30,12 @@
 - [x] Stage 2A-R2 - attachment/chatbot reconciliation (AE-01…AE-04, secondary provenance); compatibility profiles; **JDEC-014** result→declaration reference; field matrix **77 → 75** (result 13 → 11). Zero chatbot questions pending.
 
 ## In progress
-- [ ] Supervising review of the Stage-2A closure commit; then **Stage 2B — PRD-01…04**. No implementation until PRDs are approved.
+- [x] Stage 2B - PRD-01…04 authored in full (reviewed).
+- [x] Stage 2C - PRD-05…07 authored in full (reviewed); 91/91 requirements have one primary owner.
+- [x] Stage 2-CLOSE - **PASS**; CLOSE-F1 + CLOSE-F2 resolved with **no artifact-contract change** (matrix stays 75); **all 7 PRDs APPROVED — PHASE 2 LOCKED**; implementation NOT STARTED.
+
+## In progress
+- [ ] Supervising review of the Phase-2 closure commit; then **Phase 3 — Deterministic Core Implementation**.
 
 ## Pending
 - [ ] Branch protection / rulesets - **blocked**: unavailable on the current GitHub

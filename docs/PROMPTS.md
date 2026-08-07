@@ -23,6 +23,9 @@
 | 2A-R | Lecturer reference repository audit + chatbot question pack (read-only) | Referenced |
 | 2A-R2 | Final chatbot/attachment reconciliation; JDEC-014; matrix 77 → 75 | Referenced |
 | 2A-CLOSE | Consistency sweep, commit, push, CI | Referenced |
+| 2B | Full PRD-01…04 | Referenced |
+| 2C | Full PRD-05…07 | Referenced |
+| 2-CLOSE | Final PRD consistency audit, approval, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

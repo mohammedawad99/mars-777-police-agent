@@ -163,3 +163,9 @@ fields), JSON-003 (JSON field names). GAME-006 no longer CONFLICT (C-06 resolved
 C-07 technical_loss provenance noted). JSON-003 reclassified from CONFLICT (C-05
 now closed) to REVIEW REQUIRED (field names → Stage 1C). All others **EXTRACTED**.
 No row is IMPLEMENTED or VERIFIED.
+
+**Phase-2 ownership (Stage 2-CLOSE):** all **91** requirements have exactly one primary
+PRD owner — PRD-01 15 · PRD-02 11 · PRD-03 3 · PRD-04 10 · PRD-05 2 · PRD-06 14 ·
+PRD-07 24 · EXTERNAL/SUBMISSION 12. Unmapped 0; duplicate primary 0. See
+`prd/PRD_01_07_CROSSWALK.md`. **PRD-01…07 are APPROVED — PHASE 2 LOCKED; nothing is
+IMPLEMENTED or VERIFIED.**

@@ -26,7 +26,11 @@
 - **Stage 2A-R - Lecturer reference audit.** Complete: read-only audit of `rmisegal/Game-P2P-Cop-Chase` @ `960499fd` (v3.0.0). Its bundled book PDF hash matches ours exactly. Reference classified **NON-BINDING**; its unkeyed `SHA256(terms|nonce)` "signature" does **not** satisfy the book's keyed pre-supplied-key requirement (book wins). Chatbot question pack produced.
 - **Stage 2A-R2 - Final reconciliation.** Complete: attachment evidence AE-01…AE-04 recorded as **secondary provenance**; all chatbot items closed (zero pending). Compatibility profiles defined (STRICT / REFERENCE / ATTACHMENT). One authorized Stage-1 **project-contract** correction: **JDEC-014** — the result **references** the declaration instead of duplicating static metadata (four-artifact-set self-containment), so the field matrix moved **77 → 75** (result 13 → 11). No requirement, Appendix E/F value, filename, or conflict changed.
 - **Stage 2A-CLOSE - Consistency sweep + commit.** Stale-baseline sweep, non-self-referential `result_sha256` audit, symmetry re-verification, then commit + push + CI.
-- **Stage 2 - Game logic & movement legality.** Pending (PRD-01).
+- **Stage 2B - PRD-01…04 authored in full.** Complete and reviewed (documentation only).
+- **Stage 2C - PRD-05…07 authored in full.** Complete and reviewed; all 91 requirements given exactly one primary owner (PRD-01 15 / PRD-02 11 / PRD-03 3 / PRD-04 10 / PRD-05 2 / PRD-06 14 / PRD-07 24 / EXTERNAL-SUBMISSION 12).
+- **Stage 2-CLOSE - PASS.** Resolved CLOSE-F1 (series convention is negotiated protocol metadata, **not** a declaration field — matrix stays **75**) and CLOSE-F2 (declared MCP endpoint is a **stable group-level ingress**, 1/team, static whole-series). **All seven PRDs are APPROVED — PHASE 2 LOCKED.** **Implementation: NOT STARTED.**
+- **Phase 3 - Deterministic core implementation.** Next authorized phase; begins only after Phase-2 closure review.
+- **Stage 2 - Game logic & movement legality.** Pending implementation (PRD-01, locked).
 - **Stage 3 - Local FastMCP protocol.** Pending (PRD-02).
 - **Stage 4 - Baseline strategy.** Pending (PRD-03).
 - **Stage 5 - Language & scent.** Pending (PRD-04).

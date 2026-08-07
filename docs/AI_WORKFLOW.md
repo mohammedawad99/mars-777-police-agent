@@ -61,3 +61,8 @@
   (HASH ≠ MAC ≠ PKI signature ≠ mutual acknowledgement); **no key material** in any
   artifact. Specification-only; no code/schema/sibling access; **reviewed and LOCKED**
   (committed at Stage 1-CLOSE; status relabel at Stage 1-CLOSE.1).
+- **Phase 2 (Stages 2A → 2-CLOSE)** froze the architecture and authored all seven PRDs.
+  Stage 2-CLOSE resolved the two final cross-contract issues **without changing any locked
+  contract**: the series convention is negotiated protocol metadata (not a declaration field)
+  and the declared MCP endpoint is a stable group-level ingress. **PRD-01…07 are
+  APPROVED — PHASE 2 LOCKED; implementation has NOT started.**
