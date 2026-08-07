@@ -37,7 +37,9 @@ implementation) and lives under `docs/spec/`:
 
 - `AUTHORITY_RULES.md` - reading conventions, hierarchy, citation format.
 - `PAGE_COVERAGE.md` - all 160 PDF pages accounted for.
-- `REQUIREMENT_CATALOG.md` - 79 source-cited requirements across 18 domains.
+- `REQUIREMENT_CATALOG.md` - **91** source-cited requirements across 18 domains
+  (MUST 76 · MUST NOT 9 · SHOULD 4 · MAY 2), verified by row count. (The earlier
+  figure "79" was a Stage-1A count superseded by the Stage-1B correction.)
 - `APPENDIX_E_CROSSWALK.md` - all 55 mandatory entries mapped.
 - `APPENDIX_F_NUMERIC_INVENTORY.md` - every binding numeric value.
 - `HIGH_RISK_REQUIREMENTS.md` - compliance-risk audit.

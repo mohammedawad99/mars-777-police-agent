@@ -15,6 +15,6 @@
 | D9 | No remote creation before review | Controlled delivery |
 | D10 | No sibling access during implementation | Prevents strategy / state leakage |
 | D11 | Both repositories created as PRIVATE under mohammedawad99 | Controlled academic delivery |
-| D12 | Remote protocol is HTTPS (gh-authenticated) | Matches verified auth; no SSH keys or embedded tokens |
+| D12 | Git transport: **initially HTTPS** (gh-authenticated) during foundation setup; **migrated to SSH in Stage 0C.2** after the OAuth token proved unable to obtain the `workflow` scope. **Current transport = SSH** (`git@github.com:mohammedawad99/mars-777-police-agent.git`); authentication verified as **mohammedawad99** | HTTPS matched the originally verified auth and avoided embedded tokens; the SSH migration was required to push workflow files under the available scopes. No credential or key material is stored in the repository under either transport. |
 | D13 | Public visibility / lecturer access deferred | To be handled in a later reviewed stage |
 | D14 | Branch protection / rulesets deferred | Until CI check names are known from the first run |
