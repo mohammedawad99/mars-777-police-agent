@@ -24,9 +24,7 @@ most keys are **SOURCE-SEMANTIC** with **PROJECT-CONTRACT** naming (JDEC-008/009
 | team A members | `teams.group_a.members[]` | SOURCE-SEMANTIC + PC | Optional | array | Ch 9 p.94 | where required |
 | team B identity/members | `teams.group_b.*` | SOURCE-SEMANTIC + PC | Required | object | Ch 9 p.94 | — |
 | four GitHub links | `github_links` (4) | **SOURCE-SEMANTIC** (four links required) + PC representation | Required | object/array(4 urls) | Ch 9 p.96; App E #49 | INV-04; JDEC-009 |
-| **FastMCP endpoints** | `teams.<g>.mcp_endpoint` | **SOURCE-SEMANTIC (MANDATORY, K3)** + PC | **Required** | url | **Ch 9 p.94** | **self-contained** (INV-12); no secret in URL |
-| **hardware declaration data** | `teams.<g>.hardware` | **SOURCE-SEMANTIC (MANDATORY, K3)** + PC | **Required** | object | Ch 9 p.94; Ch 5 p.55 | the OS/CPU/RAM/GPU/model snapshot |
-| **hardware-authentication evidence** | `teams.<g>.hardware_auth` `{auth_alg,key_id,auth_tag}` | **SOURCE-SEMANTIC (MANDATORY, K3: "cryptographically-signed hardware declarations")** + PC | **Required** | object | Ch 9 p.94; Ch 5 p.55–56 | copy/reference of the **Step-0 keyed auth** so the lecturer can verify what was declared (INV-13); **no key material** |
+| declaration reference | `declaration_ref` (via `game_id`/`game_uid`; `group_id`) | SOURCE-SEMANTIC (four artifacts share `game_uid`; declaration owns static data) + PC key | Required | object/string | Ch 9 p.78 (four-file list); App F Tbl 20 | **Stage 2A-R2:** joins result → declaration. FastMCP endpoints, full hardware and `hardware_auth` are **declaration-owned and NOT duplicated here** (JDEC-014) |
 | per-sub-game scores | `sub_games[]` | SOURCE-SEMANTIC + PC | Required | array[object] | Ch 9 p.95; E-48 | one per sub-game |
 | — sub-game number | `sub_games[].sub_game` | SOURCE-SEMANTIC + PC | Required | int | Ch 9 p.95 | INV-02 |
 | — police score | `sub_games[].cop_score` | SOURCE-SEMANTIC + PC | Required | int | App F Tbl 17 | per scoring table |
@@ -46,29 +44,24 @@ most keys are **SOURCE-SEMANTIC** with **PROJECT-CONTRACT** naming (JDEC-008/009
 ## Classification totals
 
 - **SOURCE-EXPLICIT: 1** (`github_commit`, per sub-game).
-- **SOURCE-SEMANTIC: 22** (identities, four links, **FastMCP endpoints**, **hardware declaration + `hardware_auth`** (K3), scores, outcomes, tokens, timestamp, mutual approval, `result_sha256`).
-- **PROJECT-CONTRACT (keys/representation): all SOURCE-SEMANTIC keys** (JDEC-008 scores; JDEC-009 four-links; JDEC-013 `hardware_auth` primitive).
+- **SOURCE-SEMANTIC: 9 semantic-field rows** (identity/`declaration_ref`, team identity, four links, per-sub-game set, cumulative, total tokens, timestamp, mutual approval, `result_sha256`) — **Stage 2A-R2**: the three K3 static-metadata rows were removed (declaration-owned).
+- **PROJECT-CONTRACT (keys/representation): all SOURCE-SEMANTIC keys** (JDEC-008 scores; JDEC-009 four-links; **JDEC-014** declaration reference).
 - **EXAMPLE-ONLY: 0** adopted.
-- **REVIEW-REQUIRED: 0** — `result_sha256` is resolved to a SHA-256-backed mutual acknowledgement (NDEC-006), and the K3 report contents are mandatory (INV-10/12/13). The keyed-auth **primitive** for `hardware_auth` is a labelled PROJECT-CONTRACT default (JDEC-013), not an open item.
+- **REVIEW-REQUIRED: 0** — `result_sha256` is resolved to a SHA-256-backed mutual acknowledgement (NDEC-006), and static metadata is referenced, not duplicated (INV-10 corrected; INV-12/13 retargeted to the declaration — see §Stage 2A-R2).
 
 **Four GitHub links (INV-04, JDEC-009):** the book requires *four* links (both
 teams' police+thief) in the emailed JSON (Ch 9 p.96, E-49) but names no JSON key →
 SOURCE-SEMANTIC requirement + PROJECT-CONTRACT representation. **Do not invent
 nesting beyond a defensible 4-URL structure.**
 
-## Stage 1D.1 — self-contained report (K3) + reporting sanction (K4/C-09)
+## Stage 1D.1 — reporting sanction (K4/C-09)
 
-Ch 9 p.94 lists, among the required report contents, the **FastMCP server addresses**
-and **cryptographically-signed hardware declarations** backed by SHA-256 mutual
-acknowledgements. The emailed `result` must therefore be **verifiable from itself**:
-
-- **FastMCP endpoints** (`teams.<g>.mcp_endpoint`) — **Required** (INV-12); match the
-  declaration; no secret in the URL.
-- **Hardware declaration** (`teams.<g>.hardware`) + **keyed-authentication evidence**
-  (`teams.<g>.hardware_auth = {auth_alg,key_id,auth_tag}`) — **Required** (INV-13). The
-  evidence is the **Step-0 keyed authentication** (K1) carried into the report so the
-  grader can confirm what hardware was declared and that it was signed with the
-  pre-supplied key. **No key material** — only the non-secret `key_id`.
+> **SUPERSEDED IN PART BY STAGE 2A-R2 (below).** Stage 1D.1's K3 conclusion — that the
+> emailed result must itself carry FastMCP endpoints, full hardware declarations and
+> `hardware_auth` — over-read §9.3.3 against the Ch 9 four-file list and App F Table 20,
+> which assign that static metadata to the **declaration**. The self-containment
+> requirement is satisfied by the **four-artifact set**, not by the result file alone.
+> The reporting-sanction finding (K4/C-09) below is **unchanged and still binding**.
 - **Reporting sanction (C-09):** a required report **missing from either team** **or**
   **contradictory** reports ⇒ **game invalid, 0 to both** (App E #35, stricter than the
   Ch 9 per-side non-credit; see `CONFLICT_REGISTER.md` C-09). Both teams must send
@@ -76,6 +69,101 @@ acknowledgements. The emailed `result` must therefore be **verifiable from itsel
 
 The keyed-auth objects are **never self-referential** (the `auth_tag` excludes the
 envelope) and are **domain-separated** from the config/Step-0 by `context`.
+
+## Stage 2A-R2 — FOUR-ARTIFACT-SET SELF-CONTAINMENT (corrects Stage-1D.1 K3)
+
+**Decision: the *artifact set* is self-contained, not the result file alone.**
+
+**Primary evidence (PDF, re-read directly).**
+- **Ch 9 (p.78), four-file list — the DECLARATION** "מרכזת את **כל הנתונים הקבועים של
+  המשחק כולו** (כלל תת-המשחקים): זהות שתי הקבוצות וחבריהן, **כתובות מאגרי השוטר והגנב,
+  כתובות שרתי ה-MCP, מפרטי החומרה**, מודל השפה, תקרת הטוקנים המוסכמת, וזמני תחילת
+  המשחק וסיומו" — concentrates **all constant data**: both groups' identity and members,
+  police/thief repo addresses, **MCP server addresses, hardware specs**, model, token
+  cap, start/end times.
+- **Ch 9 (p.78) — the RESULT** "דוח התוצאות הסופי. סיכום כלל תת-המשחקים: ניקוד כל קבוצה
+  בכל משחקון והתוצאה המצטברת, לשקלול ציון הליגה" — the final results report: per-sub-game
+  scores + cumulative, for league weighting.
+- **Ch 9 (p.79) — mandatory report fields** "השדות המחייבים בדוח כוללים את **קישורי
+  ה-GitHub של שתי הקבוצות**, את **מזהה הקומיט של כל משחקון**, ואת **סך הטוקנים שנצרכו**".
+- **App F Table 20** assigns *static game/team metadata* → declaration; *final league
+  result* → result; and states the table "היא טבלת ייחוס בלבד … ואינה נתונה למשא ומתן".
+
+**Documented book-internal tension.** §9.3.3 (p.77) describes the emailed report as
+containing "כל פרטי הזהות של הקבוצה, כתובות ה-GitHub שלה, **כתובות שרתי ה-FastMCP,
+הצהרות חומרה חתומות קריפטוגרפית**, חותמת-הזמן … ואישורי הסכמה-הדדית מגובי SHA-256".
+Read literally that would duplicate declaration-owned data. **Resolution:** §9.3.3
+describes the *information scope of the reporting package*; Table 20 and the Ch 9
+four-file list define the *physical placement*, and both put static metadata in the
+declaration. The attached example (secondary provenance, AE-03) agrees: *"Static team
+metadata … is NOT repeated here — it lives in 1-pre-game-declaration.json and is
+referenced via game_id / group_id."* We therefore **reference, not duplicate**, and the
+**declaration is delivered as part of the same four-artifact set**, so the lecturer
+still receives every element §9.3.3 lists.
+
+**STRICT_COUNTED_MATCH result content (mandatory):**
+
+1. `game_id`, `game_uid` — identity/join keys (INV-01).
+2. `declaration_ref` — explicit join to `declaration_<game_id>.json` (**JDEC-014**).
+3. `teams.<g>.group_id` (+ name) — minimal identity needed to attribute scores.
+4. `github_links` — **four** links (explicitly mandatory, p.79; SUB-004, INV-04).
+5. `sub_games[]` — `sub_game`, `cop_score`, `thief_score`, `outcome`,
+   **`github_commit`** (explicitly mandatory, p.79), `tokens`.
+6. `cumulative` — per-team totals + series outcome.
+7. `total_tokens` — explicitly mandatory (p.79; PERF-001, E-54).
+8. `timestamp` — game timestamp (§9.3.3).
+9. `mutual_agreement` + `result_sha256` — SHA-256-backed mutual approval (§9.3.3);
+   missing-from-either-side **or** contradictory ⇒ **0 to both** (C-09, INV-11).
+10. `reported_by` — each team sends its own report (REPORT-001).
+
+**NOT duplicated in the result** (declaration-owned, referenced by `game_uid`):
+FastMCP/MCP endpoints · full hardware specifications · `hardware_auth` evidence ·
+full member lists · full repository metadata beyond the four required links · LLM model
+· agreed token cap · start/end times.
+
+**Compatibility.** `LECTURER_ATTACHMENT_COMPATIBILITY` may align naming/nesting with the
+extracted attachment example, and may **inline** static metadata if a grader parser is
+shown to require it — never weakening any mandatory semantic. See
+`../../reference/COMPATIBILITY_PROFILES.md`.
+
+
+## RESULT APPROVAL CORE — the one hashing model (non-self-referential)
+
+**`result_sha256 = SHA256( canonical_bytes( RESULT_APPROVAL_CORE ) )`**
+
+**INCLUDED in the core** (the content both peers must agree on):
+`game_id` · `game_uid` · `declaration_ref` · each team's `group_id` ·
+`github_links` (the four required links) · `sub_games[]` each with
+{`sub_game`, `cop_score`, `thief_score`, `outcome`, `github_commit`, `tokens`} ·
+`cumulative` · `total_tokens` · `timestamp`.
+
+**EXCLUDED from the core (must not be in the bytes hashed):**
+1. **`result_sha256` itself** and **`mutual_agreement.sha256`** — the hash field can
+   never be part of the bytes from which its own value is computed;
+2. `mutual_agreement.confirmed` (agreement *state*, recorded after the hash is agreed);
+3. `reported_by` and any reporter-local presentation metadata outside the approval core.
+
+**Agreement flow.** Both peers independently build the same canonical approval core,
+compute `result_sha256`, exchange it, and only then set
+`mutual_agreement.sha256 = result_sha256` and `mutual_agreement.confirmed = true`.
+Unequal hashes, or a report missing from either side, ⇒ **0 to both** (C-09, INV-11).
+
+**NON-SELF-REFERENTIAL: YES.** This is the same discipline already applied to
+`config_sha256` and every `auth_tag` (JDEC-010) — the digest is stored **outside** the
+bytes it covers. No keyed signature is introduced for result approval: the source
+requires a SHA-256-backed **mutual acknowledgement**, not producer authentication.
+
+## RESULT ↔ DECLARATION JOIN INVARIANT
+
+- `declaration_ref == "declaration_<game_id>.json"` (official Table-20 filename);
+- `result.game_id   == declaration.game_id`;
+- `result.game_uid  == declaration.game_uid`;
+- each `result.teams.<g>.group_id == declaration.teams.<g>.group_id`.
+
+**No second identity is created** — the join reuses the existing source-named
+`game_id`/`game_uid` (INV-01). The **four GitHub links remain in the result** even though
+repository metadata is otherwise declaration-owned, because Ch 9 p.79 makes them an
+explicitly mandatory *report* field (SUB-004, INV-04).
 
 ## Illustrative example (Markdown only; placeholder identifiers/scores)
 

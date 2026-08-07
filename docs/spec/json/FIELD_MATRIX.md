@@ -6,9 +6,11 @@ Every candidate field across all four artifacts, exactly once. Status ∈ {LOCKE
 LOCKED-PROJECT, NEGOTIATED-PRE-MATCH, PROJECT-DECISION, REVIEW-REQUIRED,
 EXAMPLE-ONLY}. **No field is LOCKED if its provenance is ambiguous.** Artifact
 codes: **C**=config, **D**=declaration, **L**=log, **R**=result. Relevance flags:
-Hash/Sig, Replay, Report (Y/—). **Stage 1D.1:** the Step-0/config keyed-auth and
-result FastMCP/hardware fields were added; the interop status column already carries
-the final Stage-1D/1D.1 status for those rows.
+Hash/Sig, Replay, Report (Y/—). **Stage 1D.1:** the Step-0/config keyed-auth fields were added.
+**Stage 2A-R2 correction:** the three K3 result rows that duplicated declaration-owned
+static metadata (`mcp_endpoint`, `hardware`, `hardware_auth`) were **removed from the
+result** and replaced by a single `declaration_ref` join row — see
+`RESULT_CONTRACT.md` §Stage 2A-R2. Result 13 → **11**; grand total 77 → **75**.
 
 | Art | Semantic field | Proposed key | Provenance | Req/Opt | Type | Card. | Binding constraint | Req IDs | Primary source | Conflict | Hash/Sig | Replay | Report | Status |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -79,9 +81,7 @@ the final Stage-1D/1D.1 status for those rows.
 | R | game/uid | `game_id`/`game_uid` | **SRC-EXPLICIT** (source-named, D3) | Req | string | 1 | INV-01 | JSON-003 | Ch9 p.94 | — | — | Y | Y | LOCKED-SOURCE (identity) |
 | R | teams | `teams.<g>.*` | SRC-SEMANTIC + PC | Req | object | 2 | identities | SUB-003 | Ch9 p.94 | — | — | — | Y | PROJECT-DECISION |
 | R | four links | `github_links` (4) | SRC-SEMANTIC + PC | Req | object/arr | 4 | four links | SUB-004 | Ch9 p.96; E-49 | — | — | — | Y | PROJECT-DECISION (JDEC-009) |
-| R | fastmcp endpoint | `teams.<g>.mcp_endpoint` | SRC-SEMANTIC (MANDATORY, K3) + PC | Req | url | 1/team | self-contained; matches decl (INV-12); no secret | NET-001 | Ch9 p.94 | — | — | — | Y | PROJECT-DECISION (K3) |
-| R | hardware decl | `teams.<g>.hardware` | SRC-SEMANTIC (MANDATORY, K3) + PC | Req | object | 1/team | matches Step-0 decl (INV-13) | CRYPTO-006 | Ch9 p.94; Ch5 p.55 | — | Y | — | Y | PROJECT-DECISION (K3) |
-| R | hardware auth | `teams.<g>.hardware_auth` `{auth_alg,key_id,auth_tag}` | SRC-SEMANTIC (MANDATORY, K3: "cryptographically-signed hardware declarations") + PC primitive | Req | object | 1/team | keyed-auth evidence = Step-0 `step0_auth`; **key never stored** | CRYPTO-006 | Ch9 p.94; Ch5 p.55–56 | — | Y | — | Y | NEGOTIATED-PRE-MATCH (JDEC-013; INV-13) |
+| R | declaration reference | `declaration_ref` (via `game_id`/`game_uid`; `group_id` per team) | SRC-SEMANTIC (four artifacts share `game_uid`; declaration owns static data — Ch 9 p.78 four-file list, App F Tbl 20) + PC key | Req | object/string | 1 | joins result → declaration; **static metadata is NOT duplicated** (INV-10 corrected) | JSON-003 | Ch9 p.78; App F Tbl 20 | — | — | Y | Y | LOCKED-PROJECT (join key; JDEC-014) |
 | R | per-sub-game | `sub_games[].{sub_game,cop_score,thief_score,outcome,github_commit,tokens}` | SRC-SEMANTIC (+ SRC-EXPLICIT `github_commit`) | Req | array[obj] | ≥1 | scores per App F; outcome incl technical_loss | GAME-006,GIT-003,PERF-001 | Ch9 p.95; E-48/54 | C-07 | Y | Y | Y | PROJECT-DECISION (JDEC-008); commit LOCKED |
 | R | cumulative | `cumulative.{cop_total,thief_total,series_outcome}` | SRC-SEMANTIC + PC | Req | object | 1 | tie rule | LEAGUE-006 | Ch9 p.95,87 | — | — | — | Y | PROJECT-DECISION (JDEC-008) |
 | R | total tokens | `total_tokens` | SRC-SEMANTIC | Req | int | 1 | series tokens | PERF-001 | E-54 | — | Y | — | Y | PROJECT-DECISION |
@@ -149,8 +149,8 @@ surface), **EX** example-only value, **BU** blocking-unresolved.
 | declaration | 16 | 3 | 13 | 0 | 0 | 3 | 9 | 4 | 0 | 0 | 0 |
 | config | 39 | 35 | 4 | 0 | 0 | 16 | 1 | 22 | 0 | 0 | 0 |
 | log | 9 | 0 | 9 | 0 | 0 | 0 | 0 | 3 | 6 | 0 | 0 |
-| result | 13 | 2 | 11 | 0 | 0 | 1 | 2 | 10 | 0 | 0 | 0 |
-| **GRAND** | **77** | **40** | **37** | **0** | **0** | **20** | **12** | **39** | **6** | **0** | **0** |
+| result | 11 | 2 | 9 | 0 | 0 | 1 | 3 | 7 | 0 | 0 | 0 |
+| **GRAND** | **75** | **40** | **35** | **0** | **0** | **20** | **13** | **36** | **6** | **0** | **0** |
 
 **Per-artifact derivation (which rows land in which bucket):**
 
@@ -180,8 +180,8 @@ surface), **EX** example-only value, **BU** blocking-unresolved.
   `result_sha256`).
 
 **Invariants (all hold):** provenance total = status total = row total for every
-artifact; 16+39+9+13 = **77**; SE+SS+PC+EX = 40+37+0+0 = **77**;
-LS+LP+NPM+LO+EX+BU = 20+12+39+6+0+0 = **77**. **BU = 0** in every artifact.
+artifact; 16+39+9+11 = **75**; SE+SS+PC+EX = 40+35+0+0 = **75**;
+LS+LP+NPM+LO+EX+BU = 20+13+36+6+0+0 = **75**. **BU = 0** in every artifact.
 **No approximation signs.** No duplicate `Artifact + Semantic Field` identity; every
 field appears exactly once; `verdict` is **not** a separate field — it equals `intent`
 (C-08); `step0_auth`/`config_auth`/`hardware_auth` are distinct objects with distinct

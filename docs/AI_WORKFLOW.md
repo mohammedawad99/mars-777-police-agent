@@ -52,10 +52,12 @@
 - Stage 1D.1 **corrected** the cryptographic/reporting contract: Step-0 and the config
   signature exchange are **keyed authentication with a pre-supplied key** (SOURCE-
   REQUIRED; HMAC-SHA256 default = PROJECT-CONTRACT, JDEC-013) — **not** unkeyed SHA-256
-  digests and **not** invented PKI; the emailed result is **self-contained** (FastMCP +
-  cryptographically-signed hardware declarations, K3); the reporting-sanction conflict
-  (Ch 9 vs App E #35) is recorded as **C-09** with the strictest 0-both rule. Registers:
-  NDEC-001…007, JDEC-001…013, INV-01…15. The crypto taxonomy is kept precise
+  digests and **not** invented PKI; the reporting-sanction conflict (Ch 9 vs App E #35) is
+  recorded as **C-09** with the strictest 0-both rule. *(Stage 1D.1's K3 — that the result
+  itself must carry FastMCP endpoints and signed hardware declarations — was later
+  **superseded by Stage 2A-R2/JDEC-014**: that static metadata is declaration-owned and the
+  result references it.)* Registers **at that stage**: NDEC-001…007, JDEC-001…013,
+  INV-01…15; **current: JDEC-001…014**. The crypto taxonomy is kept precise
   (HASH ≠ MAC ≠ PKI signature ≠ mutual acknowledgement); **no key material** in any
   artifact. Specification-only; no code/schema/sibling access; **reviewed and LOCKED**
   (committed at Stage 1-CLOSE; status relabel at Stage 1-CLOSE.1).

@@ -126,7 +126,12 @@ runtime-VERIFIED**.
 | GAME-006 scoring incl. technical_loss | `json/CONFIG_CONTRACT.md`, `json/RESULT_CONTRACT.md` | CONTRACT-DEFINED (technical_loss provenance C-07 preserved) |
 
 Cross-artifact invariants: `json/CROSS_ARTIFACT_INVARIANTS.md` (INV-01…INV-15).
-Project decisions: `json/PROJECT_CONTRACT_DECISIONS.md` (JDEC-001…JDEC-013).
+Project decisions: `json/PROJECT_CONTRACT_DECISIONS.md` (**JDEC-001…JDEC-014**).
+
+**Current baseline (after Stage 2A-R2):** field matrix **75** rows — declaration 16,
+config 39, log 9, **result 11**. *(Stage 1 originally locked at 77 rows with result 13;
+Stage-2A-R2 **JDEC-014** superseded the project-defined duplication of declaration-owned
+static metadata in the result, so the current matrix is 75.)* Requirements remain **91**.
 
 **Stage 1D (interoperability lock):** the contracts were independently audited and
 locked for interoperable implementation. `json/STAGE_1D_AUDIT.md` (D1–D5),

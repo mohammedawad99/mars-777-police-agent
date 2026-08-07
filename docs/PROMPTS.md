@@ -19,6 +19,10 @@
 | 1C | Four JSON artifact **contracts** (specification only; provenance-classified) | Referenced |
 | 1D | Final JSON contract audit & interoperability lock (verdict/intent, game_uid, NDEC) | Referenced |
 | 1D.1 | Cryptographic & reporting contract corrections (Step-0/config **keyed authentication** K1/K2, result self-containment K3, reporting-sanction conflict C-09/K4) | Referenced |
+| 2A | Architecture freeze and PRD blueprint (21 architecture docs, 7 blueprints) | Referenced |
+| 2A-R | Lecturer reference repository audit + chatbot question pack (read-only) | Referenced |
+| 2A-R2 | Final chatbot/attachment reconciliation; JDEC-014; matrix 77 → 75 | Referenced |
+| 2A-CLOSE | Consistency sweep, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

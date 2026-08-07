@@ -21,7 +21,7 @@ simple, reversible representations are preferred.
 | **JDEC-010** | Internal hash storage: `config_sha256`/`result_sha256` stored **outside** the bytes they cover (non-self-referential). **[MODIFIED — Stage 1D non-self-ref; Stage 1D.1 K1/K2]** Step-0/config authentication is **no longer REVIEW-REQUIRED**: it is **keyed authentication** (JDEC-013, NDEC-005/007), envelope `{auth_alg,key_id,auth_tag}` stored outside the authenticated core; **key out-of-band**. | book states hashes/keyed signing exist, not exact primitive/storage | embedded / sidecar | **outside** the hashed/authenticated bytes (declaration/config sidecar) | conservative; non-self-referential; primitive negotiated | **no secret material stored** (only `key_id`) | hash/tag-presence test | low | supersedes the old "defer interop signatures" note |
 | **JDEC-011** | Timestamps = ISO-8601 UTC (`Z`) strings | Ch 9 requires times, not a format | epoch / ISO-8601 | ISO-8601 UTC | human+machine readable, unambiguous TZ | agree with opponent | none | format test | trivial |
 
-## Stage 1D audit (KEEP / MODIFY / RETIRE) + new JDEC-012
+## Stage 1D audit (KEEP / MODIFY / RETIRE) + JDEC-012/013 + Stage-2A-R2 JDEC-014
 
 | JDEC | Action | Change |
 |---|---|---|
@@ -38,8 +38,9 @@ simple, reversible representations are preferred.
 | JDEC-011 | KEEP | — |
 | **JDEC-012** | **NEW** | `state` sealed representation `{config_sha256, self_pos, barriers(sorted), step, role}` (own-known only); PROJECT-LOCKED default, confirmed via **NDEC-002** |
 | **JDEC-013** | **NEW (Stage 1D.1)** | **Keyed authentication default = HMAC-SHA256** over `context ‖ canonical_payload`, `context ∈ {"step0","config"}`, key referenced by `key_id` (no key material anywhere). **Source requirement = keyed authentication with a pre-supplied key (Ch 5 p.55–56; App B p.128); the algorithm is our choice, not lecturer-specified.** Out-of-band key provisioning; `auth_tag`/`auth_alg`/`key_id` envelope is non-self-referential. No compatible key/mechanism pre-match ⇒ **refuse counted play**. |
+| **JDEC-014** | **NEW (Stage 2A-R2)** | **Result references the declaration instead of duplicating static metadata.** The emitted `result_<game_id>.json` carries a `declaration_ref` join (via `game_id`/`game_uid`/`group_id`) plus the explicitly-mandatory report fields (four GitHub links, per-sub-game `github_commit`, total tokens, scores, cumulative, timestamp, mutual agreement, `result_sha256`). FastMCP/MCP endpoints, full hardware specifications, `hardware_auth`, member lists and the token cap are **declaration-owned** (Ch 9 p.78 four-file list; App F Table 20) and are **not repeated** in the result. Self-containment is a property of the **four-artifact set**. Corrects the Stage-1D.1 K3 over-read of §9.3.3. Compatibility profiles may inline them if a grader parser is shown to require it. |
 
-**No JDEC retired.** JDEC-001…013 active, unique. Negotiated items are tracked as
+**No JDEC retired.** JDEC-001…014 active, unique. Negotiated items are tracked as
 NDEC-001…007 in `INTEROPERABILITY_NEGOTIATION.md`.
 
 ### JDEC-013 key handling (security)
@@ -56,6 +57,6 @@ specifically; an asymmetric signature is an allowed alternative if both peers ag
 - JDEC-002, JDEC-010, JDEC-012 are the interop/security-relevant ones (hashing
   determinism, non-self-referential hash storage, sealed `state`); each has a
   PROJECT-LOCKED default confirmed via an NDEC.
-- IDs are unique JDEC-001…JDEC-013; no duplicates. `game_uid` is **not** invented —
+- IDs are unique JDEC-001…JDEC-014; no duplicates. `game_uid` is **not** invented —
   it is source-named (D3). JDEC-013 (keyed authentication) fixes only the **primitive**;
   the **requirement** (keyed auth with a pre-supplied key) is SOURCE, not a JDEC.

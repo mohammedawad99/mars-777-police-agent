@@ -154,10 +154,10 @@ sub-keys and tagged `game_uid` two ways). No approximation.
 | declaration | 16 | 3 | 13 | 0 | 0 | 3 | 9 | 4 | 0 | 0 | 0 |
 | config | 39 | 35 | 4 | 0 | 0 | 16 | 1 | 22 | 0 | 0 | 0 |
 | log | 9 | 0 | 9 | 0 | 0 | 0 | 0 | 3 | 6 | 0 | 0 |
-| result | 13 | 2 | 11 | 0 | 0 | 1 | 2 | 10 | 0 | 0 | 0 |
-| **GRAND** | **77** | **40** | **37** | **0** | **0** | **20** | **12** | **39** | **6** | **0** | **0** |
+| result | **11** | 2 | 9 | 0 | 0 | 1 | 3 | 7 | 0 | 0 | 0 |
+| **GRAND** | **75** | **40** | **35** | **0** | **0** | **20** | **13** | **36** | **6** | **0** | **0** |
 
-Provenance total = status total = row total for every artifact; all sum to **77**.
+Provenance total = status total = row total for every artifact; all sum to **75** (**Stage 2A-R2**: result 13 → 11 after the three K3 static-metadata rows were replaced by one `declaration_ref` join row — JDEC-014).
 **No BLOCKING-UNRESOLVED field in any artifact.** Full per-row derivation in
 `FIELD_MATRIX.md` (§Exact reconciliation).
 
@@ -228,13 +228,16 @@ INV-14 (Step-0 keyed-auth verifies, K1) — SOURCE-REQUIRED + PROJECT primitive;
   JDEC-013); NDEC-005 rewritten. INV-14 added.
 - **K2 — config signature exchange** (App B p.128) added as a distinct keyed-auth
   layer beyond `config_sha256` equality; NDEC-007 + INV-15 added.
-- **K3 — result must be self-contained:** FastMCP endpoints + cryptographically-signed
-  hardware declarations (`hardware_auth`) are MANDATORY; INV-10/12/13 added.
+- **K3 — result self-containment: CORRECTED at Stage 2A-R2.** Ch 9 p.78 and App F Table 20
+  assign MCP addresses and hardware specs to the **declaration**; self-containment is a
+  property of the **four-artifact set**, not of the result file. The result now carries a
+  `declaration_ref` join (JDEC-014); INV-10 corrected, INV-12/13 retargeted to the
+  declaration. The reporting-sanction finding (K4/C-09) is unchanged.
 - **K4/C-09 — reporting-sanction conflict** (Ch 9 per-side non-credit vs E-35
   game-void/0-both) documented; strictest composite adopted; INV-11 added.
 - **K5 — `game_uid`** remains SOURCE-EXPLICIT (kept).
 - **K6 — `verdict` = `intent`** remains a documented terminology interpretation
   (C-08), not a literal source alias; no separate field.
-- **Counts recalculated** row-exact (77 semantic-field rows: declaration 16, config 39,
-  log 9, result 13; provenance total = status total = 77; BU 0); **no key material** in
+- **Counts recalculated** row-exact (**Stage 2A-R2: 75** semantic-field rows: declaration 16,
+  config 39, log 9, result **11**; provenance total = status total = 75; BU 0); **no key material** in
   any artifact. No code, no schema, no commit.
