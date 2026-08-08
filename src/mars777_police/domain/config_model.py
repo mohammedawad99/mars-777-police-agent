@@ -1,4 +1,4 @@
-"""Immutable grid configuration and its Appendix-F validation policy.
+"""Immutable configuration value objects and their Appendix-F policy.
 
 Stage 3A implements only the grid part of the locked configuration: the board
 is a **square** grid whose size comes from ``board_and_agents.grid_size`` and
@@ -9,11 +9,17 @@ the signed value -- the size itself is always supplied by the caller.
 ``axis_start_index`` is NEGOTIABLE with default 0 (PRD01-FR-002), so it is
 carried here rather than hard-coded into the geometry.
 
+Stage 3B adds the three **FIXED** pheromone parameters (App F Table 16:
+centre 0.9, decay 0.10, field 5x5). They live here because this module owns the
+typed view of the signed config and its FIXED/MINIMUM/NEGOTIABLE semantics; the
+physics that consumes them lives in ``domain.scent``.
+
 This module performs no I/O: it reads no file and no environment variable.
 """
 
 from collections.abc import Iterable
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Final
 
 from .board import Board, Position
@@ -66,3 +72,54 @@ class GridConfig:
             start_index=self.start_index,
             blocked=frozenset(blocked),
         )
+
+
+FIXED_CENTER_INTENSITY: Final[Decimal] = Decimal("0.9")
+"""App F T16 #1, FIXED: pheromone intensity deposited on the emitting cell."""
+
+FIXED_DECAY: Final[Decimal] = Decimal("0.10")
+"""App F T16 #2, FIXED: rho, the per-turn decay rate."""
+
+FIXED_FIELD_SIZE: Final[int] = 5
+"""App F T16 #3, FIXED: side of the square emission window."""
+
+
+class InvalidScentError(DomainError):
+    """Raised for invalid scent parameters, kernels, fields or cells."""
+
+
+def require_decimal(value: object, name: str, *, allow_str: bool = False) -> Decimal:
+    """Return *value* as a finite Decimal, rejecting binary floats outright."""
+    if isinstance(value, Decimal):
+        result = value
+    elif allow_str and isinstance(value, str):
+        try:
+            result = Decimal(value)
+        except ArithmeticError as exc:
+            raise InvalidScentError(f"{name} {value!r} is not a decimal") from exc
+    else:
+        raise InvalidScentError(f"{name} must be a Decimal, got {type(value).__name__}")
+    if not result.is_finite():
+        raise InvalidScentError(f"{name} must be finite")
+    return result
+
+
+@dataclass(frozen=True, slots=True)
+class ScentParams:
+    """The three locked pheromone parameters (App F T16, all FIXED)."""
+
+    center_intensity: Decimal = FIXED_CENTER_INTENSITY
+    decay: Decimal = FIXED_DECAY
+    field_size: int = FIXED_FIELD_SIZE
+
+    def __post_init__(self) -> None:
+        require_decimal(self.center_intensity, "center_intensity")
+        require_decimal(self.decay, "decay")
+        require_int(self.field_size, "field_size", InvalidScentError)
+        for name, value, locked in (
+            ("center_intensity", self.center_intensity, FIXED_CENTER_INTENSITY),
+            ("decay", self.decay, FIXED_DECAY),
+            ("field_size", Decimal(self.field_size), Decimal(FIXED_FIELD_SIZE)),
+        ):
+            if value != locked:
+                raise InvalidScentError(f"{name} is FIXED at {locked}, got {value}")

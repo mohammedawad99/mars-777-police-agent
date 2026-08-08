@@ -57,7 +57,7 @@
   itself must carry FastMCP endpoints and signed hardware declarations — was later
   **superseded by Stage 2A-R2/JDEC-014**: that static metadata is declaration-owned and the
   result references it.)* Registers **at that stage**: NDEC-001…007, JDEC-001…013,
-  INV-01…15; **current: JDEC-001…014**. The crypto taxonomy is kept precise
+  INV-01…15; **current: JDEC-001…015**. The crypto taxonomy is kept precise
   (HASH ≠ MAC ≠ PKI signature ≠ mutual acknowledgement); **no key material** in any
   artifact. Specification-only; no code/schema/sibling access; **reviewed and LOCKED**
   (committed at Stage 1-CLOSE; status relabel at Stage 1-CLOSE.1).
@@ -75,3 +75,14 @@
   geometry, per the frozen domain-layer boundary. **PRD-01…07 remain APPROVED — PHASE 2
   LOCKED**; the deterministic core is **not** complete and no protocol, networking,
   cryptography, strategy, GUI or reporting code exists.
+- **Stage 3B** completed the deterministic game-rule layer tests-first: barriers,
+  capture, terminal/survival, scoring and bounded scent physics. Two supervising
+  corrections were applied. **JDEC-015** records a source *gap* — Appendix F fixes two
+  independent MINIMUM-35 step limits but Ch 3 Table 2 defines no outcome when the
+  ceiling precedes the survival threshold, so `survival_threshold <= max_moves` became
+  an admissibility condition instead of an invented terminal. **C-10** records a source
+  *contradiction* — Ch 4 §4.3 defines tau in [0, 0.9] yet writes the update with a lower
+  clamp only, so the state domain wins and the recurrence saturates. Registers are now
+  **JDEC-001…015** and **C-01…C-10**; every authoritative count is unchanged. Turn
+  orchestration, protocol, networking, cryptography, strategy, GUI and reporting remain
+  **not implemented**; PRD-01 stays **IN PROGRESS** and PRD-02…07 **NOT STARTED**.

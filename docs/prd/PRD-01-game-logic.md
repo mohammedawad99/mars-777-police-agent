@@ -400,3 +400,17 @@ transport, crypto, GUI, reporting · no LLM · no persistence.
 - [x] Supervising review — **PASS** (Stage 2-CLOSE)
 - [ ] Implementation — **in progress**: Stage 3A foundation done; barriers, capture,
       terminal/survival, scoring and scent still pending
+
+## 30. Phase-3 Implementation Clarifications (post-lock)
+
+**These are Phase-3 implementation findings recorded after this PRD was locked.
+They did not exist during Phase 2, they change no requirement, acceptance
+criterion, planned test, numeric value or provenance above, and the counts in
+§13/§14/§23/§24 are unchanged.**
+
+| # | Finding | Class | Effect |
+|---|---|---|---|
+| **JDEC-015** *(Stage 3B-FIX1)* | App F T15 #3/#4 fix only two independent MINIMUM-35 floors, and Ch 3 Table 2 defines **no** end event for a survival threshold the step ceiling can never reach. A counted configuration therefore MUST satisfy `survival_threshold <= max_moves`; a violating configuration is **refused before `CONFIG_LOCKED`**. | **PROJECT-CONTRACT** — implementation-discovered source-gap resolution | Validation only. No new outcome is invented; PRD01-FR-060/061 and both MINIMUM-35 floors are unchanged; **not** an Appendix-F row. |
+| Radial kernel contract *(Stage 3B-FIX1)* | Ch 4 p.43 and Figure 4 describe the emission window only as a **radial fall-off**; App F T16 locks solely centre 0.9, ρ 0.10 and 5×5. The 25 weights are therefore **agreed, not locked**, and are validated as: centre exactly 0.9 · finite, non-negative · equal **integer squared radius** ⇒ equal intensity · a farther ring never stronger than a nearer one (non-increasing). | SOURCE description + **PROJECT** formalisation | PRD01-FR-041/044 unchanged. The Figure-4 numbers stay **ILLUSTRATIVE** and appear only in tests, never in production. |
+| Scent numeric representation | `Decimal` built from strings in a fixed context, resolving the §27 open "floats vs fixed-point" decision. | **PROJECT** implementation | Results unchanged in value; `0.9 → 0.81` becomes exact and platform-independent. |
+| **C-10** *(Stage 3B-FIX2)* | PDF p.43 (book p.27) defines `τij(t)` as *"ערך רציף בתחום [0, 0.9]"* — a continuous value **in [0, 0.9]** — while the written recurrence `τ(t+1)=max(0,(1−ρ)·τ(t)+Δτ)` with centre `Δτ = 0.9` has no upper clamp and can reach 1.71. **Resolved: the explicit state domain wins**, so the implemented evolution saturates: `τ_next = min(0.9, max(0, (1−ρ)·τ + Δτ))`, and every field cell is validated into `[0, 0.9]` at construction. | **SOURCE-CONFLICT** resolved by documented project interpretation (`CONFLICT_REGISTER.md` C-10) | PRD01-FR-040/041/042 unchanged; App F 0.9 / 0.10 / 5×5 unchanged; below the bound the recurrence is exactly additive. Figure 5 is corroborating **illustration** only, Figure 4 stays **ILLUSTRATIVE**, and no config field is introduced. |

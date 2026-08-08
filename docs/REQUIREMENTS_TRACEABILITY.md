@@ -5,7 +5,8 @@
 > Stage 1A statuses are one of: **EXTRACTED**, **REVIEW REQUIRED**, **CONFLICT**,
 > **NOT APPLICABLE**. Nothing is IMPLEMENTED or VERIFIED. Full details and
 > citations live in `docs/spec/REQUIREMENT_CATALOG.md`; conflicts in
-> `docs/CONFLICT_REGISTER.md`. "Component" = planned PRD/area.
+> `docs/CONFLICT_REGISTER.md` (**C-01…C-10**; C-10 added post-lock in
+> Stage 3B-FIX2 — scent state bound vs additive update). "Component" = planned PRD/area.
 
 | Requirement ID | Requirement | Source | Mandatory/Optional | Repository | Planned component | Planned verification | Planned evidence | Status | Notes |
 |---|---|---|---|---|---|---|---|---|---|
@@ -126,7 +127,8 @@ runtime-VERIFIED**.
 | GAME-006 scoring incl. technical_loss | `json/CONFIG_CONTRACT.md`, `json/RESULT_CONTRACT.md` | CONTRACT-DEFINED (technical_loss provenance C-07 preserved) |
 
 Cross-artifact invariants: `json/CROSS_ARTIFACT_INVARIANTS.md` (INV-01…INV-15).
-Project decisions: `json/PROJECT_CONTRACT_DECISIONS.md` (**JDEC-001…JDEC-014**).
+Project decisions: `json/PROJECT_CONTRACT_DECISIONS.md` (**JDEC-001…JDEC-015**;
+JDEC-015 added in Stage 3B-FIX1 — terminal threshold admissibility).
 
 **Current baseline (after Stage 2A-R2):** field matrix **75** rows — declaration 16,
 config 39, log 9, **result 11**. *(Stage 1 originally locked at 77 rows with result 13;

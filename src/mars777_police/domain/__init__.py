@@ -5,17 +5,35 @@ filesystem, no global mutable state and no randomness (PRD01-NFR-001). The
 domain imports nothing from the application, protocol or infrastructure
 layers (``docs/architecture/DEPENDENCY_RULES.md`` rule D1).
 
-Stage 3A provides the primitives that later game semantics need: grid
-configuration, coordinates, the board and blocked cells, the five-token move
-set, movement legality, legal-move enumeration and safe move application.
-Barriers as an action, capture, scoring, scent, belief, observation and
-strategy are **not** implemented here.
+Stage 3A provided the primitives: grid configuration, coordinates, the board
+and blocked cells, the five-token move set, movement legality, legal-move
+enumeration and safe move application. Stage 3B adds the remaining PRD-01
+semantics: barrier placement, the three capture routes, terminal/survival
+evaluation, role-keyed scoring and scent physics. Belief, observation,
+strategy, orchestration, protocol and reporting are **not** implemented here.
 
 No type in this package carries opponent truth (PRD01-FR-021).
 """
 
-from .board import Board, InvalidBoardError, Position
-from .config_model import MIN_GRID_SIZE, GridConfig, InvalidGridConfigError
+from .barriers import (
+    MIN_MAX_BARRIERS,
+    BarrierQuota,
+    InvalidBarrierError,
+    is_adjacent_or_same,
+    is_placeable,
+    place_barrier,
+)
+from .board import ORTHOGONAL_OFFSETS, Board, InvalidBoardError, Position
+from .config_model import (
+    FIXED_CENTER_INTENSITY,
+    FIXED_DECAY,
+    FIXED_FIELD_SIZE,
+    MIN_GRID_SIZE,
+    GridConfig,
+    InvalidGridConfigError,
+    InvalidScentError,
+    ScentParams,
+)
 from .errors import DomainError
 from .rules import (
     MOVE_ORDER,
@@ -27,21 +45,72 @@ from .rules import (
     is_legal_move,
     legal_moves,
 )
+from .scent import MAX_SCENT_STATE, ScentField
+from .scent_kernel import ScentKernel
+from .scoring import (
+    CAPTURE_SCORE,
+    SURVIVAL_SCORE,
+    TECHNICAL_LOSS_SCORE,
+    TIE_SCORE,
+    ScoreLine,
+    score_for,
+)
+from .terminal import (
+    MIN_MAX_MOVES,
+    MIN_SURVIVAL_THRESHOLD,
+    InvalidTurnLimitsError,
+    Outcome,
+    TurnLimits,
+    evaluate_terminal,
+    is_barrier_capture,
+    is_same_cell,
+    is_trapped,
+)
 
 __all__ = [
+    "CAPTURE_SCORE",
+    "FIXED_CENTER_INTENSITY",
+    "FIXED_DECAY",
+    "FIXED_FIELD_SIZE",
+    "MAX_SCENT_STATE",
     "MIN_GRID_SIZE",
+    "MIN_MAX_BARRIERS",
+    "MIN_MAX_MOVES",
+    "MIN_SURVIVAL_THRESHOLD",
     "MOVE_ORDER",
+    "ORTHOGONAL_OFFSETS",
+    "SURVIVAL_SCORE",
+    "TECHNICAL_LOSS_SCORE",
+    "TIE_SCORE",
+    "BarrierQuota",
     "Board",
     "DomainError",
     "GridConfig",
     "IllegalMoveError",
+    "InvalidBarrierError",
     "InvalidBoardError",
     "InvalidGridConfigError",
+    "InvalidScentError",
+    "InvalidTurnLimitsError",
     "Move",
+    "Outcome",
     "Position",
+    "ScentField",
+    "ScentKernel",
+    "ScentParams",
+    "ScoreLine",
+    "TurnLimits",
     "apply_move",
     "delta_of",
     "destination_of",
+    "evaluate_terminal",
+    "is_adjacent_or_same",
+    "is_barrier_capture",
     "is_legal_move",
+    "is_placeable",
+    "is_same_cell",
+    "is_trapped",
     "legal_moves",
+    "place_barrier",
+    "score_for",
 ]

@@ -51,6 +51,8 @@ remain NOT CONFIRMED.
 
 | C-09 | **Reporting-failure sanction: chapter vs Appendix E** (Stage 1D.1) | **Ch 9 §9.3.3 p.94:** "אם לא יתקבל דוח מאחד הצדדים, אותו צד לא יזוכה בניקוד" — if a report is not received from **one** side, **that side** is not credited (a **one-sided, per-team** non-credit; the reporting side can still score) | **App E #35 p.147:** "דיווח סותר גורם ל**פסילת המשחק וציון 0 לשתי הקבוצות**" — a **contradictory** report voids the **whole game**, **0 to both** teams | **No** (a sanction/severity conflict, not a numeric value) | Non-numeric; App F does not arbitrate. Resolve by the **stricter, safer** rule and by scope: missing-from-one-side (Ch 9) and contradictory (E-35) are partly different triggers, but where they overlap the **harsher E-35 game-void/0-both** governs | **CONFIRMED conflict (severity/scope):** the two texts are **not** the same sanction. We adopt the **strictest composite**: **(a)** a required report missing from **either** team **or (b)** contradictory reports ⇒ **game invalid, 0 to both** (E-35). We do **not** rely on the milder Ch 9 per-side non-credit when E-35's harsher rule can apply. Both teams must send **matching** reports (equal `result_sha256`, `mutual_agreement:true`) or neither is credited. | High | Result/report validation MUST treat any missing-or-contradictory report as **0 to both**; never silently credit one side. Surfaced in `RESULT_CONTRACT.md`, NDEC-006, INV-11, and the adversarial cases. | Open (book-internal severity conflict; strictest rule adopted, flagged for lecturer) |
 
+| **C-10** | **Scent state bound vs additive update formula** (Stage 3B-FIX2; **post-lock, implementation-discovered**) | **Ch 4 §4.3 (PDF p.43 / book p.27)** defines the state variable: `τij(t) — עוצמת הריח בתא בזמן הנוכחי. **ערך רציף בתחום [0, 0.9]**` — τ is a continuous value **in [0, 0.9]**. This constrains the STATE, not merely the emission delta. | **Ch 4 §4.3 update equation:** `τij(t+1) = max(0, (1−ρ)·τij(t) + ∆τij)` — a lower clamp only, with centre `∆τ = 0.9`. Literal repeated emission yields e.g. `0.81 + 0.9 = 1.71`, which violates Source A. | **No** (App F fixes 0.9 / 0.10 / 5×5 but does not resolve the update expression) | Non-numeric semantic conflict → documented project interpretation (academic-freedom rule, PDF p.5) | **The state invariant wins: `0 <= τ <= 0.9`.** The implemented evolution is the saturated recurrence `τ_next = min(Decimal("0.9"), max(Decimal("0"), (1−ρ)·τ_cur + ∆τ))`. Below the bound the recurrence stays exactly additive — saturation is a boundary operation, not a replacement. | **Confirmed** (both statements quoted from the same section) | Upper saturation in `domain.scent`; construction-time `[0, 0.9]` validation of every `ScentField` cell; Figure 5 is corroborating illustration only | **RESOLVED — Stage 3B-FIX2 (post-lock)** |
+
 **Stage 1D.1 correction (this pass):** added **C-09** (reporting-failure sanction:
 Ch 9 per-side non-credit vs App E #35 game-void/0-both). The Stage-1A high-risk-class
 line that called reporting sanctions "consistent / NOT CONFIRMED" is **corrected** —
@@ -71,3 +73,28 @@ example vs full sealed record) is handled in `LOG_CONTRACT.md` (the simplified C
 4-field and Ch-7 `nonce|move` examples are EXAMPLE-ONLY, not the real format).
 Unspecified JSON key names / signature storage are **REVIEW-REQUIRED**, not
 conflicts (silence ≠ conflict).
+
+## C-10 — scope and non-effects (Stage 3B-FIX2)
+
+**Rationale.** (1) The source explicitly defines τ's legal state domain as
+`[0, 0.9]`. (2) The unsaturated recurrence can produce a value outside that
+domain. (3) Upper saturation is the smallest deterministic interpretation that
+lets the stated state-domain invariant and the intended additive decay/emission
+mechanism coexist. (4) **Figure 5** (bounded re-emission) is corroborating
+*illustrative* evidence only, never the source of the rule. (5) Appendix-F
+numeric values are unchanged. (6) The exact update model is still to be mutually
+agreed and hash-locked before a series, as Ch 4.5 requires.
+
+**C-10 does NOT:** change `pheromone_center_intensity` · change
+`pheromone_decay` · change `pheromone_grid_size` · add an Appendix-F row · add a
+new source MUST · make Figure 5 binding · make the Figure-4 values binding ·
+alter the radial-kernel project contract · introduce a config field (the bound
+is a source-defined state-domain invariant, never negotiated and never written
+to an official artifact) · relate to `pheromone_min_center_intensity`.
+
+**Identifier note.** Conflict-Register **C-10** is distinct from the unrelated
+review-local finding label "C-10" used inside
+`docs/prd/PRD_05_07_REVIEW.md`, which numbers that document's own Stage-2C
+red-team findings and is **not** a Conflict-Register entry. That historical
+review is left unchanged. The Conflict Register is the single authority for
+`C-01…C-10`.

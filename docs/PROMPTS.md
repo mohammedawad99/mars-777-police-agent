@@ -28,6 +28,9 @@
 | 2-CLOSE | Final PRD consistency audit, approval, commit, push, CI | Referenced |
 | 3A | Deterministic domain foundation - tests first (grid config, position, board, moves, legality, apply) | Referenced |
 | 3A-CLOSE | Stage-3A final audits, narrow tracking update, commit, push, CI | Referenced |
+| 3B | Deterministic game semantics - tests first (barriers, capture, terminal, scoring, scent) | Referenced |
+| 3B-FIX1 | Supervising correction: terminal threshold admissibility (JDEC-015) + scent radial contract hardening | Referenced |
+| 3B-FIX2 | Supervising ruling: scent state bound vs additive update resolved as C-10 (saturating recurrence) | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

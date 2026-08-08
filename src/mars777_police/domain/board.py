@@ -14,8 +14,17 @@ hard-coded.
 
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from typing import Final
 
 from .errors import DomainError, require_int
+
+ORTHOGONAL_OFFSETS: Final[tuple[tuple[int, int], ...]] = ((-1, 0), (1, 0), (0, 1), (0, -1))
+"""The four cardinal adjacency offsets, in the project-deterministic order.
+
+Adjacency is this module's responsibility. The movement vocabulary in
+``domain.rules`` carries the same four deltas; a unit test pins them equal so
+the two can never drift.
+"""
 
 
 class InvalidBoardError(DomainError):
@@ -83,6 +92,21 @@ class Board:
     def is_traversable(self, position: Position) -> bool:
         """Return True when *position* is on the board and not blocked."""
         return self.contains(position) and not self.is_blocked(position)
+
+    def orthogonal_neighbours(self, position: Position) -> tuple[Position, ...]:
+        """Return the four cardinal neighbours of *position*, in fixed order.
+
+        Cells outside the board are still returned: callers decide whether an
+        edge counts as blocked. The order never depends on hashing.
+        """
+        if not isinstance(position, Position):
+            raise InvalidBoardError(
+                f"position must be a Position, got {type(position).__name__}",
+            )
+        return tuple(
+            Position(position.row + d_row, position.col + d_col)
+            for d_row, d_col in ORTHOGONAL_OFFSETS
+        )
 
     def _validated_blocked(self) -> frozenset[Position]:
         raw: object = self.blocked
