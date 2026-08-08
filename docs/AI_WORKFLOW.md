@@ -86,3 +86,12 @@
   **JDEC-001…015** and **C-01…C-10**; every authoritative count is unchanged. Turn
   orchestration, protocol, networking, cryptography, strategy, GUI and reporting remain
   **not implemented**; PRD-01 stays **IN PROGRESS** and PRD-02…07 **NOT STARTED**.
+- **Stage 3C** opened the application layer with the **local** turn-execution step,
+  tests-first. Supervising review accepted it except for one state-ownership defect:
+  `LocalTruth` carried a `barriers_placed` counter that duplicated the public board's
+  barrier facts and could drift from them, and it was police-only state sitting in a
+  role-neutral object. **Stage 3C-FIX1** removed it; remaining budget is derived from
+  `max_barriers - len(board.blocked)`, and `STATE_OWNERSHIP.md` anti-duplication rule 2
+  is satisfied. No architecture document was changed. **PRD-02 is now IN PROGRESS**
+  for this one slice; the state machine, orchestrator, ports, FastMCP, networking and
+  cryptography remain **not implemented**, and PRD-03…07 stay **NOT STARTED**.

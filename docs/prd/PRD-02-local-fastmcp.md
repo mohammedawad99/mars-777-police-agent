@@ -13,7 +13,22 @@
 ## 2. Status
 
 **APPROVED — PHASE 2 LOCKED.** Approved after Stage 2-CLOSE supervising review.
-**Implementation status: NOT STARTED.** No code, no dependency added.
+The requirements below are unchanged by implementation progress.
+
+**Implementation status: IN PROGRESS.**
+
+**Completed implementation slice:** Stage 3C — Local Application / Turn
+Orchestration Foundation: `LocalTruth` (board, own position, completed steps);
+typed `MoveAction` / `BarrierAction`; a role-specific `LocalTurnService`
+capability; atomic local effect application; local completed-step accounting;
+and max-moves action exhaustion.
+
+**Still pending within PRD-02:** state machine · orchestrator · application
+ports · strategy-API integration · protocol turn lifecycle integration · FastMCP
+server/client · Gatekeeper · concurrency / serialized executor · retry and
+deadline implementation · SeriesLauncher · runtime composition.
+
+**PRD-02 is NOT implemented, NOT done and NOT complete.**
 
 ## 3. Purpose
 

@@ -171,3 +171,7 @@ PRD owner — PRD-01 15 · PRD-02 11 · PRD-03 3 · PRD-04 10 · PRD-05 2 · PRD
 PRD-07 24 · EXTERNAL/SUBMISSION 12. Unmapped 0; duplicate primary 0. See
 `prd/PRD_01_07_CROSSWALK.md`. **PRD-01…07 are APPROVED — PHASE 2 LOCKED; nothing is
 IMPLEMENTED or VERIFIED.**
+
+**Phase-3 progress (current):** PRD-01 and PRD-02 are **IN PROGRESS** — the
+deterministic domain (Stages 3A/3B) and the local turn foundation (Stage 3C) are
+implemented and tested; PRD-03…07 remain **NOT STARTED**.

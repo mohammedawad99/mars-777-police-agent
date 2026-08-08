@@ -31,6 +31,10 @@
 | 3B | Deterministic game semantics - tests first (barriers, capture, terminal, scoring, scent) | Referenced |
 | 3B-FIX1 | Supervising correction: terminal threshold admissibility (JDEC-015) + scent radial contract hardening | Referenced |
 | 3B-FIX2 | Supervising ruling: scent state bound vs additive update resolved as C-10 (saturating recurrence) | Referenced |
+| 3B-CLOSE | Stage-3B final audit, tracking finalization, commit, push, CI | Referenced |
+| 3C | Local application / turn orchestration foundation - tests first | Referenced |
+| 3C-FIX1 | Supervising correction: remove duplicated local barrier-count state | Referenced |
+| 3C-CLOSE | Stage-3C final audits, PRD-02 status alignment, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

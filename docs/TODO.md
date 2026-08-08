@@ -44,17 +44,21 @@
 - [x] Stage 3B-FIX1 - supervising correction: **JDEC-015** terminal threshold admissibility (`survival_threshold <= max_moves`) + radial scent-kernel contract hardened; `UnspecifiedTerminalError` removed.
 - [x] Stage 3B-FIX2 - supervising ruling: **C-10** scent state bound vs additive update resolved as the saturating recurrence `min(0.9, max(0, (1-rho)*tau + delta))`.
 - [x] Stage 3B-CLOSE - final audits, tracking finalization, commit + push + CI.
+- [x] Stage 3C - local application / turn orchestration **foundation** (tests-first): `LocalTruth` (board, own position, completed steps), typed `MoveAction`/`BarrierAction`, role-specific `LocalTurnService` (police move **or** barrier; thief move only), atomic local effect application, local step accounting and max-moves exhaustion. **Supervising review PASS.**
+- [x] Stage 3C-FIX1 - state-ownership correction: removed the duplicated `barriers_placed` counter from `LocalTruth`; barrier usage now has **one** authoritative representation (the public board plus the validated `BarrierQuota`), so no local count can drift.
+- [x] Stage 3C-CLOSE - final audits, PRD-02 status alignment, commit + push + CI.
 
 ## In progress
 **Phase 2 — PRD and architecture — is fully complete.** **Phase 3 is under way:**
-Stages 3A and 3B are closed, so the deterministic game-rule layer — movement,
-barriers, capture, terminal/survival, scoring and bounded scent physics — is
-implemented locally and tested. Two implementation-discovered source anomalies
-carry explicit provenance: **JDEC-015** (terminal source gap) and **C-10**
-(scent source conflict). **Not implemented:** turn orchestration, state machine,
-local application service, protocol, networking, cryptography, strategy, belief,
-GUI, replay and reporting. The deterministic core is **not** complete and PRD-01
-remains **IN PROGRESS**. The next stage is tracked once, under Pending.
+Stages 3A, 3B and 3C are closed, so the deterministic game-rule layer and the
+**local** turn-execution step exist and are tested. A local action validates
+through the domain, advances own truth atomically and consumes exactly one
+step; it deliberately declares **no** terminal outcome, computes **no** score
+and runs **no** scent lifecycle, because those need verified peer facts or a
+completed full turn. **Not implemented:** the protocol state machine,
+orchestrator, application ports, FastMCP, networking, cryptography, strategy,
+belief, GUI, replay and reporting. PRD-01 and PRD-02 are both **IN PROGRESS**;
+the next stage is tracked once, under Pending.
 ## Pending
 - [ ] Branch protection / rulesets - **blocked**: unavailable on the current GitHub
       plan for private repos (Stage 0D). Needs Pro upgrade, org, or public-at-submission.
@@ -64,7 +68,7 @@ remains **IN PROGRESS**. The next stage is tracked once, under Pending.
 - [x] Stage 1B - independent cross-audit of the extraction - done (supervising review PASS).
 - [x] Controlled synchronization of the reviewed COMMON specification baseline to the thief repo - **COMPLETE** (Stage 1-SYNC / 1-SYNC-CLOSE).
 - [x] PRD-01 game logic (Base Logic; board/movement/barriers/capture/scoring) - **LOCKED as requirements; implementation IN PROGRESS** (Stage 3A foundation only; barriers, capture, terminal/survival, scoring and scent still pending).
-- [x] PRD-02 local FastMCP (MCP infra + orchestrator/state-machine) - **LOCKED as requirements; NOT IMPLEMENTED.**
+- [x] PRD-02 local FastMCP (MCP infra + orchestrator/state-machine) - **LOCKED as requirements; implementation IN PROGRESS** (Stage 3C local turn foundation only; state machine, orchestrator, ports, FastMCP, Gatekeeper and runtime composition still pending).
 - [x] PRD-03 baseline / blind strategy (**POLICE** role-specific) - **LOCKED as requirements; NOT IMPLEMENTED.**
 - [x] PRD-04 language & scent - **LOCKED as requirements; NOT IMPLEMENTED.**
 - [x] PRD-05 public network / tunnel / league - **LOCKED as requirements; NOT IMPLEMENTED.**
@@ -72,7 +76,8 @@ remains **IN PROGRESS**. The next stage is tracked once, under Pending.
 - [x] PRD-07 reporting, GUI, replay (Gmail gatekeeper, Live GUI, Replay Viewer) - **LOCKED as requirements; NOT IMPLEMENTED.**
 - [x] **Phase 3 — Deterministic Core Implementation** — **STARTED** (Stage 3A closed; the phase itself is **not** complete).
 - [x] **Stage 3B — Deterministic Game Semantics** — **CLOSED** (barriers, capture, terminal/survival, scoring, bounded scent physics).
-- [ ] **Stage 3C — Local Application / Turn Orchestration Foundation** — **NEXT AUTHORIZED; NOT STARTED.** Planned: consume the validated domain primitives; a local turn command/application service; explicit action choice (move **or** barrier); local state ownership; deterministic transition/result objects. **No** public networking and **no** cryptography.
+- [x] **Stage 3C — Local Application / Turn Orchestration Foundation** — **CLOSED.**
+- [ ] **Stage 4A — Local Protocol State Machine Foundation** — **NEXT AUTHORIZED; NOT STARTED.** Planned: the frozen protocol/application state enum and legal transition machine; phase/cursor discipline; deterministic transition validation; terminal-state immutability; evidence/event outputs for later adapters; local effect execution connected only at the already-authorized transition boundary. **Not** in 4A: real FastMCP transport, public tunnel, commit-reveal cryptography or network I/O.
 - [ ] Collaborator (Rawey7) access - pending explicit instruction.
 
 _Phases 1 and 2 are specification and requirements only; all seven PRDs remain
