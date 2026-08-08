@@ -154,3 +154,28 @@
   hierarchy the project already had: a derived contract sentence never outranks
   the Appendix-F status it is derived from. The error was caught before commit,
   and this record keeps it rather than hiding it.
+- **Stage 4D** was authorized to build the application port contracts and instead
+  stopped before writing a single line, which is the outcome the process is for.
+  Three internal contradictions made a truthful implementation impossible:
+  `API_BOUNDARIES.md` says in its own header "**No Python signatures are fixed
+  here**", and a repository-wide search of every architecture and PRD document
+  found no `def`, no `Protocol` and no return annotation - so every method name
+  would have been invented; the `app.ports` row allowed **stdlib typing only**
+  while the same architecture defines `GameRulesPort` over board/action/config and
+  `ScoringPort` over outcome to per-role scores, leaving those ports
+  unrepresentable in the module assigned to them; and `PLAN.md` still claimed 18
+  ports where the frozen table has 20. The tempting move was to ship a thin
+  `ClockPort` with a `monotonic() -> float`, since that is the one port whose input
+  is "—" and whose headline output is a stdlib scalar. It was refused: the method
+  name is not frozen, and the row's own Returns column also lists deadlines and
+  timers whose machinery `CONCURRENCY_MODEL.md` assigns to the Watchdog, the
+  Deadline timers and the executor. Shipping a third of a port under its full name
+  would have been an overclaim. **Stage 4D-R1** repaired the architecture instead
+  of the symptom, changing exactly one cell of one module row - dependency
+  inversion is aimed at concrete adapters, not at the domain model, and `app`
+  already imports `domain` - and recorded that any future Python signature is a
+  **PROJECT-CONTRACT**, never source- or reference-mandated. The analysis also
+  found that not every row named `*Port` needs a Protocol: wrapping a pure
+  deterministic domain function the orchestrator may already call directly adds
+  indirection without substitutability. The blocked stage is kept in the record as
+  evidence, not erased.

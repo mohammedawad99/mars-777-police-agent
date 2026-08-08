@@ -51,3 +51,29 @@ composition root wires them (`DEPENDENCY_RULES.md` D3/D4).
   Step-0 producer-authentication profile.**
 - **P7 — Ports are stable, adapters are not.** Swapping FastMCP transport or LLM provider
   must not change any port contract.
+
+## Signature-freeze policy (Stage 4D-R1)
+
+This table is **architecture-level**: it fixes each port's caller, owner, semantic
+operands, failure contract, sync/async mode and trust class. It fixes **no Python
+signature**, and no other frozen document supplies one — a repository-wide search of
+`docs/architecture/` and `docs/prd/` finds no `def`, no `Protocol` and no return
+annotation. That is a deliberate deferral, not an omission.
+
+Consequences, recorded so no later stage mistakes one for the other:
+
+- **Any Python method name, parameter list or return type chosen later is a
+  PROJECT-CONTRACT**, decided by this project — never `SOURCE-MANDATED`,
+  `LECTURER-EXACT` or `REFERENCE-EXACT`. It must be recorded as such when frozen.
+- The reference-compatible FastMCP tool names `negotiate`, `receive_turn`,
+  `submit_audit`, `receive_control` are **LECTURER_REFERENCE_COMPATIBILITY** only
+  (PRD02-FR-034 labels them a MAY). They are adapter-surface names and must never
+  become `app.ports` method names.
+- A port row is **not** an instruction to create a Python `Protocol` immediately. A
+  row whose implementation owner is a pure, deterministic, in-process `domain`
+  service that `app` may already call directly (`ScoringPort`, `GameRulesPort`,
+  `BeliefPort`) documents the call boundary; wrapping it in a Protocol adds
+  indirection without substitutability. Injection is required for the
+  non-deterministic ports named in **P3**.
+- **20 ports** are frozen here: the original 18 plus `SeriesLauncherPort` and
+  `CompatibilityProfilePort`, both added at Stage 2A-R2.

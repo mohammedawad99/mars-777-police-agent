@@ -183,4 +183,8 @@ current sub-game cursor and the one cursor-owned branch; `num_games` enforced as
 exactly **6, FIXED** per App F T18 #1 and C-05, with score recording still
 **pending**); PRD-03…07 remain **NOT STARTED**. `FIELD_MATRIX` is unchanged at
 **75** — transition evidence and the orchestrator cursor are internal application
-values and define no artifact field.
+values and define no artifact field. The **20** architecture-level ports of `API_BOUNDARIES.md` remain
+**design-level only**: none is implemented, `app.ports` does not exist yet, and any
+future Python port signature is a **PROJECT-CONTRACT** decision rather than a
+source-mandated API (Stage 4D-R1). Port count is an architecture count and does not
+affect the 91 requirements or any register.

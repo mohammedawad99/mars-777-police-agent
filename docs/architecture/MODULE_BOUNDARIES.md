@@ -35,10 +35,26 @@ rules vs. scoring), and that seam is named below.
 | `app.state_machine` | Legal states + transitions (`STATE_MACHINE.md`); refuses out-of-order events | domain | protocol, infra | **current state** | illegal transition |
 | `app.orchestrator` | Drives a sub-game/series; calls ports in the order the state machine permits | domain, ports | concrete adapters | turn cursor, sub-game index | deadline exceeded |
 | `app.turn_service` | One turn: decide → validate → commit → ack → reveal → verify | domain, ports | concrete adapters | pending turn record | nonce/hash mismatch |
-| `app.ports` | **Abstract port definitions only** (`API_BOUNDARIES.md`) | stdlib typing | everything else | none | — |
+| `app.ports` | **Abstract port definitions only** (`API_BOUNDARIES.md`) | stdlib typing **+ immutable `domain` value types, as type references only** | `protocol`, `infra`, any adapter, network/FastMCP/HTTP libraries, `app` implementation modules, domain services with side effects — everything else | none | — |
 | `app.strategy_api` | `Observation` in → `ProposedAction` out contract | domain.observation | infra, protocol | none | no legal action |
 
 **Test boundary:** state-machine and contract tests with fake ports.
+
+> **Stage 4D-R1 reconciliation (implementation-discovered, internal).** The
+> `app.ports` row originally allowed `stdlib typing` only, yet `API_BOUNDARIES.md`
+> defines ports whose operands and results *are* domain values (`GameRulesPort`
+> takes board state and a proposed action; `ScoringPort` takes an outcome and
+> returns per-role scores). Those contracts were therefore unrepresentable in the
+> very module the architecture assigns them to, without duplicating domain types
+> or erasing them behind `Any`/`object` — both of which break
+> `STATE_OWNERSHIP.md`'s one-owner rule or the typing gates. The row now permits
+> **type references to immutable `domain` value types** and nothing else outward.
+> Rationale: port contracts may *name* existing immutable semantic values without
+> duplicating them, and dependency inversion (D3) is directed against **concrete
+> adapters**, not against the domain model — `app` may already import `domain`
+> (see `app.orchestrator` / `app.turn_service` above), so this adds no new edge to
+> the layer DAG. No other module row is broadened. No requirement, PRD, JDEC,
+> NDEC, INV or Conflict-Register entry changes.
 
 ## Protocol / adapter layer — `mars777_police.protocol`
 
