@@ -35,9 +35,15 @@ Enforced by three layers:
 
 1. **Serialization** — a single executor with an ordered queue; one event is processed
    to completion (including evidence write) before the next begins.
-2. **Turn cursor guard** — every inbound message carries `(sub_game, step, phase)`. The
-   state machine accepts it **only** if it matches the expected cursor. Anything else is
-   `E-PROTO-STALE` (duplicate/replayed/out-of-order) and is rejected, not queued.
+2. **Turn cursor + admissibility guard** — a turn-scoped inbound message carries
+   `(sub_game, step)`, which identifies the turn; the executor accepts it **only** if that
+   cursor matches the expected one **and** the message family is admissible in the
+   receiver's current `ProtocolMachine` state. Anything else is `E-PROTO-STALE`
+   (duplicate/replayed/out-of-order) and is rejected, not queued. Phase is **not** a
+   transmitted cursor field — the receiver already owns the one authoritative phase
+   (Stage 4E-R1-FIX1; previously this read "every inbound message carries
+   `(sub_game, step, phase)`"). Control and finalization messages carry their own
+   semantic identity instead of a turn cursor.
 3. **Idempotency** — re-delivery of an already-applied step is answered from the
    recorded result; it never re-applies an effect (`STATE_MACHINE.md` R8).
 

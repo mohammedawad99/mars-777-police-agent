@@ -69,8 +69,12 @@ operator (starts/stops the runtime; may run the `SeriesLauncher`) · the domain
 
 ## 8. Definitions
 
-**Turn cursor** = `(sub_game, step, phase)` — the only accepted position in the
-protocol. **Turn Executor** = the single serialized component that applies mutating
+**Turn cursor** = `(sub_game, step)` — the transmitted identity of a **turn-scoped**
+semantic message, used for staleness/idempotency (FR-044, FR-063). **Phase
+admissibility** is a separate, receiver-side check: the receiver asks whether this
+message family is admissible in **its own** `ProtocolMachine` state (FR-021, FR-062,
+STATE-003) — no phase value is transmitted. *(Stage 4E-R1-FIX1 consistency correction;
+this definition previously read `(sub_game, step, phase)`, contradicting FR-044/FR-063.)* **Turn Executor** = the single serialized component that applies mutating
 events. **Profile** = the negotiated `AuthProfile` / `CommitmentCodec` / `ResultProfile`
 set, frozen at config lock. **SeriesLauncher** = local helper that activates the
 appropriate independent role process per sub-game.
@@ -199,7 +203,7 @@ evidence / idempotence / forbidden):
 | **PRD02-FR-041** | Exactly **one serialized Turn Executor** applies all mutating events; one event completes (including its evidence write) before the next begins. | §2 rule |
 | **PRD02-FR-042** | Inbound requests never mutate directly: the server validates, converts to an event, and enqueues it. | `CONCURRENCY_MODEL.md` |
 | **PRD02-FR-043** | **Two concurrent peer requests MUST NOT mutate the same turn state** — enforced by serialization + turn-cursor guard + idempotency. | primary concurrency rule |
-| **PRD02-FR-044** | Every inbound message carries `(sub_game, step, phase)`; a mismatch is `E-PROTO-STALE` and is rejected, not queued. | R8 |
+| **PRD02-FR-044** | Every **turn-scoped** inbound protocol message carries the turn cursor `(sub_game, step)`; a mismatch is `E-PROTO-STALE` and is rejected, not queued. Series- and sub-game-control and finalization messages carry their own already-authoritative identity context instead. The **phase** check stays receiver-side (**FR-062**, STATE-003): the receiver compares against **its own** `ProtocolMachine`, so no phase value is transmitted. *(Stage 4E-R1 correction — implementation-discovered internal PRD consistency fix; the original wording said "every inbound message carries `(sub_game, step, phase)`", which is over-broad: **FR-063**, the requirement that actually names the "cursor guard" and traces to R8 like this one, lists only sub-game and step, while the phase rejection is FR-062 under STATE-003. Traceability to R8 / idempotency is preserved; no source rule, requirement count, JDEC, NDEC, INV or Conflict-Register entry changes.)* | R8 |
 | **PRD02-FR-045** | The inbound queue is **bounded** (`queue_depth`, default 100, **MINIMUM**); overflow applies backpressure/rejection, never unbounded growth. | App F T19 |
 | **PRD02-FR-046** | Outbound concurrency is capped by `concurrent_requests` (default 2, **MINIMUM**). | App F T19 |
 | **PRD02-FR-047** | Outbound calls pass a **token bucket** at `requests_per_minute` (default 30, **MINIMUM**): `tokens ← min(C, tokens + r·Δt)`, send iff `tokens ≥ 1`. | NET-002; App F T19 |

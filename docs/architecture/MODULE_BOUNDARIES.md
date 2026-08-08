@@ -37,8 +37,23 @@ rules vs. scoring), and that seam is named below.
 | `app.turn_service` | One turn: decide → validate → commit → ack → reveal → verify | domain, ports | concrete adapters | pending turn record | nonce/hash mismatch |
 | `app.ports` | **Abstract port definitions only** (`API_BOUNDARIES.md`) | stdlib typing **+ immutable `domain` value types, as type references only** | `protocol`, `infra`, any adapter, network/FastMCP/HTTP libraries, `app` implementation modules, domain services with side effects — everything else | none | — |
 | `app.strategy_api` | `Observation` in → `ProposedAction` out contract | domain.observation | infra, protocol | none | no legal action |
+| `app.peer_messages` *(4E-R1)* | **Immutable internal peer-protocol semantic contracts** — the values application control flow consumes and produces (state-changing inbound events reach the Turn Executor) and that `protocol.messages` maps to/from; **never** wire JSON | stdlib typing + immutable `domain` value types | `protocol`, `infra`, any adapter, FastMCP/network libraries, wire serialization, artifact storage, GUI, replay, reporting | none | invalid message construction |
 
 **Test boundary:** state-machine and contract tests with fake ports.
+
+> **Stage 4E-R1 reconciliation (implementation-discovered, internal).** Stage 4E
+> tried to build the internal semantic peer-message values inside
+> `protocol.messages` and was blocked twice. The home was wrong first: that row is
+> a **wire** boundary ("wire schema validation", failure "malformed JSON"), while
+> `CONCURRENCY_MODEL.md` has the MCP server "validate, convert to an **event**, and
+> submit it to the executor queue" — and the Turn Executor is `app`. Since
+> `app` may never import `protocol`, a semantic value the executor consumes
+> **cannot** live in `protocol`; that is a proof, not a preference. `app.peer_messages`
+> is therefore added as an application **contract** module, in the same spirit as
+> `app.ports` and `app.strategy_api`, and `protocol.messages` stays the wire mapper
+> that translates between the two. It keeps **no state** and remains forbidden from
+> infra transport. No requirement, PRD numbering, JDEC, NDEC, INV or
+> Conflict-Register entry changes.
 
 > **Stage 4D-R1 reconciliation (implementation-discovered, internal).** The
 > `app.ports` row originally allowed `stdlib typing` only, yet `API_BOUNDARIES.md`
@@ -64,7 +79,7 @@ rules vs. scoring), and that seam is named below.
 | `protocol.commitment` | `H_commit` over the 8-field sealed record; verify at audit | canonical, domain | transport | pending nonce (secret) | mismatch ⇒ TAMPERED |
 | `protocol.keyed_auth` | Keyed authentication (HMAC-SHA256 default) over `context‖core`; `step0`/`config` domain separation | canonical | transport, logging of keys | none (**never key bytes**) | bad tag / unknown `key_id` |
 | `protocol.config_lock` | Canonical config, `config_sha256`, auth exchange, immutable lock | canonical, keyed_auth, domain.config_model | strategy | locked config handle | hash/tag mismatch |
-| `protocol.messages` | Wire schema validation + domain command/event mapping | canonical, domain | infra transport | none | malformed JSON |
+| `protocol.messages` | Wire schema validation + mapping wire bytes ⇄ `app.peer_messages` semantic values | canonical, domain, `app.peer_messages` (type references only) | infra transport | none | malformed JSON |
 | `protocol.declaration` | Step-0 declaration assembly + `step0_auth` envelope | canonical, keyed_auth | transport | none | missing field |
 | `protocol.profiles` *(2A-R2)* | Negotiated `AuthProfile` / `CommitmentCodec` / `ResultProfile` selection; frozen at config lock | canonical | infra transport | active profile set | unknown/weakening profile |
 | `protocol.hints` | Hint bounds (`hint_max_words`) and `intent` tagging | domain.config_model | LLM SDK | none | over-length hint |
@@ -94,7 +109,7 @@ rules vs. scoring), and that seam is named below.
 ## Cross-cutting rules
 
 - `domain` imports **nothing** from `app`, `protocol`, or `infra`.
-- `app` imports `domain` and `app.ports` only — **never** a concrete adapter.
+- `app` imports `domain` and its own contract modules (`app.ports`, `app.peer_messages`) only — **never** `protocol`, `infra` or a concrete adapter.
 - Strategy plug-ins import `app.strategy_api` + `domain` value types **only**.
 - `infra.replay` imports **artifacts**, never `app`/`domain` live state.
 - `infra.reporter` is **write-only** with respect to game state.

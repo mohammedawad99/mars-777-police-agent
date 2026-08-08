@@ -179,3 +179,25 @@
   deterministic domain function the orchestrator may already call directly adds
   indirection without substitutability. The blocked stage is kept in the record as
   evidence, not erased.
+- **Stage 4E** stopped before code for the second time in a row, and the reconciliation
+  that followed is the more interesting half. The stage was scoped to build internal
+  semantic peer-message values in `protocol.messages`, and the audit found the home
+  itself was wrong: that row is a **wire** boundary, while `CONCURRENCY_MODEL.md` has
+  the server "validate, convert to an **event**, and submit it to the executor queue" -
+  and the Turn Executor is `app`. Since `app` may never import `protocol`, a semantic
+  value the executor consumes simply cannot live there. That turned a naming debate
+  into a proof. The second blocker looked worse: PRD02-FR-044 required every inbound
+  message to carry `(sub_game, step, phase)`, yet nothing anywhere defines step
+  numbering, the pre-turn value, or what `phase` even denotes. The temptation was a
+  `step=0` sentinel. Instead the answer came from inside PRD-02: **FR-063**, the
+  requirement that actually names the "cursor guard" and traces to R8 exactly as
+  FR-044 does, lists only **sub-game and step**, while the phase rejection is
+  **FR-062** under **STATE-003** - a receiver-side check against the receiver's own
+  machine. A state-machine walk confirmed it: turns are lockstep, so a transmitted
+  phase is either constant per message family (redundant) or not independently
+  computable (peers sit in different phases at the same moment). Narrowing FR-044
+  dissolved the phase-dependency blocker for free, because nothing needs to transmit a
+  phase at all - and the single `ProtocolPhase` stayed exactly where it was. The audit
+  also caught an omission in the project's own earlier planning: the peer-visible
+  family count is **10**, not 9; Event 8 "Move validation" transmits accept/reject and
+  had been dropped. Both the blocked stage and the miscount are kept in the record.

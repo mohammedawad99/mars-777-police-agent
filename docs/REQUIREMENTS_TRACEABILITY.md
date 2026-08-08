@@ -187,4 +187,9 @@ values and define no artifact field. The **20** architecture-level ports of `API
 **design-level only**: none is implemented, `app.ports` does not exist yet, and any
 future Python port signature is a **PROJECT-CONTRACT** decision rather than a
 source-mandated API (Stage 4D-R1). Port count is an architecture count and does not
-affect the 91 requirements or any register.
+affect the 91 requirements or any register. The peer-visible protocol-timeline
+family inventory is **10** (Stage-4E audit restored Event 8, "Move validation";
+earlier planning said 9), and PRD02-FR-044's turn cursor is **`(sub_game, step)`**
+for turn-scoped messages, with the phase check receiver-side under FR-062/STATE-003
+(Stage 4E-R1). Both are architecture/PRD-consistency counts and change no
+requirement, modality, Appendix-E/F value or register entry.
