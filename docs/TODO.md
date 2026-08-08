@@ -23,19 +23,21 @@
 
 - [x] Stage 1C/1D/1D.1 - **supervising review PASS**; Stage-1 specification/JSON-contract baseline **REVIEWED / APPROVED / LOCKED**.
 - [x] Stage 1-CLOSE - row-exact field matrix (**then** 77) + 26-point audit; reviewed baseline committed (`9fdbe3c`) + pushed; CI green (Ubuntu + Windows). *(Current matrix is **75** after Stage 2A-R2/JDEC-014.)*
-- [x] Stage 1-CLOSE.1 - status-only relabel of the committed docs to reviewed/locked (this commit).
+- [x] Stage 1-CLOSE.1 - status-only relabel of the committed docs to reviewed/locked (`691280d`).
+- [x] Stage 1-SYNC - reviewed COMMON Stage-1 specification baseline synchronized (read-only) to the thief repo; **COMPLETE**.
+- [x] Stage 1-SYNC-CLOSE - repository-metadata repair (requirement count 79 → **91**; remote HTTPS → **SSH**) committed + pushed in both repos (`7563e09`); CI green.
 
 - [x] Stage 2A - architecture freeze: 21 architecture docs + 7 PRD blueprints; 91/91 requirements architecture-mapped; red-team blocking findings resolved.
 - [x] Stage 2A-R - read-only lecturer reference audit (`rmisegal/Game-P2P-Cop-Chase` @ `960499fd`); reference classified NON-BINDING; book wins on keyed Step-0 auth.
 - [x] Stage 2A-R2 - attachment/chatbot reconciliation (AE-01…AE-04, secondary provenance); compatibility profiles; **JDEC-014** result→declaration reference; field matrix **77 → 75** (result 13 → 11). Zero chatbot questions pending.
-
-## In progress
+- [x] Stage 2A-CLOSE - stale-baseline sweep + `result_sha256` audit; architecture/compatibility baseline committed + pushed (`68a9569`); CI green (Ubuntu + Windows). **Phase 2 architecture: COMPLETE.**
 - [x] Stage 2B - PRD-01…04 authored in full (reviewed).
-- [x] Stage 2C - PRD-05…07 authored in full (reviewed); 91/91 requirements have one primary owner.
-- [x] Stage 2-CLOSE - **PASS**; CLOSE-F1 + CLOSE-F2 resolved with **no artifact-contract change** (matrix stays 75); **all 7 PRDs APPROVED — PHASE 2 LOCKED**; implementation NOT STARTED.
+- [x] Stage 2C - PRD-05…07 authored in full (reviewed); 91/91 requirements have exactly one primary owner.
+- [x] Stage 2-CLOSE - **PASS**; CLOSE-F1 + CLOSE-F2 resolved with **no artifact-contract change** (matrix stays **75**); **all 7 PRDs APPROVED — PHASE 2 LOCKED**; implementation **NOT STARTED**. Committed + pushed (`14dafed`); CI green.
+- [x] Stage 2-CLOSE.1 - tracking-status repair of this file (duplicate heading + stale Pending entries); no specification, architecture, PRD, or contract change.
 
 ## In progress
-- [ ] Supervising review of the Phase-2 closure commit; then **Phase 3 — Deterministic Core Implementation**.
+- [ ] Supervising review of the Phase-2 closure and tracking-repair commits; then **Phase 3 — Deterministic Core Implementation** (next authorized work; **not started**).
 
 ## Pending
 - [ ] Branch protection / rulesets - **blocked**: unavailable on the current GitHub
@@ -44,15 +46,17 @@
 - [x] JSON contract construction - done and reviewed (Stage 1C/1D/1D.1; `docs/spec/json/`).
 - [ ] Example-simulator (Appendix D) review - non-binding; pending.
 - [x] Stage 1B - independent cross-audit of the extraction - done (supervising review PASS).
-- [ ] **Next authorized step:** controlled synchronization of the reviewed COMMON specification baseline to the thief repo (not started; must be reviewed before PRD/architecture).
-- [ ] PRD-01 game logic (Base Logic; board/movement/barriers/capture/scoring).
-- [ ] PRD-02 local FastMCP (MCP infra + orchestrator/state-machine).
-- [ ] PRD-03 baseline / blind strategy.
-- [ ] PRD-04 language & scent.
-- [ ] PRD-05 public network / tunnel / league.
-- [ ] PRD-06 security & cryptography (commit-reveal, Step-0).
-- [ ] PRD-07 reporting, GUI, replay (Gmail gatekeeper, Live GUI, Replay Viewer).
+- [x] Controlled synchronization of the reviewed COMMON specification baseline to the thief repo - **COMPLETE** (Stage 1-SYNC / 1-SYNC-CLOSE).
+- [x] PRD-01 game logic (Base Logic; board/movement/barriers/capture/scoring) - **LOCKED as requirements; NOT IMPLEMENTED.**
+- [x] PRD-02 local FastMCP (MCP infra + orchestrator/state-machine) - **LOCKED as requirements; NOT IMPLEMENTED.**
+- [x] PRD-03 baseline / blind strategy (**POLICE** role-specific) - **LOCKED as requirements; NOT IMPLEMENTED.**
+- [x] PRD-04 language & scent - **LOCKED as requirements; NOT IMPLEMENTED.**
+- [x] PRD-05 public network / tunnel / league - **LOCKED as requirements; NOT IMPLEMENTED.**
+- [x] PRD-06 security & cryptography (commit-reveal, Step-0) - **LOCKED as requirements; NOT IMPLEMENTED.**
+- [x] PRD-07 reporting, GUI, replay (Gmail gatekeeper, Live GUI, Replay Viewer) - **LOCKED as requirements; NOT IMPLEMENTED.**
+- [ ] **Phase 3 — Deterministic Core Implementation** - next authorized work; **not started**.
 - [ ] Collaborator (Rawey7) access - pending explicit instruction.
 
-_No game logic, JSON schema, or protocol code has been implemented. Stage 1A is
-specification-only._
+_No game logic, JSON schema, protocol, strategy, or reporting code has been
+implemented. Phases 1 and 2 are specification and requirements only; all seven
+PRDs are APPROVED — PHASE 2 LOCKED with implementation status NOT STARTED._
