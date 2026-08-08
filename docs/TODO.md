@@ -35,9 +35,12 @@
 - [x] Stage 2C - PRD-05…07 authored in full (reviewed); 91/91 requirements have exactly one primary owner.
 - [x] Stage 2-CLOSE - **PASS**; CLOSE-F1 + CLOSE-F2 resolved with **no artifact-contract change** (matrix stays **75**); **all 7 PRDs APPROVED — PHASE 2 LOCKED**; implementation **NOT STARTED**. Committed + pushed (`14dafed`); CI green.
 - [x] Stage 2-CLOSE.1 - tracking-status repair of this file (duplicate heading + stale Pending entries); no specification, architecture, PRD, or contract change.
+- [x] Stage 2-CLOSE.2 - tracking-status deduplication of this file (the next-phase entry is recorded exactly once, under Pending only); no specification, architecture, PRD, or contract change.
 
 ## In progress
-- [ ] Supervising review of the Phase-2 closure and tracking-repair commits; then **Phase 3 — Deterministic Core Implementation** (next authorized work; **not started**).
+**Phase 2 — PRD and architecture — is fully complete.** No implementation
+stage is currently active. Phase 3 is the next authorized phase and has not
+started; it is tracked once, under Pending.
 
 ## Pending
 - [ ] Branch protection / rulesets - **blocked**: unavailable on the current GitHub
@@ -54,7 +57,7 @@
 - [x] PRD-05 public network / tunnel / league - **LOCKED as requirements; NOT IMPLEMENTED.**
 - [x] PRD-06 security & cryptography (commit-reveal, Step-0) - **LOCKED as requirements; NOT IMPLEMENTED.**
 - [x] PRD-07 reporting, GUI, replay (Gmail gatekeeper, Live GUI, Replay Viewer) - **LOCKED as requirements; NOT IMPLEMENTED.**
-- [ ] **Phase 3 — Deterministic Core Implementation** - next authorized work; **not started**.
+- [ ] **Phase 3 — Deterministic Core Implementation** — **NEXT AUTHORIZED; NOT STARTED.**
 - [ ] Collaborator (Rawey7) access - pending explicit instruction.
 
 _No game logic, JSON schema, protocol, strategy, or reporting code has been
