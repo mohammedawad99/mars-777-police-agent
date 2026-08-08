@@ -38,8 +38,40 @@ rules vs. scoring), and that seam is named below.
 | `app.ports` | **Abstract port definitions only** (`API_BOUNDARIES.md`) | stdlib typing **+ immutable `domain` value types, as type references only** | `protocol`, `infra`, any adapter, network/FastMCP/HTTP libraries, `app` implementation modules, domain services with side effects — everything else | none | — |
 | `app.strategy_api` | `Observation` in → `ProposedAction` out contract | domain.observation | infra, protocol | none | no legal action |
 | `app.peer_messages` *(4E-R1)* | **Immutable internal peer-protocol semantic contracts** — the values application control flow consumes and produces (state-changing inbound events reach the Turn Executor) and that `protocol.messages` maps to/from; **never** wire JSON | stdlib typing + immutable `domain` value types | `protocol`, `infra`, any adapter, FastMCP/network libraries, wire serialization, artifact storage, GUI, replay, reporting | none | invalid message construction |
+| `app.protocol_values` *(4F-R1)* | **Immutable shared protocol semantic value representations** — the primitives that peer-message contracts and outer protocol implementations must agree on (e.g. a SHA-256 digest result, a final-audit verdict). Representation only: it never computes, serializes or knows what was hashed | pure stdlib **value-definition and validation primitives** only (`typing`, `dataclasses`, `enum`) | `protocol`, `infra`, any adapter, `hashlib`/`hmac`/`cryptography`/`secrets`/`random`, FastMCP/network libraries, I/O, JSON or any wire/artifact serialization, cryptographic computation, GUI, replay, reporting — everything else | none | invalid value representation |
 
 **Test boundary:** state-machine and contract tests with fake ports.
+
+> **Stage 4F-R1 reconciliation (implementation-discovered, internal).** Stage 4F found
+> that a SHA-256 digest result is needed by `app.peer_messages` (messages carry
+> `H_commit`, `config_sha256`, `result_sha256`), by `protocol.commitment` (which
+> produces `H_commit`) and by `protocol.config_lock` (which produces `config_sha256`) —
+> with no module reachable by all three — and stopped rather than duplicate the
+> validator or invent a `types.py`. Two corrections resolve it. First, the blocker
+> analysis was **too broad**: `infra.logger`, `infra.artifacts` and `infra.reporter` are
+> **mappers**, not semantic consumers — they serialize whatever structured record they
+> are handed, which already reaches them through `app.ports` (LoggerPort), so `infra`
+> needs no new dependency and `DEPENDENCY_RULES.md` is unchanged. Second, the genuine
+> consumers are satisfied by one inner contract module, `app.protocol_values`, plus a
+> narrow type-reference dependency for exactly the two protocol producers — the same
+> outer→inner pattern Stage 4E-R1 already authorized for `protocol.messages` →
+> `app.peer_messages`. `app.protocol_values` holds representations only: it performs no
+> hashing, no canonicalization (that stays `protocol.canonical`) and knows nothing about
+> which core was hashed. State owned: none. No requirement, PRD, JDEC, NDEC, INV,
+> Conflict-Register or FIELD_MATRIX entry changes.
+>
+> **Stage 4F-R1-FIX1.** Two wording defects in the above were corrected. (i) The two
+> protocol rows first said "type references only" — wording borrowed from `app.ports`,
+> where annotation-only is genuinely enough. It is **not** enough here:
+> `protocol.commitment` and `protocol.config_lock` **produce** these values, so they
+> must construct and return them at runtime. Their permission now says so, and it still
+> reaches no other application module. (ii) `app.protocol_values` first allowed only
+> "stdlib typing", which could not support defining an immutable validated value at all;
+> it now allows the pure stdlib **value-definition and validation primitives**
+> (`typing`, `dataclasses`, `enum`) and nothing more — `hashlib`, `hmac`,
+> `cryptography`, `secrets`, `random`, I/O and every form of serialization stay
+> forbidden. Sibling note, reported not changed: `app.peer_messages` carries the same
+> "stdlib typing" phrasing and will need the same widening when Stage 4E resumes.
 
 > **Stage 4E-R1 reconciliation (implementation-discovered, internal).** Stage 4E
 > tried to build the internal semantic peer-message values inside
@@ -76,9 +108,9 @@ rules vs. scoring), and that seam is named below.
 | Module | Responsibility | Allowed deps | Forbidden deps | State owned | Failure modes |
 |---|---|---|---|---|---|
 | `protocol.canonical` | Canonical JSON bytes (sorted keys, `(",",":")`, UTF-8, NFC, LF, no trailing NL) — JDEC-002 | stdlib | domain mutation | none | non-canonical input |
-| `protocol.commitment` | `H_commit` over the 8-field sealed record; verify at audit | canonical, domain | transport | pending nonce (secret) | mismatch ⇒ TAMPERED |
+| `protocol.commitment` | `H_commit` over the 8-field sealed record; verify at audit | canonical, domain, `app.protocol_values` (**runtime use**: constructs and returns the value contracts it produces) | transport | pending nonce (secret) | mismatch ⇒ TAMPERED |
 | `protocol.keyed_auth` | Keyed authentication (HMAC-SHA256 default) over `context‖core`; `step0`/`config` domain separation | canonical | transport, logging of keys | none (**never key bytes**) | bad tag / unknown `key_id` |
-| `protocol.config_lock` | Canonical config, `config_sha256`, auth exchange, immutable lock | canonical, keyed_auth, domain.config_model | strategy | locked config handle | hash/tag mismatch |
+| `protocol.config_lock` | Canonical config, `config_sha256`, auth exchange, immutable lock | canonical, keyed_auth, domain.config_model, `app.protocol_values` (**runtime use**: constructs and returns the value contracts it produces) | strategy | locked config handle | hash/tag mismatch |
 | `protocol.messages` | Wire schema validation + mapping wire bytes ⇄ `app.peer_messages` semantic values | canonical, domain, `app.peer_messages` (type references only) | infra transport | none | malformed JSON |
 | `protocol.declaration` | Step-0 declaration assembly + `step0_auth` envelope | canonical, keyed_auth | transport | none | missing field |
 | `protocol.profiles` *(2A-R2)* | Negotiated `AuthProfile` / `CommitmentCodec` / `ResultProfile` selection; frozen at config lock | canonical | infra transport | active profile set | unknown/weakening profile |
@@ -109,7 +141,7 @@ rules vs. scoring), and that seam is named below.
 ## Cross-cutting rules
 
 - `domain` imports **nothing** from `app`, `protocol`, or `infra`.
-- `app` imports `domain` and its own contract modules (`app.ports`, `app.peer_messages`) only — **never** `protocol`, `infra` or a concrete adapter.
+- `app` imports `domain` and its own contract modules (`app.ports`, `app.peer_messages`, `app.protocol_values`) only — **never** `protocol`, `infra` or a concrete adapter.
 - Strategy plug-ins import `app.strategy_api` + `domain` value types **only**.
 - `infra.replay` imports **artifacts**, never `app`/`domain` live state.
 - `infra.reporter` is **write-only** with respect to game state.

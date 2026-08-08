@@ -50,6 +50,10 @@
 | 4E | Protocol semantic message contracts foundation - tests first (BLOCKED before code; two blockers) | Referenced |
 | 4E-R1 | Semantic message architecture / turn-cursor reconciliation: app.peer_messages home, FR-044 scope, 10-family inventory | Referenced |
 | 4E-R1-FIX1 | Turn-cursor consistency + sub-game-control identity reconciliation | Referenced |
+| 4F | Protocol value representation contracts foundation - audit first (BLOCKED before code) | Referenced |
+| 4F-R1 | Shared protocol value architecture / representation reconciliation | Referenced |
+| 4F-R1-FIX1 | Runtime value-consumer dependency + readiness-accounting hardening | Referenced |
+| 4F-R1-CLOSE | Stage-4F-R1 final contract/accounting audit, tracking, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

@@ -201,3 +201,27 @@
   also caught an omission in the project's own earlier planning: the peer-visible
   family count is **10**, not 9; Event 8 "Move validation" transmits accept/reject and
   had been dropped. Both the blocked stage and the miscount are kept in the record.
+- **Stage 4F** audited nine value representations and stopped before code again, this
+  time on a subtler problem: two representations were genuinely ready, but there was
+  nowhere legal to put them. A SHA-256 digest is produced by `protocol.commitment` and
+  `protocol.config_lock` and carried by `app.peer_messages`, and no module in the frozen
+  table was reachable by all three. The easy answers were both wrong - duplicating the
+  validator per layer would have created the semantic drift the anti-duplication rule
+  exists to prevent, and a `types.py` would have been the junk drawer the stage brief
+  explicitly forbade. **Stage 4F-R1** fixed it by first correcting the project's own
+  analysis: `infra.logger`, `infra.artifacts` and `infra.reporter` had been listed as
+  consumers, but they are **mappers** - they serialize whatever structured record they
+  are handed, and that record already reaches them through `app.ports`. With the real
+  consumer set down to three, one inner contract module plus two narrow type-reference
+  dependencies sufficed, reusing the pattern Stage 4E-R1 had already established. Two
+  representation defects surfaced in the same review. The digest had been called
+  ready while its case policy was called unresolved - a contradiction in one report;
+  resolving it meant separating **algorithm** (SOURCE), **encoding** (project-locked
+  hex), **length** (entailed by SHA-256) and **case** (genuinely free), then adopting
+  lowercase as a labelled PROJECT-CONTRACT that **rejects** uppercase rather than
+  silently rewriting it. And `RESULT_CONTRACT.md` turned out to define
+  `mutual_agreement` as a bool in its field table, scoring rule and example while its
+  approval-core prose treated it as an object whose `.sha256` duplicated the separate
+  `result_sha256` - the prose was the stale side, and correcting it kept the locked
+  11-field result count intact. Seven representations remain deferred rather than
+  guessed.

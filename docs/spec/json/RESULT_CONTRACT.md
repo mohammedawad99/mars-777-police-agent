@@ -138,14 +138,20 @@ shown to require it — never weakening any mandatory semantic. See
 `cumulative` · `total_tokens` · `timestamp`.
 
 **EXCLUDED from the core (must not be in the bytes hashed):**
-1. **`result_sha256` itself** and **`mutual_agreement.sha256`** — the hash field can
-   never be part of the bytes from which its own value is computed;
-2. `mutual_agreement.confirmed` (agreement *state*, recorded after the hash is agreed);
+1. **`result_sha256` itself** — the hash field can never be part of the bytes from
+   which its own value is computed;
+2. **`mutual_agreement`** (agreement *state*, recorded after the hash is agreed);
 3. `reported_by` and any reporter-local presentation metadata outside the approval core.
 
 **Agreement flow.** Both peers independently build the same canonical approval core,
-compute `result_sha256`, exchange it, and only then set
-`mutual_agreement.sha256 = result_sha256` and `mutual_agreement.confirmed = true`.
+compute `result_sha256`, exchange it, and only then — with both values equal — set
+`mutual_agreement = true`. *(Stage 4F-R1 internal consistency correction: this section
+previously wrote `mutual_agreement.sha256` and `mutual_agreement.confirmed`, treating
+the field as an object, while the field table, the scoring rule and the JSON example
+all define `mutual_agreement` as a **bool** beside the separate top-level
+`result_sha256`. The object form also duplicated `result_sha256` inside itself. The
+exclusion semantics are unchanged: neither the approval hash nor the agreement state
+may sit inside the bytes it approves.)*
 Unequal hashes, or a report missing from either side, ⇒ **0 to both** (C-09, INV-11).
 
 **NON-SELF-REFERENTIAL: YES.** This is the same discipline already applied to

@@ -192,4 +192,10 @@ family inventory is **10** (Stage-4E audit restored Event 8, "Move validation";
 earlier planning said 9), and PRD02-FR-044's turn cursor is **`(sub_game, step)`**
 for turn-scoped messages, with the phase check receiver-side under FR-062/STATE-003
 (Stage 4E-R1). Both are architecture/PRD-consistency counts and change no
-requirement, modality, Appendix-E/F value or register entry.
+requirement, modality, Appendix-E/F value or register entry. Stage 4F-R1 adds `app.protocol_values` as the
+shared home for protocol semantic primitives and records the internal digest
+representation (lowercase 64-hex PROJECT-CONTRACT), the closed `Verified OK`/`TAMPERED`
+audit verdict, and the `mutual_agreement` bool correction — all internal contract
+consistency, changing no requirement, register or FIELD_MATRIX count. Stage-4F value-blocker readiness accounts at
+category level as **2 ready / 6 deferred / 1 reconciled = 9**; the six deferred
+categories expand to nine unresolved sub-items. No value type is implemented.
