@@ -1,27 +1,14 @@
-"""The frozen protocol phase machine.
+"""The frozen protocol phase machine and its transition evidence.
 
-`app.state_machine` is the sole authority on what may happen next
-(`MODULE_BOUNDARIES.md`), and it owns exactly one fact: the current phase
-(`STATE_OWNERSHIP.md` - "State-machine current state | app.state_machine").
-Everything else stays where it already lives: the step count in `domain.truth`,
-the sub-game index in `app.orchestrator`, the barrier facts on the board.
-
-Stage 4A enforces phase ORDER only. COMMIT_SENT, ACKNOWLEDGED, REVEAL and
-FINAL_AUDIT are lifecycle labels; none of the cryptography, message bodies,
-serialization or transport they will later carry exists yet, and this module
-performs no I/O and holds no game state. Conditional branches are decided by
-the caller, which supplies the target phase; this module validates only whether
-that step is legal, never the facts behind the choice.
-
-The graph in ``_ALLOWED`` is transcribed from the "Allowed next" column of
-`STATE_MACHINE.md` §2 and is the single authoritative representation - the
-transition check reads it rather than re-encoding the graph in branching logic.
-
-One edge is an implementation-discovered architecture correction (Stage
-4A-FIX1): ``TECHNICAL_LOSS -> SUBGAME_COMPLETE``. The same table already makes
-"technical loss" an entry condition of SUBGAME_COMPLETE and tells TECHNICAL_LOSS
-to "proceed per series rules", and R5 names only TAMPERED and FAILED as never
-returning to play. TAMPERED and FAILED stay absorbing, untouched.
+Sole authority on what may happen next; owns one fact, the current phase
+(`MODULE_BOUNDARIES.md`, `STATE_OWNERSHIP.md`). Phase ORDER only: COMMIT_SENT,
+ACKNOWLEDGED, REVEAL and FINAL_AUDIT are labels with no cryptography, message
+body or transport, and the caller supplies the target phase. Per R7 and
+`PROTOCOL_TIMELINE.md` event 10 - a "phase transition", persistence and hashing
+both "-" - evidence is the two phases and nothing else; `infra.logger` owns
+persistence and the official log artifact is a separate contract. ``_ALLOWED``
+is the single authoritative graph from `STATE_MACHINE.md` §2, including the
+Stage-4A-FIX1 correction ``TECHNICAL_LOSS -> SUBGAME_COMPLETE``.
 """
 
 from dataclasses import dataclass
@@ -30,12 +17,7 @@ from typing import Final
 
 
 class IllegalTransitionError(Exception):
-    """Raised when a requested phase step is not in the frozen graph.
-
-    Outer layers map this onto the locked codes: an out-of-order inbound event
-    is ``E-PROTO-STALE``, an internal misuse is ``E-LOCAL-DEFECT``
-    (`ERROR_MODEL.md`). The message carries only the two phase names.
-    """
+    """Illegal phase step; outer layers map it to E-PROTO-STALE / E-LOCAL-DEFECT."""
 
 
 class ProtocolPhase(StrEnum):
@@ -63,8 +45,6 @@ class ProtocolPhase(StrEnum):
 
 _P: Final = ProtocolPhase
 
-"""The 15 normal lifecycle phases, in `STATE_MACHINE.md` §2 table order."""
-
 _ALLOWED: Final[dict[ProtocolPhase, tuple[ProtocolPhase, ...]]] = {
     _P.BOOT: (_P.STEP0_NEGOTIATION, _P.FAILED),
     _P.STEP0_NEGOTIATION: (_P.CONFIG_NEGOTIATION, _P.FAILED),
@@ -88,14 +68,7 @@ _ALLOWED: Final[dict[ProtocolPhase, tuple[ProtocolPhase, ...]]] = {
 
 
 FAULT_PHASES: Final[tuple[ProtocolPhase, ...]] = (_P.FAILED, _P.TAMPERED, _P.TECHNICAL_LOSS)
-"""The 3 phases listed as "terminal / fault" in `STATE_MACHINE.md` §1.
-
-Fault identity and the graph property are independent. REPORT_READY is a
-*normal* phase that is absorbing, and TECHNICAL_LOSS is a fault that is **not**
-absorbing: it hands the sub-game to SUBGAME_COMPLETE. Use
-:attr:`ProtocolMachine.is_absorbing` for "has no successor"; this tuple means
-"is a fault".
-"""
+"""The 3 "terminal / fault" phases; independent of :attr:`ProtocolMachine.is_absorbing`."""
 
 NORMAL_PHASES: Final[tuple[ProtocolPhase, ...]] = tuple(
     phase for phase in _ALLOWED if phase not in FAULT_PHASES
@@ -103,24 +76,59 @@ NORMAL_PHASES: Final[tuple[ProtocolPhase, ...]] = tuple(
 """The 15 normal lifecycle phases, in `STATE_MACHINE.md` §2 table order."""
 
 
+def _require_phase(value: object, name: str) -> ProtocolPhase:
+    if not isinstance(value, ProtocolPhase):
+        raise IllegalTransitionError(f"{name} must be a ProtocolPhase, got {type(value).__name__}")
+    return value
+
+
+@dataclass(frozen=True, slots=True)
+class TransitionEvidence:
+    """Replayable record of one SUCCESSFUL transition: the two phases only.
+
+    Valid by construction - the pair must be an edge of ``_ALLOWED``, the sole
+    graph - since a record of a forbidden step (R1, R5) is untruthful. Validity
+    is not authenticity: a well-formed edge is never proof that it occurred.
+    """
+
+    source_phase: ProtocolPhase
+    target_phase: ProtocolPhase
+
+    def __post_init__(self) -> None:
+        source = _require_phase(self.source_phase, "source_phase")
+        target = _require_phase(self.target_phase, "target_phase")
+        if target not in _ALLOWED[source]:
+            raise IllegalTransitionError(
+                f"illegal transition {source.value} -> {target.value}",
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class TransitionResult:
+    """A successful transition: the new machine and its evidence."""
+
+    machine: "ProtocolMachine"
+    evidence: TransitionEvidence
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.evidence, TransitionEvidence):
+            raise IllegalTransitionError("result needs a TransitionEvidence")
+        if self.evidence.target_phase is not self.machine.phase:
+            raise IllegalTransitionError(
+                f"evidence target {self.evidence.target_phase.value} does not match"
+                f" machine phase {self.machine.phase.value}",
+            )
+
+
 @dataclass(frozen=True, slots=True)
 class ProtocolMachine:
-    """An immutable holder of the current phase.
-
-    The constructor is a **trusted snapshot primitive**: it accepts any valid
-    phase so a caller that already holds one can wrap it. It is *not* the
-    untrusted runtime API - normal bootstrap goes through :meth:`start`, which
-    begins at BOOT ("entry condition: process start"), and every later phase is
-    reached only through :meth:`advance`.
-    """
+    """Immutable current phase; the constructor is a trusted snapshot primitive,
+    not the untrusted runtime API - normal bootstrap is :meth:`start` at BOOT."""
 
     phase: ProtocolPhase
 
     def __post_init__(self) -> None:
-        if not isinstance(self.phase, ProtocolPhase):
-            raise IllegalTransitionError(
-                f"phase must be a ProtocolPhase, got {type(self.phase).__name__}",
-            )
+        _require_phase(self.phase, "phase")
 
     @classmethod
     def start(cls) -> "ProtocolMachine":
@@ -136,14 +144,7 @@ class ProtocolMachine:
         """Return the legal successors, in the frozen table's order."""
         return _ALLOWED[self.phase]
 
-    def advance(self, target: ProtocolPhase) -> "ProtocolMachine":
-        """Return a new machine in *target*, or raise if that step is illegal."""
-        if not isinstance(target, ProtocolPhase):
-            raise IllegalTransitionError(
-                f"target must be a ProtocolPhase, got {type(target).__name__}",
-            )
-        if target not in _ALLOWED[self.phase]:
-            raise IllegalTransitionError(
-                f"illegal transition {self.phase.value} -> {target.value}",
-            )
-        return ProtocolMachine(target)
+    def advance(self, target: ProtocolPhase) -> TransitionResult:
+        """New machine plus evidence; legality decided once, in TransitionEvidence."""
+        evidence = TransitionEvidence(self.phase, _require_phase(target, "target"))
+        return TransitionResult(ProtocolMachine(evidence.target_phase), evidence)

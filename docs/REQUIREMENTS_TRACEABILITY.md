@@ -172,8 +172,12 @@ PRD-07 24 · EXTERNAL/SUBMISSION 12. Unmapped 0; duplicate primary 0. See
 `prd/PRD_01_07_CROSSWALK.md`. **PRD-01…07 are APPROVED — PHASE 2 LOCKED; nothing is
 IMPLEMENTED or VERIFIED.**
 
-**Phase-3 progress (current):** PRD-01 and PRD-02 are **IN PROGRESS** — the
+**Phase-3/4 progress (current):** PRD-01 and PRD-02 are **IN PROGRESS** — the
 deterministic domain (Stages 3A/3B) and the local turn foundation (Stage 3C) are
 implemented and tested, together with the local protocol phase machine
-(Stage 4A, `STATE_MACHINE.md` graph enforcement only); PRD-03…07 remain
-**NOT STARTED**.
+(Stage 4A, `STATE_MACHINE.md` graph enforcement only) and its transition evidence
+(Stage 4B, R7 as scoped by `PROTOCOL_TIMELINE.md` event 10 — `source_phase` +
+`target_phase` only, valid by construction, phase-path replay, **no** authenticity,
+persistence or artifact claim); PRD-03…07 remain **NOT STARTED**. `FIELD_MATRIX`
+is unchanged at **75** — transition evidence is an internal application value and
+defines no artifact field.

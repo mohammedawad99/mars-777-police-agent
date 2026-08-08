@@ -20,7 +20,7 @@ TURN = (P.TURN_DECISION, P.COMMIT_SENT, P.ACKNOWLEDGED, P.REVEAL, P.VALIDATING, 
 def _walk(start: ProtocolPhase, path: tuple[ProtocolPhase, ...]) -> ProtocolMachine:
     machine = ProtocolMachine(start)
     for phase in path:
-        machine = machine.advance(phase)
+        machine = machine.advance(phase).machine
     return machine
 
 
@@ -59,7 +59,7 @@ def test_the_documented_sub_game_loop_returns_to_ready() -> None:
 
 def test_a_sub_game_may_complete_directly_from_ready() -> None:
     # Frozen table: READY -> TURN_DECISION, SUBGAME_COMPLETE.
-    assert ProtocolMachine(P.READY).advance(P.SUBGAME_COMPLETE).phase is P.SUBGAME_COMPLETE
+    assert ProtocolMachine(P.READY).advance(P.SUBGAME_COMPLETE).machine.phase is P.SUBGAME_COMPLETE
 
 
 def test_no_phase_skipping_inside_the_turn() -> None:

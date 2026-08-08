@@ -24,7 +24,7 @@ PROBE = (
     "from mars777_police.app.state_machine import ProtocolMachine, ProtocolPhase as P;"
     "m=ProtocolMachine(P.BOOT);"
     "print([p.value for p in m.allowed_next()],"
-    " m.advance(P.STEP0_NEGOTIATION).phase.value)"
+    " m.advance(P.STEP0_NEGOTIATION).machine.phase.value)"
 )
 
 
@@ -86,7 +86,7 @@ def test_failure_states_are_entered_only_from_documented_sources() -> None:
     for fault, sources in allowed.items():
         for phase in ProtocolPhase:
             if phase in sources:
-                assert ProtocolMachine(phase).advance(fault).phase is fault
+                assert ProtocolMachine(phase).advance(fault).machine.phase is fault
             else:
                 with pytest.raises(IllegalTransitionError):
                     ProtocolMachine(phase).advance(fault)

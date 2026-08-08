@@ -52,17 +52,24 @@
 - [x] Stage 4A - local protocol **state machine** foundation (tests-first): the frozen 18-phase graph (15 normal + 3 fault) with **31** legal directed edges, exhaustively verified over all 324 ordered pairs; `ProtocolMachine` owns **only** the current phase; normal bootstrap via `ProtocolMachine.start()` at BOOT. **Supervising review PASS.**
 - [x] Stage 4A-FIX1 - **TECHNICAL_LOSS lifecycle correction**: the frozen table made "technical loss" an entry condition of SUBGAME_COMPLETE and told the phase to "proceed per series rules", while R5 names only TAMPERED and FAILED as never returning to play - yet it listed no successor. One edge added, `TECHNICAL_LOSS -> SUBGAME_COMPLETE`, recorded in `STATE_MACHINE.md` §4 as an implementation-discovered architecture correction. TAMPERED and FAILED stay absorbing.
 - [x] Stage 4A-CLOSE - final graph/ownership audit, bootstrap guard, tracking, commit + push + CI.
+- [x] Stage 4B - protocol event / **transition evidence** foundation (tests-first): every successful `advance()` now returns one immutable `TransitionResult` carrying a `TransitionEvidence` of exactly `source_phase` + `target_phase`, per R7 and `PROTOCOL_TIMELINE.md` event 10 (transmitted "phase transition", persisted "—", hashed "—"). No transition-signal vocabulary is frozen anywhere, so **no event enum was invented**; there is no evidence-less transition path and no compatibility shim. **Supervising review PASS.**
+- [x] Stage 4B-FIX1 - supervising corrections: (a) `TransitionEvidence` is now **valid by construction** - the pair must be an edge of the single `_ALLOWED` graph, so a record of a step R1/R5 forbid (e.g. `COMMIT_SENT -> REVEAL`, `TAMPERED -> SUBGAME_COMPLETE`) cannot be built; 31 legal pairs constructible, 293 illegal pairs and all 18 self-loops rejected. The replay corruption boundary moved forward to the constructor and negative replay coverage was **extended** (duplicated record, out-of-position record) rather than weakened. (b) A reported "153-line" file was reconciled as a **cross-repo semantic-diff count**, not physical LOC; the repository-wide audit proves max **150** and **0** files over the limit.
+- [x] Stage 4B-CLOSE - final evidence/graph invariant audit, repository-wide LOC proof, tracking finalization, commit + push + CI.
 
 ## In progress
 **Phase 2 — PRD and architecture — is fully complete.** **Phases 3 and 4 are under
 way:** the deterministic game-rule layer (3A/3B), the local turn-execution step
-(3C) and the local protocol phase machine (4A) exist and are tested. The phase
-machine enforces order only — the phases named COMMIT_SENT, ACKNOWLEDGED, REVEAL
-and FINAL_AUDIT carry no cryptography, message bodies or transport, and the
-machine never applies a local effect. **Not implemented:** transition evidence
-objects, orchestrator, application ports, FastMCP, networking, cryptography,
-strategy, belief, GUI, replay and reporting. PRD-01 and PRD-02 remain
-**IN PROGRESS**; the next stage is tracked once, under Pending.
+(3C), the local protocol phase machine (4A) and its transition evidence (4B)
+exist and are tested. The phase machine enforces order only — the phases named
+COMMIT_SENT, ACKNOWLEDGED, REVEAL and FINAL_AUDIT carry no cryptography, message
+bodies or transport, and the machine never applies a local effect. Transition
+evidence is **structurally valid, not authenticated**: it supports ordered
+**phase-path** replay only, never game-state, movement, barrier, score, scent,
+commitment, nonce, network-message, official-artifact or complete-game replay.
+**Not implemented:** orchestrator, application ports, FastMCP, networking,
+cryptography, logger/replay persistence, JSON artifacts, strategy, belief, GUI
+and reporting. PRD-01 and PRD-02 remain **IN PROGRESS**; the next stage is
+tracked once, under Pending.
 ## Pending
 - [ ] Branch protection / rulesets - **blocked**: unavailable on the current GitHub
       plan for private repos (Stage 0D). Needs Pro upgrade, org, or public-at-submission.
@@ -82,7 +89,8 @@ strategy, belief, GUI, replay and reporting. PRD-01 and PRD-02 remain
 - [x] **Stage 3B — Deterministic Game Semantics** — **CLOSED** (barriers, capture, terminal/survival, scoring, bounded scent physics).
 - [x] **Stage 3C — Local Application / Turn Orchestration Foundation** — **CLOSED.**
 - [x] **Stage 4A — Local Protocol State Machine Foundation** — **CLOSED.**
-- [ ] **Stage 4B — Protocol Event / Transition Evidence Foundation** — **NEXT AUTHORIZED; NOT STARTED.** Planned: typed lifecycle transition signals/events; deterministic evidence/result objects per transition; caller-supplied guard facts at the frozen branch points; replayable local transition evidence; a clean seam for later adapters. **Not** in 4B: FastMCP, network I/O, public tunnel, SHA/HMAC/signatures, nonces, canonical sealed commitment records or real commit/reveal transport.
+- [x] **Stage 4B — Protocol Event / Transition Evidence Foundation** — **CLOSED** (deterministic per-transition evidence, valid by construction against the single frozen graph; phase-path replay only). No event enum was invented: no transition-signal vocabulary is frozen in any source or architecture document.
+- [ ] **Stage 4C — Local Orchestrator / Protocol Guard Foundation** — **NEXT AUTHORIZED; NOT STARTED.** Planned: introduce the frozen `app.orchestrator` responsibility; own the sub-game index/cursor where the architecture assigns it; consume `TransitionResult`/evidence; coordinate caller-supplied branch/guard facts without duplicating their authoritative subsystem state; establish deterministic series/sub-game control flow; prepare the seam for `LocalTurnService` and later protocol adapters. **Not** in 4C unless separately authorized: FastMCP/network I/O, commitment hashing, nonce generation, signatures/HMAC, canonical sealed payloads, official artifact persistence, strategy, GUI/replay/reporting.
 - [ ] Collaborator (Rawey7) access - pending explicit instruction.
 
 _Phases 1 and 2 are specification and requirements only; all seven PRDs remain

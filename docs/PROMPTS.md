@@ -38,6 +38,9 @@
 | 4A | Local protocol state machine foundation - tests first (18 phases, frozen graph) | Referenced |
 | 4A-FIX1 | Supervising correction: TECHNICAL_LOSS lifecycle reconciled with series continuation | Referenced |
 | 4A-CLOSE | Stage-4A final graph/ownership audit, tracking, commit, push, CI | Referenced |
+| 4B | Protocol event / transition evidence foundation - tests first (per-transition evidence, no invented event enum) | Referenced |
+| 4B-FIX1 | Supervising corrections: transition evidence valid by construction against the single frozen graph; repository-wide physical-LOC reconciliation | Referenced |
+| 4B-CLOSE | Stage-4B final evidence/graph invariant audit, LOC proof, tracking, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

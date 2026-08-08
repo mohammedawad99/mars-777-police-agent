@@ -107,3 +107,26 @@
   Primary source agrees: Ch 3 Table 2 lists technical loss as a **sub-game** end event
   scored 0/0 beside capture and survival. TAMPERED keeps its severe, non-repairable
   status. PRD-06 remains **NOT STARTED** despite the crypto-named phases.
+- **Stage 4B** added transition evidence, tests-first. The instructive part was what
+  the stage did **not** build. The prompt allowed typed transition signals, but an
+  audit of every source and architecture document found **no frozen transition-signal
+  vocabulary** - `PROTOCOL_TIMELINE.md`'s 15 numbered events are protocol-timeline
+  entries, not state-machine signals - so inventing a 31-value event enum would have
+  created a second representation of a graph that already exists once. The target
+  phase stayed the typed request. Likewise, the per-state Evidence column names
+  artifacts, hashes and log entries, but event 10 fixes the *state machine's* share as
+  literally "phase transition" with persistence and hashing both "—", so evidence is
+  the two phases and nothing else. Supervising review then raised two close-critical
+  points. **Stage 4B-FIX1** answered the first by making evidence **valid by
+  construction**: R7 records a *successful* transition and R1/R5 forbid the skips, so
+  a value naming a non-edge could never be truthful. Validation reuses `_ALLOWED`
+  directly - one dict literal, one enum class in the module. That deleted the old
+  negative test's subject, and the honest fix was to move the corruption boundary
+  forward to the constructor and **add** replay negatives (duplicated record,
+  out-of-position record) rather than relax the constructor to keep an obsolete test
+  alive. The second point was a reported contradiction between a "153-line" file and
+  "0 files over 150"; it resolved as a **units error in the report** - 153 was the
+  cross-repo semantic-diff count, physical LOC was 150 - and a repository-wide sweep
+  of all 48 `*.py` files per repo proved max 150 and 0 over. Throughout, the honest
+  claim was kept narrow: structural validity is not authenticity, and phase replay is
+  not game replay. PRD-06 and PRD-07 remain **NOT STARTED**.

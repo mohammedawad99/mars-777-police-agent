@@ -30,7 +30,7 @@ def test_technical_loss_is_a_fault_but_not_absorbing() -> None:
 
 def test_technical_loss_permits_only_the_sub_game_boundary() -> None:
     machine = ProtocolMachine(P.TECHNICAL_LOSS)
-    assert machine.advance(P.SUBGAME_COMPLETE).phase is P.SUBGAME_COMPLETE
+    assert machine.advance(P.SUBGAME_COMPLETE).machine.phase is P.SUBGAME_COMPLETE
     for target in ProtocolPhase:
         if target is P.SUBGAME_COMPLETE:
             continue
@@ -40,15 +40,15 @@ def test_technical_loss_permits_only_the_sub_game_boundary() -> None:
 
 
 def test_technical_loss_continues_into_the_next_sub_game() -> None:
-    machine = ProtocolMachine(P.COMMIT_SENT).advance(P.TECHNICAL_LOSS)
-    machine = machine.advance(P.SUBGAME_COMPLETE)
-    assert machine.advance(P.READY).phase is P.READY
+    machine = ProtocolMachine(P.COMMIT_SENT).advance(P.TECHNICAL_LOSS).machine
+    machine = machine.advance(P.SUBGAME_COMPLETE).machine
+    assert machine.advance(P.READY).machine.phase is P.READY
 
 
 def test_technical_loss_on_the_final_sub_game_reaches_the_report() -> None:
-    machine = ProtocolMachine(P.VALIDATING).advance(P.TECHNICAL_LOSS)
+    machine = ProtocolMachine(P.VALIDATING).advance(P.TECHNICAL_LOSS).machine
     for phase in (P.SUBGAME_COMPLETE, P.SERIES_COMPLETE, P.FINAL_AUDIT, P.REPORT_READY):
-        machine = machine.advance(phase)
+        machine = machine.advance(phase).machine
     assert machine.phase is P.REPORT_READY
     assert machine.is_absorbing
 

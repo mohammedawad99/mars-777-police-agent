@@ -56,7 +56,7 @@ def test_every_documented_edge_succeeds() -> None:
     for source, targets in EXPECTED_EDGES.items():
         for target in targets:
             result = ProtocolMachine(P(source)).advance(P(target))
-            assert result.phase is P(target)
+            assert result.machine.phase is P(target)
 
 
 def test_all_pairs_success_exactly_on_the_frozen_edge_set() -> None:
@@ -66,7 +66,7 @@ def test_all_pairs_success_exactly_on_the_frozen_edge_set() -> None:
         machine = ProtocolMachine(source)
         legal = target.value in EXPECTED_EDGES[source.value]
         if legal:
-            assert machine.advance(target).phase is target
+            assert machine.advance(target).machine.phase is target
             allowed += 1
         else:
             with pytest.raises(IllegalTransitionError):
