@@ -1,10 +1,11 @@
 """Local application layer.
 
 Implemented so far: the local **effect step** of a turn (Stage 3C), the frozen
-protocol **phase machine** (Stage 4A), its **transition evidence** (Stage 4B)
-and the local **series orchestrator** (Stage 4C). Everything a peer exchange
-would add is deliberately absent - no protocol messages, no commit/acknowledge/
-reveal, no public network, no asynchronous orchestration and no cryptography.
+protocol **phase machine** (Stage 4A), its **transition evidence** (Stage 4B),
+the local **series orchestrator** (Stage 4C) and the shared **protocol value
+representations** (Stage 4F). Everything a peer exchange would add is
+deliberately absent - no protocol messages, no commit/acknowledge/reveal, no
+public network, no asynchronous orchestration and no cryptography.
 
 Three boundaries are deliberate and load-bearing:
 
@@ -34,6 +35,7 @@ from .orchestrator import (
     LocalOrchestrator,
     OrchestratorResult,
 )
+from .protocol_values import FinalAuditVerdict, InvalidDigestError, Sha256Digest
 from .state_machine import (
     FAULT_PHASES,
     NORMAL_PHASES,
@@ -62,9 +64,11 @@ __all__ = [
     "ActionsExhaustedError",
     "ApplicationError",
     "BarrierAction",
+    "FinalAuditVerdict",
     "IllegalSubGameBranchError",
     "IllegalTransitionError",
     "InvalidActionError",
+    "InvalidDigestError",
     "LocalActionResult",
     "LocalOrchestrator",
     "LocalTurnService",
@@ -72,6 +76,7 @@ __all__ = [
     "OrchestratorResult",
     "ProtocolMachine",
     "ProtocolPhase",
+    "Sha256Digest",
     "TransitionEvidence",
     "TransitionResult",
     "UnsupportedActionError",

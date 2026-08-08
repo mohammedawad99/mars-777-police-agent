@@ -225,3 +225,17 @@
   `result_sha256` - the prose was the stale side, and correcting it kept the locked
   11-field result count intact. Seven representations remain deferred rather than
   guessed.
+- **Stage 4F resumed** and delivered the two values the reconciliation had made
+  placeable, and the interesting part was again what supervising review caught after
+  the tests were green. The implementation was correct on every semantic axis - strict
+  lowercase 64-hex, uppercase refused rather than normalised, no hashing, the closed
+  `Verified OK` / `TAMPERED` pair - yet `InvalidDigestError` subclassed bare
+  `Exception`. That looked harmless until you noticed its sibling in the same module:
+  `FinalAuditVerdict("OK")` raises `ValueError` natively, so the two values disagreed
+  about what a malformed construction *is*, and a caller writing `except ValueError`
+  would have caught one and missed the other. It was also the only application error
+  missing from a package surface that exports every other one. **Stage 4F-RESUME-FIX1**
+  fixed both in two lines of production change, driven by a fresh RED of six failures.
+  The lesson is that an API can be semantically flawless and still be inconsistent with
+  the language it is written in, and with the project's own conventions - neither the
+  test suite nor the type checker had any reason to complain.

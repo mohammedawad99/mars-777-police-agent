@@ -198,4 +198,8 @@ representation (lowercase 64-hex PROJECT-CONTRACT), the closed `Verified OK`/`TA
 audit verdict, and the `mutual_agreement` bool correction — all internal contract
 consistency, changing no requirement, register or FIELD_MATRIX count. Stage-4F value-blocker readiness accounts at
 category level as **2 ready / 6 deferred / 1 reconciled = 9**; the six deferred
-categories expand to nine unresolved sub-items. No value type is implemented.
+categories expand to nine unresolved sub-items. Stage 4F implemented exactly the
+two ready ones in `app.protocol_values` — `Sha256Digest` (lowercase 64-hex
+PROJECT-CONTRACT, no hashing) and `FinalAuditVerdict` (`Verified OK`/`TAMPERED`) —
+with `InvalidDigestError(ValueError)` as a supporting error, not a third value.
+No requirement, register or FIELD_MATRIX count is affected.
