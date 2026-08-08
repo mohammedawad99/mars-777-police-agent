@@ -130,3 +130,27 @@
   of all 48 `*.py` files per repo proved max 150 and 0 over. Throughout, the honest
   claim was kept narrow: structural validity is not authenticity, and phase replay is
   not game replay. PRD-06 and PRD-07 remain **NOT STARTED**.
+- **Stage 4C** added the local orchestrator, tests-first, and its lesson was about
+  *authority* rather than code. The ownership audit had to reconcile two frozen
+  documents that disagree: `MODULE_BOUNDARIES.md` lists "turn cursor, sub-game
+  index" as `app.orchestrator` state, while `STATE_OWNERSHIP.md` - the authority
+  for mutable-state ownership - puts turn/step under `domain.truth`. The
+  already-approved D17 precedent settled it, so no turn cursor was stored and no
+  blocker was raised. The same audit found that the table *also* assigns the
+  **recorded score** to the orchestrator; that responsibility was reported and
+  **deferred**, not silently dropped and not quietly implemented, because its
+  input is a terminal `Outcome` the local agent cannot yet know. Role alternation
+  was likewise refused: PRD02-FR-011 makes it a negotiated `SeriesLauncher`
+  convention with no silent default, so nothing was derived from an odd/even
+  index. The real defect surfaced at review. Stage 4C had implemented the series
+  length as a floor (`>= 6`) on the strength of one sentence in
+  `CONFIG_CONTRACT.md` - "6 (or the agreed higher)" - without checking it against
+  Appendix F's own status table, which lists `num_games` under **FIXED** and
+  defines FIXED as "binding, unchangeable; deviation disqualifies". **Stage
+  4C-FIX1** corrected the code to exact equality and, because the stale wording
+  really was in the committed tree (in `CONFIG_CONTRACT.md` and the C-05 impact
+  cell), narrowed those two sentences to the meaning App F and C-05 had already
+  locked - no new JDEC, conflict or requirement. The lesson is the authority
+  hierarchy the project already had: a derived contract sentence never outranks
+  the Appendix-F status it is derived from. The error was caught before commit,
+  and this record keeps it rather than hiding it.

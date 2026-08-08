@@ -5,16 +5,15 @@ is a **square** grid whose size comes from ``board_and_agents.grid_size`` and
 which MUST be rejected below 7 (PRD01-FR-001; App F T13 grid_size MINIMUM 7;
 conflict C-01). ``MIN_GRID_SIZE`` is a validation floor, not a substitute for
 the signed value -- the size itself is always supplied by the caller.
-
-``axis_start_index`` is NEGOTIABLE with default 0 (PRD01-FR-002), so it is
+``axis_start_index`` is NEGOTIABLE with default 0 (PRD01-FR-002), so it too is
 carried here rather than hard-coded into the geometry.
 
-Stage 3B adds the three **FIXED** pheromone parameters (App F Table 16:
-centre 0.9, decay 0.10, field 5x5). They live here because this module owns the
-typed view of the signed config and its FIXED/MINIMUM/NEGOTIABLE semantics; the
-physics that consumes them lives in ``domain.scent``.
-
-This module performs no I/O: it reads no file and no environment variable.
+Stage 3B adds the three **FIXED** pheromone parameters (App F Table 16: centre
+0.9, decay 0.10, field 5x5) and Stage 4C the counted-series length (App F T18
+#1). They live here because this module owns the typed view of the signed config
+and its FIXED/MINIMUM/NEGOTIABLE semantics; the physics consuming the pheromone
+values lives in ``domain.scent`` and the cursor in `app.orchestrator`. The module
+performs no I/O: it reads no file and no environment variable.
 """
 
 from collections.abc import Iterable
@@ -72,6 +71,32 @@ class GridConfig:
             start_index=self.start_index,
             blocked=frozenset(blocked),
         )
+
+
+FIXED_NUM_GAMES: Final[int] = 6
+"""App F T18 #1, FIXED ("deviation disqualifies"): a counted series is exactly 6
+sub-games, so 7 is as illegal as 5 - not a MINIMUM floor (C-05; App B's ``1`` is a
+demo). Sub-games number from 1 (``FIRST_SUB_GAME``; JDEC-004 ``g01``..``g06``)."""
+
+FIRST_SUB_GAME: Final[int] = 1
+
+
+class InvalidSeriesError(DomainError):
+    """Raised when a declared counted-series length violates the locked policy."""
+
+
+@dataclass(frozen=True, slots=True)
+class SeriesConfig:
+    """Immutable, validated counted-series length from the locked config."""
+
+    num_games: int = FIXED_NUM_GAMES
+
+    def __post_init__(self) -> None:
+        require_int(self.num_games, "num_games", InvalidSeriesError)
+        if self.num_games != FIXED_NUM_GAMES:
+            raise InvalidSeriesError(
+                f"num_games is FIXED at {FIXED_NUM_GAMES}, got {self.num_games}",
+            )
 
 
 FIXED_CENTER_INTENSITY: Final[Decimal] = Decimal("0.9")

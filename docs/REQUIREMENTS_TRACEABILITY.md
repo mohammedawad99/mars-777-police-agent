@@ -178,6 +178,9 @@ implemented and tested, together with the local protocol phase machine
 (Stage 4A, `STATE_MACHINE.md` graph enforcement only) and its transition evidence
 (Stage 4B, R7 as scoped by `PROTOCOL_TIMELINE.md` event 10 — `source_phase` +
 `target_phase` only, valid by construction, phase-path replay, **no** authenticity,
-persistence or artifact claim); PRD-03…07 remain **NOT STARTED**. `FIELD_MATRIX`
-is unchanged at **75** — transition evidence is an internal application value and
-defines no artifact field.
+persistence or artifact claim) and the local series orchestrator (Stage 4C — the
+current sub-game cursor and the one cursor-owned branch; `num_games` enforced as
+exactly **6, FIXED** per App F T18 #1 and C-05, with score recording still
+**pending**); PRD-03…07 remain **NOT STARTED**. `FIELD_MATRIX` is unchanged at
+**75** — transition evidence and the orchestrator cursor are internal application
+values and define no artifact field.

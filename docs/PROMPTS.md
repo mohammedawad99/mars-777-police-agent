@@ -41,6 +41,9 @@
 | 4B | Protocol event / transition evidence foundation - tests first (per-transition evidence, no invented event enum) | Referenced |
 | 4B-FIX1 | Supervising corrections: transition evidence valid by construction against the single frozen graph; repository-wide physical-LOC reconciliation | Referenced |
 | 4B-CLOSE | Stage-4B final evidence/graph invariant audit, LOC proof, tracking, commit, push, CI | Referenced |
+| 4C | Local orchestrator / protocol guard foundation - tests first (sub-game cursor, one cursor-owned branch) | Referenced |
+| 4C-FIX1 | Supervising correction: counted series is num_games = 6 FIXED, not a floor; bootstrap/constructor audit | Referenced |
+| 4C-CLOSE | Stage-4C final FIXED-series/cursor audit, package-surface alignment, tracking, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

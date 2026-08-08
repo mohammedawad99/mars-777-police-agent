@@ -58,7 +58,9 @@ The App B example shows `"num_games": 1` (single-demo sub-game). **The binding
 counted-league series value is `6`, status FIXED** (App F Table 18 #1; PDF p.154,
 and App B text p.130 defers to `[games per series]`). **Do not treat the
 illustrative `1` as binding.** For a counted league game the config MUST carry
-`num_games: 6` (or the agreed higher). (See `CONFLICT_REGISTER.md` C-05, closed.)
+`num_games: 6` exactly — FIXED means "binding, unchangeable; deviation
+disqualifies", so a value **above** 6 is refused just like a value below it.
+(See `CONFLICT_REGISTER.md` C-05, closed.)
 
 ## technical_loss — provenance (C-07)
 

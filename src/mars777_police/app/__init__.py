@@ -1,12 +1,12 @@
 """Local application layer.
 
-Stage 3C implements only the **local effect step** of a turn: it validates a
-single proposed action through the already-built domain rules and advances this
-agent's own truth. Everything a peer exchange would add is deliberately absent -
-no protocol messages, no commit/acknowledge/reveal, no public network, no
-asynchronous orchestration and no cryptography.
+Implemented so far: the local **effect step** of a turn (Stage 3C), the frozen
+protocol **phase machine** (Stage 4A), its **transition evidence** (Stage 4B)
+and the local **series orchestrator** (Stage 4C). Everything a peer exchange
+would add is deliberately absent - no protocol messages, no commit/acknowledge/
+reveal, no public network, no asynchronous orchestration and no cryptography.
 
-Two boundaries are deliberate and load-bearing:
+Three boundaries are deliberate and load-bearing:
 
 * **No terminal outcome is declared here.** Capture takes precedence over
   survival and is established by deterministic evaluation on *both* peers, never
@@ -17,16 +17,31 @@ Two boundaries are deliberate and load-bearing:
   of each *full* turn - after both agents have completed their move - which a
   purely local action step cannot know. That physics stays a domain primitive
   until the resolved turn cycle owns its timing.
+* **Transition evidence is structural, not authenticated.** It records a legal
+  phase pair and supports phase-path replay only; hashes, signatures, nonces and
+  official artifacts belong to PRD-06 / replay.
+
+The orchestrator owns the current sub-game cursor and composes the phase
+machine; recording the per-sub-game and cumulative score (`STATE_OWNERSHIP.md`)
+remains a **pending** later responsibility, because it needs truthful terminal
+facts that do not exist yet.
 
 The layer depends inward on ``domain`` only; ``domain`` never imports it.
 """
 
+from .orchestrator import (
+    IllegalSubGameBranchError,
+    LocalOrchestrator,
+    OrchestratorResult,
+)
 from .state_machine import (
     FAULT_PHASES,
     NORMAL_PHASES,
     IllegalTransitionError,
     ProtocolMachine,
     ProtocolPhase,
+    TransitionEvidence,
+    TransitionResult,
 )
 from .turn_service import (
     ActionKind,
@@ -47,12 +62,17 @@ __all__ = [
     "ActionsExhaustedError",
     "ApplicationError",
     "BarrierAction",
+    "IllegalSubGameBranchError",
     "IllegalTransitionError",
     "InvalidActionError",
     "LocalActionResult",
+    "LocalOrchestrator",
     "LocalTurnService",
     "MoveAction",
+    "OrchestratorResult",
     "ProtocolMachine",
     "ProtocolPhase",
+    "TransitionEvidence",
+    "TransitionResult",
     "UnsupportedActionError",
 ]

@@ -9,8 +9,9 @@ Stage 3A provided the primitives: grid configuration, coordinates, the board
 and blocked cells, the five-token move set, movement legality, legal-move
 enumeration and safe move application. Stage 3B adds the remaining PRD-01
 semantics: barrier placement, the three capture routes, terminal/survival
-evaluation, role-keyed scoring and scent physics. Belief, observation,
-strategy, orchestration, protocol and reporting are **not** implemented here.
+evaluation, role-keyed scoring and scent physics, and Stage 4C the FIXED
+counted-series length. Belief, observation, strategy, orchestration, protocol
+and reporting are **not** implemented here.
 
 No type in this package carries opponent truth (PRD01-FR-021).
 """
@@ -25,14 +26,18 @@ from .barriers import (
 )
 from .board import ORTHOGONAL_OFFSETS, Board, InvalidBoardError, Position
 from .config_model import (
+    FIRST_SUB_GAME,
     FIXED_CENTER_INTENSITY,
     FIXED_DECAY,
     FIXED_FIELD_SIZE,
+    FIXED_NUM_GAMES,
     MIN_GRID_SIZE,
     GridConfig,
     InvalidGridConfigError,
     InvalidScentError,
+    InvalidSeriesError,
     ScentParams,
+    SeriesConfig,
 )
 from .errors import DomainError
 from .rules import (
@@ -69,9 +74,11 @@ from .terminal import (
 
 __all__ = [
     "CAPTURE_SCORE",
+    "FIRST_SUB_GAME",
     "FIXED_CENTER_INTENSITY",
     "FIXED_DECAY",
     "FIXED_FIELD_SIZE",
+    "FIXED_NUM_GAMES",
     "MAX_SCENT_STATE",
     "MIN_GRID_SIZE",
     "MIN_MAX_BARRIERS",
@@ -91,6 +98,7 @@ __all__ = [
     "InvalidBoardError",
     "InvalidGridConfigError",
     "InvalidScentError",
+    "InvalidSeriesError",
     "InvalidTurnLimitsError",
     "Move",
     "Outcome",
@@ -99,6 +107,7 @@ __all__ = [
     "ScentKernel",
     "ScentParams",
     "ScoreLine",
+    "SeriesConfig",
     "TurnLimits",
     "apply_move",
     "delta_of",

@@ -55,18 +55,27 @@
 - [x] Stage 4B - protocol event / **transition evidence** foundation (tests-first): every successful `advance()` now returns one immutable `TransitionResult` carrying a `TransitionEvidence` of exactly `source_phase` + `target_phase`, per R7 and `PROTOCOL_TIMELINE.md` event 10 (transmitted "phase transition", persisted "—", hashed "—"). No transition-signal vocabulary is frozen anywhere, so **no event enum was invented**; there is no evidence-less transition path and no compatibility shim. **Supervising review PASS.**
 - [x] Stage 4B-FIX1 - supervising corrections: (a) `TransitionEvidence` is now **valid by construction** - the pair must be an edge of the single `_ALLOWED` graph, so a record of a step R1/R5 forbid (e.g. `COMMIT_SENT -> REVEAL`, `TAMPERED -> SUBGAME_COMPLETE`) cannot be built; 31 legal pairs constructible, 293 illegal pairs and all 18 self-loops rejected. The replay corruption boundary moved forward to the constructor and negative replay coverage was **extended** (duplicated record, out-of-position record) rather than weakened. (b) A reported "153-line" file was reconciled as a **cross-repo semantic-diff count**, not physical LOC; the repository-wide audit proves max **150** and **0** files over the limit.
 - [x] Stage 4B-CLOSE - final evidence/graph invariant audit, repository-wide LOC proof, tracking finalization, commit + push + CI.
+- [x] Stage 4C - local **orchestrator / protocol guard** foundation (tests-first): `LocalOrchestrator` composes the `ProtocolMachine` and owns the one live fact `STATE_OWNERSHIP.md` assigns it - the **current sub-game index** - plus a read-only `SeriesConfig` projection. It delegates every phase question to `ProtocolMachine.advance()`, passes the emitted evidence through unchanged, and decides exactly one branch itself (`SUBGAME_COMPLETE -> READY / SERIES_COMPLETE`) because the cursor truthfully determines it - no `more_subgames` boolean is accepted. Ownership conflicts resolved without touching frozen architecture: `MODULE_BOUNDARIES.md`'s "turn cursor" yields to `STATE_OWNERSHIP.md` (the D17 precedent), and role alternation stays a PRD-05/`SeriesLauncher` convention (PRD02-FR-011), never derived from odd/even index. **Supervising review PASS.**
+- [x] Stage 4C-FIX1 - supervising correction: the counted series is **`num_games` = 6, FIXED**, not a floor. Stage 4C had implemented `>= 6` after following stale wording in `CONFIG_CONTRACT.md` and the C-05 impact cell ("6 or the agreed higher"); Appendix F defines FIXED as "binding, unchangeable; **deviation disqualifies**" and names `num_games` in its FIXED-14 list, so 7 is as illegal as 5. The error was caught **before commit**: `MIN_NUM_GAMES` became `FIXED_NUM_GAMES`, `SeriesConfig` now requires exact equality, and the two stale sentences were corrected to match the already-locked App F / C-05 semantics - no new JDEC, conflict, requirement or register entry. The bootstrap audit confirmed `start()` is the only runtime path and no production caller constructs a `LocalOrchestrator` directly.
+- [x] Stage 4C-CLOSE - final FIXED-series/cursor/ownership audit, duplicate-literal and bootstrap audit, package-surface alignment, tracking finalization, commit + push + CI.
 
 ## In progress
 **Phase 2 — PRD and architecture — is fully complete.** **Phases 3 and 4 are under
 way:** the deterministic game-rule layer (3A/3B), the local turn-execution step
-(3C), the local protocol phase machine (4A) and its transition evidence (4B)
-exist and are tested. The phase machine enforces order only — the phases named
-COMMIT_SENT, ACKNOWLEDGED, REVEAL and FINAL_AUDIT carry no cryptography, message
-bodies or transport, and the machine never applies a local effect. Transition
-evidence is **structurally valid, not authenticated**: it supports ordered
-**phase-path** replay only, never game-state, movement, barrier, score, scent,
-commitment, nonce, network-message, official-artifact or complete-game replay.
-**Not implemented:** orchestrator, application ports, FastMCP, networking,
+(3C), the local protocol phase machine (4A), its transition evidence (4B) and
+the local series orchestrator (4C) exist and are tested. The phase machine
+enforces order only — the phases named COMMIT_SENT, ACKNOWLEDGED, REVEAL and
+FINAL_AUDIT carry no cryptography, message bodies or transport, and the machine
+never applies a local effect. Transition evidence is **structurally valid, not
+authenticated**: it supports ordered **phase-path** replay only, never
+game-state, movement, barrier, score, scent, commitment, nonce, network-message,
+official-artifact or complete-game replay. The orchestrator implements its
+**cursor/guard slice only** — a counted series is exactly 6 sub-games, the
+cursor advances exactly five times and no seventh sub-game is representable.
+**Recording the per-sub-game and cumulative score is also `app.orchestrator`
+state per `STATE_OWNERSHIP.md`, and remains pending** a later stage, because it
+needs truthful terminal facts that do not exist yet. **Not implemented:** score
+recording, turn-service integration, application ports, FastMCP, networking,
 cryptography, logger/replay persistence, JSON artifacts, strategy, belief, GUI
 and reporting. PRD-01 and PRD-02 remain **IN PROGRESS**; the next stage is
 tracked once, under Pending.
@@ -90,7 +99,9 @@ tracked once, under Pending.
 - [x] **Stage 3C — Local Application / Turn Orchestration Foundation** — **CLOSED.**
 - [x] **Stage 4A — Local Protocol State Machine Foundation** — **CLOSED.**
 - [x] **Stage 4B — Protocol Event / Transition Evidence Foundation** — **CLOSED** (deterministic per-transition evidence, valid by construction against the single frozen graph; phase-path replay only). No event enum was invented: no transition-signal vocabulary is frozen in any source or architecture document.
-- [ ] **Stage 4C — Local Orchestrator / Protocol Guard Foundation** — **NEXT AUTHORIZED; NOT STARTED.** Planned: introduce the frozen `app.orchestrator` responsibility; own the sub-game index/cursor where the architecture assigns it; consume `TransitionResult`/evidence; coordinate caller-supplied branch/guard facts without duplicating their authoritative subsystem state; establish deterministic series/sub-game control flow; prepare the seam for `LocalTurnService` and later protocol adapters. **Not** in 4C unless separately authorized: FastMCP/network I/O, commitment hashing, nonce generation, signatures/HMAC, canonical sealed payloads, official artifact persistence, strategy, GUI/replay/reporting.
+- [x] **Stage 4C — Local Orchestrator / Protocol Guard Foundation** — **CLOSED** (sub-game cursor, the one cursor-owned branch, evidence pass-through; `num_games` = 6 FIXED). Its **score-recording** half remains open below.
+- [ ] **Orchestrator score recording** — **NOT STARTED; blocked on truthful terminal facts.** `STATE_OWNERSHIP.md` assigns the recorded per-sub-game and cumulative score to `app.orchestrator` (computed by `domain.scoring`, anti-duplication rule 3). Stage 4C deliberately did not implement it: the input is a sub-game `Outcome`, which needs verified public facts the local agent does not yet have.
+- [ ] **Next implementation stage** — **REQUIRES SUPERVISING PLAN SELECTION.** No further Stage-4 label is authorized in this plan; candidates visible from the architecture are the orchestrator/turn-service integration seam, `app.ports`, and PRD-06 cryptography — none is selected here.
 - [ ] Collaborator (Rawey7) access - pending explicit instruction.
 
 _Phases 1 and 2 are specification and requirements only; all seven PRDs remain
