@@ -37,10 +37,16 @@
 - [x] Stage 2-CLOSE.1 - tracking-status repair of this file (duplicate heading + stale Pending entries); no specification, architecture, PRD, or contract change.
 - [x] Stage 2-CLOSE.2 - tracking-status deduplication of this file (the next-phase entry is recorded exactly once, under Pending only); no specification, architecture, PRD, or contract change.
 
+### Phase 3 — Deterministic Core Implementation (started)
+- [x] Stage 3A - deterministic domain **foundation** (tests-first): immutable `GridConfig` (project grid minimum enforced here), immutable `Position`, immutable policy-free `Board` geometry with blocked cells, `Move` = N/S/E/W/STAY, stable `MOVE_ORDER`, destination calculation, bounds/blocked legality, deterministic `legal_moves`, typed `apply_move` failure. Role-neutral, no opponent truth, no I/O. **Supervising review PASS.**
+- [x] Stage 3A-CLOSE - final audits, narrow tracking update, commit + push + CI.
+
 ## In progress
-**Phase 2 — PRD and architecture — is fully complete.** No implementation
-stage is currently active. Phase 3 is the next authorized phase and has not
-started; it is tracked once, under Pending.
+**Phase 2 — PRD and architecture — is fully complete.** **Phase 3 has started**
+and Stage 3A is closed. Stage 3A is a **foundation only**: no barrier action,
+capture, terminal/survival evaluation, scoring, scent, strategy, protocol,
+networking, cryptography, GUI or reporting code exists. The deterministic core
+is **not** complete. The next stage is tracked once, under Pending.
 
 ## Pending
 - [ ] Branch protection / rulesets - **blocked**: unavailable on the current GitHub
@@ -57,9 +63,12 @@ started; it is tracked once, under Pending.
 - [x] PRD-05 public network / tunnel / league - **LOCKED as requirements; NOT IMPLEMENTED.**
 - [x] PRD-06 security & cryptography (commit-reveal, Step-0) - **LOCKED as requirements; NOT IMPLEMENTED.**
 - [x] PRD-07 reporting, GUI, replay (Gmail gatekeeper, Live GUI, Replay Viewer) - **LOCKED as requirements; NOT IMPLEMENTED.**
-- [ ] **Phase 3 — Deterministic Core Implementation** — **NEXT AUTHORIZED; NOT STARTED.**
+- [x] **Phase 3 — Deterministic Core Implementation** — **STARTED** (Stage 3A closed; the phase itself is **not** complete).
+- [ ] **Stage 3B — Deterministic Game Semantics** — **NEXT AUTHORIZED; NOT STARTED.** Planned ownership: barrier placement semantics, capture conditions, survival/terminal evaluation, scoring, deterministic scent physics.
 - [ ] Collaborator (Rawey7) access - pending explicit instruction.
 
-_No game logic, JSON schema, protocol, strategy, or reporting code has been
-implemented. Phases 1 and 2 are specification and requirements only; all seven
-PRDs are APPROVED — PHASE 2 LOCKED with implementation status NOT STARTED._
+_Phases 1 and 2 are specification and requirements only; all seven PRDs remain
+APPROVED — PHASE 2 LOCKED. Phase 3 implementation has begun with the Stage-3A
+domain foundation (grid config, coordinates, board geometry, move vocabulary,
+movement legality). No JSON schema, protocol, networking, cryptography,
+strategy, GUI or reporting code has been implemented._

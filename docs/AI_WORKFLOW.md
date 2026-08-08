@@ -66,3 +66,12 @@
   contract**: the series convention is negotiated protocol metadata (not a declaration field)
   and the declared MCP endpoint is a stable group-level ingress. **PRD-01…07 are
   APPROVED — PHASE 2 LOCKED; implementation has NOT started.**
+- **Phase 3 (Stage 3A →)** is the first implementation phase. Stage 3A was driven
+  **tests-first**: every domain test was written and observed failing in both repositories
+  before any production module existed. It delivers only the deterministic, role-neutral
+  foundation - grid configuration, coordinates, board geometry with blocked cells, the
+  five-token move set, movement legality and safe move application. The project grid
+  minimum is enforced by `GridConfig`, deliberately **not** by the policy-free `Board`
+  geometry, per the frozen domain-layer boundary. **PRD-01…07 remain APPROVED — PHASE 2
+  LOCKED**; the deterministic core is **not** complete and no protocol, networking,
+  cryptography, strategy, GUI or reporting code exists.

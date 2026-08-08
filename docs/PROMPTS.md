@@ -26,6 +26,8 @@
 | 2B | Full PRD-01…04 | Referenced |
 | 2C | Full PRD-05…07 | Referenced |
 | 2-CLOSE | Final PRD consistency audit, approval, commit, push, CI | Referenced |
+| 3A | Deterministic domain foundation - tests first (grid config, position, board, moves, legality, apply) | Referenced |
+| 3A-CLOSE | Stage-3A final audits, narrow tracking update, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

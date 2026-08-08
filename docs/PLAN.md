@@ -29,7 +29,9 @@
 - **Stage 2B - PRD-01…04 authored in full.** Complete and reviewed (documentation only).
 - **Stage 2C - PRD-05…07 authored in full.** Complete and reviewed; all 91 requirements given exactly one primary owner (PRD-01 15 / PRD-02 11 / PRD-03 3 / PRD-04 10 / PRD-05 2 / PRD-06 14 / PRD-07 24 / EXTERNAL-SUBMISSION 12).
 - **Stage 2-CLOSE - PASS.** Resolved CLOSE-F1 (series convention is negotiated protocol metadata, **not** a declaration field — matrix stays **75**) and CLOSE-F2 (declared MCP endpoint is a **stable group-level ingress**, 1/team, static whole-series). **All seven PRDs are APPROVED — PHASE 2 LOCKED.** **Implementation: NOT STARTED.**
-- **Phase 3 - Deterministic core implementation.** Next authorized phase; begins only after Phase-2 closure review.
+- **Phase 3 - Deterministic core implementation. STARTED.** Begun after Phase-2 closure review; the phase is **not** complete.
+- **Stage 3A - Deterministic domain foundation.** Complete and reviewed (**PASS**), then committed at Stage 3A-CLOSE with CI green. Tests-first: immutable `GridConfig` (the project grid minimum is enforced here, never in `Board`), immutable `Position`, immutable **policy-free** `Board` geometry with blocked cells, `Move` = N/S/E/W/STAY, stable `MOVE_ORDER` = (N, S, E, W, STAY), destination calculation, bounds/blocked legality, deterministic `legal_moves`, and typed `apply_move` failure with no mutation. Role-neutral and byte-identical in both repositories; no opponent truth, no I/O, no dependency added. **Foundation only** - barriers as an action, capture, terminal/survival, scoring and scent are **not** implemented.
+- **Stage 3B - Deterministic game semantics.** Next authorized stage; **not started**. Planned ownership: barrier placement semantics, capture conditions, survival/terminal evaluation, scoring, deterministic scent physics.
 - **Stage 2 - Game logic & movement legality.** Pending implementation (PRD-01, locked).
 - **Stage 3 - Local FastMCP protocol.** Pending (PRD-02).
 - **Stage 4 - Baseline strategy.** Pending (PRD-03).
