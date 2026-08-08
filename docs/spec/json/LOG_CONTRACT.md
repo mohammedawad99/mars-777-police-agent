@@ -40,7 +40,7 @@ identically (see `CANONICALIZATION_CONTRACT.md`).
 | Component | Proposed key | Provenance | Required | Type | Source |
 |---|---|---|---|---|---|
 | board state | `state` | SOURCE-SEMANTIC (named) | Required | string/object | Ch 5 p.51 |
-| physical move | `move` | SOURCE-SEMANTIC (named) | Required | string | Ch 5 p.51 |
+| physical **action** | `move` | SOURCE-SEMANTIC (named) | Required | **[RR]** — see below | Ch 5 p.51 |
 | intent flag | `intent` | SOURCE-SEMANTIC (named; truth/lie) | Required | string enum | Ch 5 p.51 |
 | verbal hint | `hint` | SOURCE-SEMANTIC (part of full record) | Required | string | Ch 5 p.50 |
 | step number | `step` | SOURCE-SEMANTIC (part of full record) | Required | int | Ch 5 p.50 |
@@ -75,11 +75,11 @@ Ack that the opponent's commitment was received and locked (Ch 5 §5.3.2, p.51).
 **Not necessarily the same object as the commitment** — an acknowledgement is a
 separate log event.
 
-| Field | Proposed key | Provenance | Required | Type | Source |
-|---|---|---|---|---|---|
-| acked step | `ack_of_step` | SOURCE-SEMANTIC + PC | Required | int | Ch 5 p.51 |
-| acked commit hash | `ack_commit` | SOURCE-SEMANTIC + PC | Required | string(hex) | Ch 5 p.51 |
-| acking role | `by_role` | SOURCE-SEMANTIC + PC | Required | string enum | Ch 5 p.51 |
+| Field | Proposed key | Provenance | Required | Type | Source | Origin (Stage 4E-R3) |
+|---|---|---|---|---|---|---|
+| acked step | `ack_of_step` | SOURCE-SEMANTIC + PC | Required | int | Ch 5 p.51 | copied from the peer message's turn cursor (`step`) |
+| acked commit hash | `ack_commit` | SOURCE-SEMANTIC + PC | Required | string(hex) | Ch 5 p.51 | copied from the peer message (`h_commit`) |
+| acking role | `by_role` | SOURCE-SEMANTIC + PC | Required | string enum | Ch 5 p.51 | **LOG ATTRIBUTION, not a transmitted field** (Stage 4E-R3) |
 
 ## D. Reveal data
 
@@ -88,9 +88,49 @@ until end-of-game audit (Ch 5 §5.3.2, p.51).
 
 | Field | Proposed key | Provenance | Required | Type | Source |
 |---|---|---|---|---|---|
-| revealed move | `move` | SOURCE-SEMANTIC (named) | Required | string | Ch 5 p.51 |
+| revealed **action** | `move` | SOURCE-SEMANTIC (named) | Required | **[RR]** — same representation as §B | Ch 5 p.51 |
 | revealed hint | `hint` | SOURCE-SEMANTIC | Required | string | Ch 5 p.51 |
 | (nonce — final audit only) | `nonce` | SOURCE-SEMANTIC | Required at audit | string | Ch 5 p.51,55 |
+
+### Stage 4E-R3 — `move` is the physical **action**, and `by_role` is log attribution
+
+**Source (Ch 5 §5.3.1, PDF p.51, printed 35).** The sealed record's `Move` member is
+defined as *"**הפעולה הפיזית**. המהלך הנבחר (**תנועה, הצבת חסם** וכדומה)"* — **the physical
+action; the chosen action (movement, **barrier placement**, etc.)** — *"this is the core
+that is to be locked against change"*. `move` is therefore a **generic action slot**, not
+the movement vocabulary: `move_set` (`["N","S","E","W","STAY"]`, App F T15 FIXED) is the
+vocabulary of the *movement* form only. Ch 5 §5.3.2 (same page) has Reveal send *"**את
+הפעולה (Move)** ואת המשפט המילולי"* — **the action (Move)** and the verbal sentence — so
+the revealed object is the same generic action, and it is the same one the commitment
+sealed. Ch 3 §3.4 (p.37, printed 21) supplies the other half: a turn is **a single
+action**, the police may place a barrier only *"in a turn in which he forgoes movement"*,
+and the **declaration duty** is explicit — *"על השוטר להכריז באמת על כל הצבת מחסום ועל
+מיקומה המדויק; אין להציב מחסום בהיחבא"* (**must truthfully declare every barrier placement
+and its exact location; never place one in hiding**), repeated in the Iron Rules (p.38,
+printed 22). A police barrier placement with its exact cell is therefore carried by the
+ordinary `move` action at Reveal and bound by the same `H_commit` — **no eleventh
+peer-visible family is needed, and none is created.**
+
+**Still REVIEW-REQUIRED:** the *representation* of that action. The movement form is a
+token from `move_set`; the barrier form needs its exact cell, and **no contract freezes
+how either is written into the canonical bytes** — `NDEC-002` freezes `state`'s
+representation for byte-identity but no equivalent exists for `move` (see NDEC-001's
+Stage 4E-R3 note). Until it is frozen, a barrier-carrying sealed record cannot be
+recomputed byte-identically by the peer, so **Reveal stays BLOCKED**. The reference
+`commit(state, move: str, intent)` snippet (p.53) is **EXAMPLE-ONLY** — the book labels
+that 4-field core a simplification — and does **not** narrow `move` to a movement string.
+
+**`by_role` (§C) is LOG ATTRIBUTION, not transmitted content.** Ch 5 §5.3.2 says only
+*"**היריב מאשר** כי קיבל את ההתחייבות וכי הוא נעול עליה"* — the opponent confirms it
+received the commitment and is locked onto it. The acknowledging party exists
+(SOURCE-SEMANTIC) but is nowhere stated to be a payload field, and Figure 6 (p.52) carries
+it as the message's **direction between two lifelines**. The local writer can always
+derive it: there is exactly one opponent process (ARCH-001/002), the role each side plays
+in the sub-game is immutable from `CONFIG_LOCKED` (PRD06-FR-048), and the writer knows
+whether it sent or received the acknowledgement. Because the role is never transmitted,
+there is nothing for a hostile peer to forge. The reference FastMCP snippet's
+`{"accepted": ...}` return (p.28) is **NON-BINDING** example code for a different tool and
+introduces no `accepted` field here.
 
 ## E. Verification result
 
@@ -123,7 +163,7 @@ Source-backed requirements (details + provenance in `CANONICALIZATION_CONTRACT.m
 - SOURCE-SEMANTIC: the full field set (state, move, intent, hint, step, role, sub_game, nonce, ack, reveal, verification).
 - PROJECT-CONTRACT: entry nesting & key spellings (JDEC-007), canonical params (JDEC-002), NN width (JDEC-004).
 - EXAMPLE-ONLY (NOT adopted): the 4-field `{state,move,intent,nonce}` core and the `nonce|move` verifier payload.
-- REVIEW-REQUIRED: exact `state` representation (string vs structured board), and whether ack/reveal are separate `entries[]` events or sub-objects of a turn entry.
+- REVIEW-REQUIRED: exact `state` representation (string vs structured board); **the exact `move` action representation (Stage 4E-R3 — see below)**; and whether ack/reveal are separate `entries[]` events or sub-objects of a turn entry.
 
 ## Illustrative example (Markdown only; not a real file)
 

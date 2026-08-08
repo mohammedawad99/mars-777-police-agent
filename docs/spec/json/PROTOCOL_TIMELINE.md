@@ -33,6 +33,7 @@ the wire yet.
   sealed payload** as `intent`. It is **not** the post-reveal validation "verdict"
   of event 9 (a different object that exists only after reveal).
 - **`nonce`** exists at event 4, is hashed at event 5, stays secret until event 11.
+- **`move` at events 4/5/7 is the physical *action*, not a movement token** (Ch 5 p.51: "the chosen action (movement, **barrier placement**, etc.)"; event 7 sends "**the action (Move)** and the verbal sentence"). A police barrier placement with its **exact cell** — which Ch 3 p.37/38 require to be declared truthfully and never hidden — therefore travels in this same slot and is bound by the same `H_commit`; **no eleventh peer-visible family exists**. Its exact representation is **REVIEW-REQUIRED** (`LOG_CONTRACT.md` §B, NDEC-001) *(Stage 4E-R3)*.
 - **`config_sha256`** exists at event 3 (before any turn), so a `state` that
   references it (event 5) is chronologically valid.
 - The **DECISION → COMMIT → ACK → REVEAL → VALIDATION/VERDICT → FINAL REVEAL/AUDIT**

@@ -351,3 +351,32 @@
   the exhaustive public surface. The second failure is the one a less strict convention
   would never have caught, and it is the same class of defect Stage 4F-RESUME-FIX1 found
   by review rather than by test. This time the test found it first.
+- **Stage 4E-R3** is the clearest example so far of why "read the source, not your own
+  notes" is a rule and not a slogan. Stage 4E-R2 had blocked Reveal on a finding I still
+  believe was correctly reported: no *project* contract said how a police barrier and its
+  exact cell reach the peer, and a `(cursor, Move, hint)` record could not express a legal
+  police turn. What R2 never did was go back to the book. Chapter 5 page 51 defines the
+  sealed `Move` as "the physical action - the chosen action (movement, **barrier
+  placement**, etc.)", and the Reveal step sends "the action (Move) and the verbal
+  sentence". Chapter 3 page 37 adds that a turn is a single action, that the police may
+  place a barrier only in a turn where he forgoes movement, and that every placement and
+  its **exact location** must be declared truthfully and never in hiding. The source had
+  answered the question all along; our derived contracts had quietly narrowed "action" to
+  "move" and then the narrowing propagated. That is a documentation defect of exactly the
+  kind the `mutual_agreement` nesting was - a wrong shape copied forward until someone
+  went back to the primary text.
+  The honest consequence is mixed, which is the point. Reveal did **not** become ready: the
+  semantics are now settled, but there is still no shared action *type* in a home both the
+  commitment producer and the message module can reach, and the sealed `move` value's
+  canonical representation is unfrozen where `state`'s was frozen years of stages ago by
+  NDEC-002. Those are smaller and much better-named blockers than "no contract says how a
+  barrier reaches the peer", but they are real, and inventing a JSON shape to close them
+  would have broken commit/reveal verification for a peer who agreed a different one.
+  Acknowledgement went the other way and cost almost nothing. The whole source content is
+  one sentence - the opponent confirms it received the commitment and is locked onto it -
+  and the `by_role` question dissolved once it was asked precisely: the book names an
+  acknowledging party, but Figure 6 carries that party as the *direction of an arrow
+  between two lifelines*, not as a field. A local writer always knows the direction, and
+  the role is frozen at config lock, so the log can persist `by_role` truthfully while the
+  message never carries it. The nice side effect is a security one nobody asked for: a
+  field that is never transmitted is a field a hostile peer cannot forge.

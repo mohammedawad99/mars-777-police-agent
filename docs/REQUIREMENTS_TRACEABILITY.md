@@ -297,3 +297,26 @@ FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**; INV **15**;
 C-01…C-10; architecture ports **20**; `ProtocolPhase` definitions **1**;
 peer-visible families **10**; PRD-02 requirement IDs **87**; result fields **11**;
 PRD-06 IDs **129**; PRD-07 IDs **140**.
+
+**Stage 4E-R3 (Acknowledgement + Reveal reconciliation).** Documentation/contract
+only. Re-derived from the authoritative book: Ch 5 §5.3.2 (p.51) for the
+acknowledgement, Ch 5 §5.3.1 (p.51) for the sealed `Move`, Figure 6 (p.52) for the
+exchange, and Ch 3 §3.4 (p.37) + Iron Rules (p.38) for the barrier action and its
+truthful exact-location declaration. **Acknowledgement is READY-TO-IMPLEMENT** as
+`cursor` + `h_commit`, consistent with **PRD06-FR-082/FR-083** and
+**PRD02-FR-044/FR-063**; `LOG_CONTRACT.md` §C `by_role` is reclassified as **local
+log attribution**, proved from **ARCH-001/002** (one opponent process) and
+**PRD06-FR-048** (role immutable from `CONFIG_LOCKED`). **Reveal remains BLOCKED**,
+reclassified to **BLOCKED-BY-VALUE-REPRESENTATION**: the source resolves that a
+police barrier placement travels in the ordinary `move` action slot bound by the
+same `H_commit` — consistent with **BAR-001/BAR-002**, **PRD01-FR-010/FR-035** and
+**PRD06-FR-060/FR-084** — but no shared action semantic type has a reachable home
+and the sealed `move` representation is unfrozen. Contracts corrected in place:
+`LOG_CONTRACT.md` (§B/§C/§D rows + REVIEW-REQUIRED totals), `NDEC-001` (narrow
+amendment, **NDEC count still 7**) and one `PROTOCOL_TIMELINE.md` conclusion line.
+**No requirement was added, removed, reclassified or re-owned; no JDEC-016,
+NDEC-008, INV-16 or C-11 was created.** Peer-visible families remain **10** — no
+eleventh barrier family. Requirements remain **91** (76/9/4/2); Appendix E **55**;
+Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC
+**7**; INV **15**; C-01…C-10; ports **20**; `ProtocolPhase` **1**; PRD-02 IDs
+**87**; result fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**.
