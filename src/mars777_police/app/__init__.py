@@ -21,6 +21,13 @@ Two boundaries are deliberate and load-bearing:
 The layer depends inward on ``domain`` only; ``domain`` never imports it.
 """
 
+from .state_machine import (
+    FAULT_PHASES,
+    NORMAL_PHASES,
+    IllegalTransitionError,
+    ProtocolMachine,
+    ProtocolPhase,
+)
 from .turn_service import (
     ActionKind,
     ActionsExhaustedError,
@@ -34,13 +41,18 @@ from .turn_service import (
 )
 
 __all__ = [
+    "FAULT_PHASES",
+    "NORMAL_PHASES",
     "ActionKind",
     "ActionsExhaustedError",
     "ApplicationError",
     "BarrierAction",
+    "IllegalTransitionError",
     "InvalidActionError",
     "LocalActionResult",
     "LocalTurnService",
     "MoveAction",
+    "ProtocolMachine",
+    "ProtocolPhase",
     "UnsupportedActionError",
 ]

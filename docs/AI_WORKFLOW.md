@@ -95,3 +95,15 @@
   is satisfied. No architecture document was changed. **PRD-02 is now IN PROGRESS**
   for this one slice; the state machine, orchestrator, ports, FastMCP, networking and
   cryptography remain **not implemented**, and PRD-03…07 stay **NOT STARTED**.
+- **Stage 4A** added the local protocol phase machine, tests-first, pinning the frozen
+  graph literally rather than against the implementation: an exhaustive 324-pair sweep
+  makes a hidden or missing edge impossible. Supervising review then found a genuine
+  contradiction inside the frozen table itself - TECHNICAL_LOSS was absorbing although
+  the same table makes "technical loss" an entry condition of SUBGAME_COMPLETE, tells
+  the phase to "proceed per series rules", and excludes it from rule R5. **Stage
+  4A-FIX1** added the single edge `TECHNICAL_LOSS -> SUBGAME_COMPLETE` and recorded the
+  reasoning in `STATE_MACHINE.md` §4 as an implementation-discovered architecture
+  correction - not a lecturer rule, not a source conflict, no register increment.
+  Primary source agrees: Ch 3 Table 2 lists technical loss as a **sub-game** end event
+  scored 0/0 beside capture and survival. TAMPERED keeps its severe, non-repairable
+  status. PRD-06 remains **NOT STARTED** despite the crypto-named phases.

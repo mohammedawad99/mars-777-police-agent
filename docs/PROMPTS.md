@@ -35,6 +35,9 @@
 | 3C | Local application / turn orchestration foundation - tests first | Referenced |
 | 3C-FIX1 | Supervising correction: remove duplicated local barrier-count state | Referenced |
 | 3C-CLOSE | Stage-3C final audits, PRD-02 status alignment, commit, push, CI | Referenced |
+| 4A | Local protocol state machine foundation - tests first (18 phases, frozen graph) | Referenced |
+| 4A-FIX1 | Supervising correction: TECHNICAL_LOSS lifecycle reconciled with series continuation | Referenced |
+| 4A-CLOSE | Stage-4A final graph/ownership audit, tracking, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

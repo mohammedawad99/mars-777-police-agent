@@ -22,7 +22,7 @@ BOOT → STEP0_NEGOTIATION → CONFIG_NEGOTIATION → CONFIG_LOCKED → READY
                                                      ▼
                                           SERIES_COMPLETE → FINAL_AUDIT → REPORT_READY
 
- terminal / fault: FAILED · TAMPERED · TECHNICAL_LOSS
+ terminal / fault: FAILED · TAMPERED (absorbing) · TECHNICAL_LOSS → SUBGAME_COMPLETE
 ```
 
 ## 2. State table
@@ -46,7 +46,7 @@ BOOT → STEP0_NEGOTIATION → CONFIG_NEGOTIATION → CONFIG_LOCKED → READY
 | **REPORT_READY** | audit verified | build + agree result | assemble self-contained result; exchange `result_sha256`; send JSON e-mail | reporting window | (terminal) | mutating game state | `result_<game_id>.json` | mismatch/missing ⇒ 0 both (C-09) |
 | **FAILED** | unrecoverable local/transport fault | — | halt, preserve evidence | — | (terminal) | continuing counted play | failure record | operator review |
 | **TAMPERED** | any recompute mismatch | — | halt; mark match void | — | (terminal) | appeal | tamper evidence | **no appeal — SOURCE-CITED: PDF p.75 "אין ערעור ואין תיקון בדיעבד" (no appeal, no retroactive correction); REPLAY-002** |
-| **TECHNICAL_LOSS** | protocol/timeout condition per spec | — | record technical loss 0/0 (C-07) | — | (terminal for that sub-game) | inventing other sanctions | technical-loss record | proceed per series rules |
+| **TECHNICAL_LOSS** | protocol/timeout condition per spec | — | record technical loss 0/0 (C-07) | — | SUBGAME_COMPLETE *(ends this sub-game only — see §4)* | inventing other sanctions; returning to a turn phase | technical-loss record | proceed per series rules |
 
 ## 3. Transition rules
 
@@ -61,3 +61,42 @@ BOOT → STEP0_NEGOTIATION → CONFIG_NEGOTIATION → CONFIG_LOCKED → READY
 - **R7 — replayable.** Every transition emits an evidence record sufficient for replay.
 - **R8 — idempotent inbound.** A duplicate/stale peer message for an already-completed
   step is rejected, not re-applied (see `ERROR_MODEL.md` `E-PROTO-STALE`).
+
+## 4. Stage 4A-FIX1 correction — TECHNICAL_LOSS lifecycle
+
+**Implementation-discovered architecture correction, not a new lecturer rule and
+not a source change.** Recorded post-lock; every other state and edge in §1–§3 is
+unchanged.
+
+The original TECHNICAL_LOSS row gave "Allowed next = (terminal for that
+sub-game)" — naming no successor — which made the phase absorbing for the whole
+machine. That contradicted three statements in this same file:
+
+1. **SUBGAME_COMPLETE's entry condition** already reads
+   "capture / survival threshold / max_moves / **technical loss**", so the
+   sub-game boundary is meant to be entered on a technical loss;
+2. **TECHNICAL_LOSS's own Recovery** column says "**proceed per series rules**",
+   which an absorbing phase makes impossible; and
+3. **R5** names only **TAMPERED and FAILED** as never returning to play —
+   TECHNICAL_LOSS is deliberately excluded.
+
+Primary source agrees: Ch 3 §3.5 Table 2 (PDF p.38) lists `הפסד טכני` (technical
+loss, 0/0) as one of the three **sub-game** end events beside capture and
+survival, and App E #48 scores all three the same way. A counted series is
+`num_games` = 6 FIXED sub-games, so an ordinary technical loss ends the current
+sub-game, not the series.
+
+**Correction:** `TECHNICAL_LOSS → SUBGAME_COMPLETE`, and only that edge. It
+routes through the existing sub-game boundary, which then branches to READY for
+the next sub-game or to SERIES_COMPLETE — no direct `TECHNICAL_LOSS → READY` or
+`TECHNICAL_LOSS → SERIES_COMPLETE` edge is created, and no recovery into a turn
+phase is allowed.
+
+**Unchanged:** TAMPERED remains absorbing ("halt; mark match void"; no appeal,
+PDF p.75) and FAILED remains absorbing. The stronger TAMPERED sanction is **not**
+transferred to ordinary technical loss, and the two are not merged. The state
+inventory stays at 18; the graph now has 31 directed edges.
+
+**Bootstrap:** normal construction begins at **BOOT** (`ProtocolMachine.start()`);
+constructing a machine directly at an arbitrary phase is a trusted snapshot
+primitive, never the untrusted runtime path.

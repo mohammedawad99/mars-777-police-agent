@@ -48,17 +48,21 @@
 - [x] Stage 3C-FIX1 - state-ownership correction: removed the duplicated `barriers_placed` counter from `LocalTruth`; barrier usage now has **one** authoritative representation (the public board plus the validated `BarrierQuota`), so no local count can drift.
 - [x] Stage 3C-CLOSE - final audits, PRD-02 status alignment, commit + push + CI.
 
+### Phase 4 — Protocol Foundation (started)
+- [x] Stage 4A - local protocol **state machine** foundation (tests-first): the frozen 18-phase graph (15 normal + 3 fault) with **31** legal directed edges, exhaustively verified over all 324 ordered pairs; `ProtocolMachine` owns **only** the current phase; normal bootstrap via `ProtocolMachine.start()` at BOOT. **Supervising review PASS.**
+- [x] Stage 4A-FIX1 - **TECHNICAL_LOSS lifecycle correction**: the frozen table made "technical loss" an entry condition of SUBGAME_COMPLETE and told the phase to "proceed per series rules", while R5 names only TAMPERED and FAILED as never returning to play - yet it listed no successor. One edge added, `TECHNICAL_LOSS -> SUBGAME_COMPLETE`, recorded in `STATE_MACHINE.md` §4 as an implementation-discovered architecture correction. TAMPERED and FAILED stay absorbing.
+- [x] Stage 4A-CLOSE - final graph/ownership audit, bootstrap guard, tracking, commit + push + CI.
+
 ## In progress
-**Phase 2 — PRD and architecture — is fully complete.** **Phase 3 is under way:**
-Stages 3A, 3B and 3C are closed, so the deterministic game-rule layer and the
-**local** turn-execution step exist and are tested. A local action validates
-through the domain, advances own truth atomically and consumes exactly one
-step; it deliberately declares **no** terminal outcome, computes **no** score
-and runs **no** scent lifecycle, because those need verified peer facts or a
-completed full turn. **Not implemented:** the protocol state machine,
-orchestrator, application ports, FastMCP, networking, cryptography, strategy,
-belief, GUI, replay and reporting. PRD-01 and PRD-02 are both **IN PROGRESS**;
-the next stage is tracked once, under Pending.
+**Phase 2 — PRD and architecture — is fully complete.** **Phases 3 and 4 are under
+way:** the deterministic game-rule layer (3A/3B), the local turn-execution step
+(3C) and the local protocol phase machine (4A) exist and are tested. The phase
+machine enforces order only — the phases named COMMIT_SENT, ACKNOWLEDGED, REVEAL
+and FINAL_AUDIT carry no cryptography, message bodies or transport, and the
+machine never applies a local effect. **Not implemented:** transition evidence
+objects, orchestrator, application ports, FastMCP, networking, cryptography,
+strategy, belief, GUI, replay and reporting. PRD-01 and PRD-02 remain
+**IN PROGRESS**; the next stage is tracked once, under Pending.
 ## Pending
 - [ ] Branch protection / rulesets - **blocked**: unavailable on the current GitHub
       plan for private repos (Stage 0D). Needs Pro upgrade, org, or public-at-submission.
@@ -77,7 +81,8 @@ the next stage is tracked once, under Pending.
 - [x] **Phase 3 — Deterministic Core Implementation** — **STARTED** (Stage 3A closed; the phase itself is **not** complete).
 - [x] **Stage 3B — Deterministic Game Semantics** — **CLOSED** (barriers, capture, terminal/survival, scoring, bounded scent physics).
 - [x] **Stage 3C — Local Application / Turn Orchestration Foundation** — **CLOSED.**
-- [ ] **Stage 4A — Local Protocol State Machine Foundation** — **NEXT AUTHORIZED; NOT STARTED.** Planned: the frozen protocol/application state enum and legal transition machine; phase/cursor discipline; deterministic transition validation; terminal-state immutability; evidence/event outputs for later adapters; local effect execution connected only at the already-authorized transition boundary. **Not** in 4A: real FastMCP transport, public tunnel, commit-reveal cryptography or network I/O.
+- [x] **Stage 4A — Local Protocol State Machine Foundation** — **CLOSED.**
+- [ ] **Stage 4B — Protocol Event / Transition Evidence Foundation** — **NEXT AUTHORIZED; NOT STARTED.** Planned: typed lifecycle transition signals/events; deterministic evidence/result objects per transition; caller-supplied guard facts at the frozen branch points; replayable local transition evidence; a clean seam for later adapters. **Not** in 4B: FastMCP, network I/O, public tunnel, SHA/HMAC/signatures, nonces, canonical sealed commitment records or real commit/reveal transport.
 - [ ] Collaborator (Rawey7) access - pending explicit instruction.
 
 _Phases 1 and 2 are specification and requirements only; all seven PRDs remain
