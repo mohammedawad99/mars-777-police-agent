@@ -2,10 +2,12 @@
 
 Implemented so far: the local **effect step** of a turn (Stage 3C), the frozen
 protocol **phase machine** (Stage 4A), its **transition evidence** (Stage 4B),
-the local **series orchestrator** (Stage 4C) and the shared **protocol value
-representations** (Stage 4F). Everything a peer exchange would add is
-deliberately absent - no protocol messages, no commit/acknowledge/reveal, no
-public network, no asynchronous orchestration and no cryptography.
+the local **series orchestrator** (Stage 4C), the shared **protocol value
+representations** (Stage 4F) and the first **peer-message contracts** - the turn
+cursor and the commitment (Stage 4E). Everything else a peer exchange would add
+is deliberately absent: nine of the ten peer-visible families stay blocked on
+contracts nothing freezes yet, so there is no acknowledgement, no reveal, no wire
+mapping, no public network, no asynchronous orchestration and no cryptography.
 
 Three boundaries are deliberate and load-bearing:
 
@@ -35,6 +37,7 @@ from .orchestrator import (
     LocalOrchestrator,
     OrchestratorResult,
 )
+from .peer_messages import Commitment, TurnCursor
 from .protocol_values import FinalAuditVerdict, InvalidDigestError, Sha256Digest
 from .state_machine import (
     FAULT_PHASES,
@@ -64,6 +67,7 @@ __all__ = [
     "ActionsExhaustedError",
     "ApplicationError",
     "BarrierAction",
+    "Commitment",
     "FinalAuditVerdict",
     "IllegalSubGameBranchError",
     "IllegalTransitionError",
@@ -79,5 +83,6 @@ __all__ = [
     "Sha256Digest",
     "TransitionEvidence",
     "TransitionResult",
+    "TurnCursor",
     "UnsupportedActionError",
 ]

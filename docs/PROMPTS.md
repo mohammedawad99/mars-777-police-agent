@@ -60,6 +60,8 @@
 | 4E-R2 | Peer message runtime contract readiness reconciliation: app.peer_messages capability + protocol_values dependency, cycle proof, TurnCursor home, ten-family readiness, Stage-4E subset selection | Referenced |
 | 4E-R2-FIX1 | Current result-agreement contract consistency (NDEC-006 object-form residue) + TurnCursor/Commitment static-construction error semantics | Referenced |
 | 4E-R2-FIX2 | PRD result-agreement propagation (FR-142/FR-085/FR-190) + TurnCursor fixed-constant dependency reconciliation | Referenced |
+| 4E-RESUME | TurnCursor + Commitment foundation - tests first (the one ready peer-message family) | Referenced |
+| 4E-RESUME-CLOSE | Stage-4E slice final implementation audit, tracking, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

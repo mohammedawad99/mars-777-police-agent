@@ -276,3 +276,24 @@ creates no second numeric authority (`FIXED_NUM_GAMES: Final[int] = 6` is the on
 **75 = 16/39/9/11**; JDEC **15**; NDEC **7**; INV **15**; C-01…C-10; architecture
 ports **20**; `ProtocolPhase` definitions **1**; peer-visible families **10**
 (**1 READY / 9 BLOCKED**); PRD-02 requirement IDs **87**; result fields **11**.
+
+**Stage 4E — RESUME (TurnCursor + Commitment).** The one peer-visible family
+Stage 4E-R2 proved ready is now implemented in `app.peer_messages`, together with
+its supporting `TurnCursor` contract: exactly two classes, **0** supporting error
+types, and 73 targeted tests per repository. `TurnCursor` implements the PRD-02 §8
+turn identity `(sub_game, step)` traced to **PRD02-FR-044/FR-063**, with phase
+admissibility left to **PRD02-FR-021/FR-062** (STATE-003) and no phase field;
+its sub-game bound reads the App-F-FIXED `num_games` contract through
+`domain.config_model`, and `step` carries no ceiling because `max_moves` is
+per-sub-game locked configuration. `Commitment` implements the Event-5 payload
+(`PROTOCOL_TIMELINE.md`: "`H_commit` only") plus that independently-required
+cursor, consistent with **PRD06-FR-061/FR-067/FR-081/FR-086** — it stores an
+already-validated `Sha256Digest`, performs no hashing, and carries none of the
+sealed-record fields of **PRD06-FR-060**. **No requirement was added, removed,
+reclassified or re-owned**, and no register entry was created. Nine peer-visible
+families remain BLOCKED and **Stage 4E as a whole is not complete**. Requirements
+remain **91** (76/9/4/2); Appendix E **55**; Appendix F **32 = 14/9/9**;
+FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**; INV **15**;
+C-01…C-10; architecture ports **20**; `ProtocolPhase` definitions **1**;
+peer-visible families **10**; PRD-02 requirement IDs **87**; result fields **11**;
+PRD-06 IDs **129**; PRD-07 IDs **140**.

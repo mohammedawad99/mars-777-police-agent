@@ -328,3 +328,26 @@
   `app.orchestrator` was already importing `FIRST_SUB_GAME` at runtime - so the widening
   documented a dependency the codebase had been relying on lawfully all along, which is
   the most comfortable kind of architecture correction to make.
+- **Stage 4E finally resumed**, ten reconciliation stages after it was first blocked, and
+  the striking thing is how small the result is: two classes, 96 lines. Everything that
+  made it possible was the argument, not the code. The module could not have been written
+  in the shape the original Stage-4E prompt imagined - there was no legal home for the
+  values, no permission to hold a digest, no permission to read the sub-game bound, and
+  nine of the ten families still have no frozen payload. What shipped is precisely the
+  part that survived every audit.
+  Two implementation choices are worth recording because both were tempting to get wrong.
+  The first is `type(x) is TurnCursor` instead of `isinstance`. That looks pedantic until
+  you write the adversarial test: a `Sha256Digest` subclass can override `__post_init__`
+  and thereby *weaken* the validation the composition is relying on, and `isinstance`
+  would wave it through. Exact identity refuses it. The second is the deliberate absence
+  of an upper bound on `step`. Every instinct says a step number should be bounded, and
+  `max_moves` is sitting right there in the config - but it is *per-sub-game locked*
+  configuration, and a transmitted cursor does not carry it. Embedding it would have made
+  a structural contract silently depend on state the value has no access to, which is the
+  same category of error as the "value types" wording that blocked this module twice. The
+  test that proves the point accepts `step = 10**9` and says why.
+  The RED came twice, which is the useful part of the record: once for the missing module,
+  and once - after the implementation was complete and correct - for the missing export on
+  the exhaustive public surface. The second failure is the one a less strict convention
+  would never have caught, and it is the same class of defect Stage 4F-RESUME-FIX1 found
+  by review rather than by test. This time the test found it first.
