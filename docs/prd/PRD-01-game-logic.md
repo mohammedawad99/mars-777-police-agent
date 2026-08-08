@@ -14,8 +14,20 @@
 ## 2. Status
 
 **APPROVED — PHASE 2 LOCKED.** Approved after Stage 2-CLOSE supervising review.
-**Implementation status: NOT STARTED.**
-Not approved, not locked, not implemented. No code exists.
+The requirements below are unchanged by implementation progress.
+
+**Implementation status: IN PROGRESS.**
+
+**Completed implementation slice:** Stage 3A — deterministic domain foundation:
+`GridConfig` (grid geometry policy), `Position`, policy-free `Board` geometry with
+blocked cells, the `N/S/E/W/STAY` move vocabulary and stable `MOVE_ORDER`,
+deterministic movement legality, legal-move enumeration, and safe `apply_move`.
+
+**Still pending within PRD-01:** barrier placement semantics · capture ·
+survival / terminal semantics · scoring · scent physics · the remaining
+deterministic game semantics.
+
+**PRD-01 is NOT implemented, NOT done and NOT complete.**
 
 ## 3. Purpose
 
@@ -385,5 +397,6 @@ transport, crypto, GUI, reporting · no LLM · no persistence.
 - [x] Scoring role-keyed with explicit anti-reversal requirement
 - [x] Determinism and cross-OS constraints stated and testable
 - [x] Privacy boundary (no opponent truth) stated and test-enforced
-- [ ] Supervising review — **pending**
-- [ ] Implementation — **not started**
+- [x] Supervising review — **PASS** (Stage 2-CLOSE)
+- [ ] Implementation — **in progress**: Stage 3A foundation done; barriers, capture,
+      terminal/survival, scoring and scent still pending

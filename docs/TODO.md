@@ -56,7 +56,7 @@ is **not** complete. The next stage is tracked once, under Pending.
 - [ ] Example-simulator (Appendix D) review - non-binding; pending.
 - [x] Stage 1B - independent cross-audit of the extraction - done (supervising review PASS).
 - [x] Controlled synchronization of the reviewed COMMON specification baseline to the thief repo - **COMPLETE** (Stage 1-SYNC / 1-SYNC-CLOSE).
-- [x] PRD-01 game logic (Base Logic; board/movement/barriers/capture/scoring) - **LOCKED as requirements; NOT IMPLEMENTED.**
+- [x] PRD-01 game logic (Base Logic; board/movement/barriers/capture/scoring) - **LOCKED as requirements; implementation IN PROGRESS** (Stage 3A foundation only; barriers, capture, terminal/survival, scoring and scent still pending).
 - [x] PRD-02 local FastMCP (MCP infra + orchestrator/state-machine) - **LOCKED as requirements; NOT IMPLEMENTED.**
 - [x] PRD-03 baseline / blind strategy (**POLICE** role-specific) - **LOCKED as requirements; NOT IMPLEMENTED.**
 - [x] PRD-04 language & scent - **LOCKED as requirements; NOT IMPLEMENTED.**
