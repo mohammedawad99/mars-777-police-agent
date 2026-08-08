@@ -37,10 +37,58 @@ rules vs. scoring), and that seam is named below.
 | `app.turn_service` | One turn: decide → validate → commit → ack → reveal → verify | domain, ports | concrete adapters | pending turn record | nonce/hash mismatch |
 | `app.ports` | **Abstract port definitions only** (`API_BOUNDARIES.md`) | stdlib typing **+ immutable `domain` value types, as type references only** | `protocol`, `infra`, any adapter, network/FastMCP/HTTP libraries, `app` implementation modules, domain services with side effects — everything else | none | — |
 | `app.strategy_api` | `Observation` in → `ProposedAction` out contract | domain.observation | infra, protocol | none | no legal action |
-| `app.peer_messages` *(4E-R1)* | **Immutable internal peer-protocol semantic contracts** — the values application control flow consumes and produces (state-changing inbound events reach the Turn Executor) and that `protocol.messages` maps to/from; **never** wire JSON | stdlib typing + immutable `domain` value types | `protocol`, `infra`, any adapter, FastMCP/network libraries, wire serialization, artifact storage, GUI, replay, reporting | none | invalid message construction |
+| `app.peer_messages` *(4E-R1; deps 4E-R2/FIX2)* | **Immutable internal peer-protocol semantic contracts** — the values application control flow consumes and produces (state-changing inbound events reach the Turn Executor) and that `protocol.messages` maps to/from; **never** wire JSON | pure stdlib **value-definition and validation primitives** only (`typing`, `dataclasses`) + immutable `domain` value types + immutable **globally-FIXED `domain` constants read as structural bounds** (currently `FIRST_SUB_GAME`, `FIXED_NUM_GAMES` from `domain.config_model`; **read-only**, never redefined) + `app.protocol_values` (**runtime use**: constructs and stores the shared semantic values its messages carry) | `protocol`, `infra`, any adapter, `app` implementation modules (`app.state_machine`, `app.orchestrator`, `app.turn_service`), `enum` (no message-local vocabulary exists — reuse `domain.rules.Move` and `app.protocol_values.FinalAuditVerdict`), `hashlib`/`hmac`/`cryptography`/`secrets`/`random`, FastMCP/network libraries, wire serialization, JSON, artifact storage, cryptographic computation, I/O, GUI, replay, reporting — everything else | none | invalid message construction |
 | `app.protocol_values` *(4F-R1)* | **Immutable shared protocol semantic value representations** — the primitives that peer-message contracts and outer protocol implementations must agree on (e.g. a SHA-256 digest result, a final-audit verdict). Representation only: it never computes, serializes or knows what was hashed | pure stdlib **value-definition and validation primitives** only (`typing`, `dataclasses`, `enum`) | `protocol`, `infra`, any adapter, `hashlib`/`hmac`/`cryptography`/`secrets`/`random`, FastMCP/network libraries, I/O, JSON or any wire/artifact serialization, cryptographic computation, GUI, replay, reporting — everything else | none | invalid value representation |
 
 **Test boundary:** state-machine and contract tests with fake ports.
+
+> **Stage 4E-R2 reconciliation (implementation-discovered, internal).** The
+> `app.peer_messages` row was written before `app.protocol_values` existed and carried
+> two defects, both paid off here before any Stage-4E Python is written. (i) It allowed
+> only "stdlib typing", which — exactly as Stage 4F-R1-FIX1 found for
+> `app.protocol_values` — cannot define an immutable validated value at all; it now
+> allows the pure stdlib value-definition and validation primitives it actually needs.
+> `enum` is **deliberately excluded**: no peer message defines a vocabulary of its own,
+> and the two it will reference already exist (`domain.rules.Move`,
+> `app.protocol_values.FinalAuditVerdict`). Should a future family genuinely need a new
+> closed vocabulary, `enum` is added then, with the evidence. (ii) It could not name
+> `app.protocol_values` at all, so a message could not carry `Sha256Digest` — the value
+> the Stage-4F reconciliation was built to serve. That dependency is **runtime use**
+> (message constructors accept and store these values), not annotation-only, and it is
+> intra-layer: both modules are `app` contract modules, so no edge is added to the layer
+> DAG (D1) and `app.ports`' precedent for naming immutable values is unchanged.
+> **Acyclicity is structural, not conventional:** `app.protocol_values` allows *only*
+> pure stdlib primitives, so it cannot import `app.peer_messages` — the back edge is
+> already impossible under its own allow-list, and D2 holds without a new rule.
+> `protocol.messages` → `app.peer_messages` stays the outer→inner mapper and is
+> untouched. No new shared layer, no requirement, PRD, JDEC, NDEC, INV,
+> Conflict-Register or FIELD_MATRIX entry changes.
+>
+> **Stage 4E-R2-FIX2 addendum.** The row said "immutable `domain` value **types**", which
+> names classes. `TurnCursor`'s frozen structural bound `FIRST_SUB_GAME <= sub_game <=
+> FIXED_NUM_GAMES` needs two module-level `Final[int]` **constants**, and reading "value
+> types" to cover them would be exactly the generous reading this project refused twice
+> (Stage 4D-R1 for `app.ports`, Stage 4F-R1-FIX1 for `app.protocol_values`). The row now
+> names them explicitly and nothing else. The alternatives were rejected on evidence: a
+> literal `6` inside `app.peer_messages` would create a **second** numeric authority for a
+> value Appendix F marks FIXED ("deviation disqualifies"), and moving or copying the
+> constants would do the same; taking the bound from a `SeriesConfig` instance — already a
+> permitted value type — would either add a third field to a cursor frozen at two or make
+> a *transmitted* cursor appear to depend on locked configuration it does not carry, when
+> the bound it needs is the global constant, not a config value. **Single authority is
+> mechanically verified:** `FIXED_NUM_GAMES: Final[int] = 6` in `domain.config_model` is
+> the only `= 6` series length in the source tree, and `app.orchestrator` already imports
+> `FIRST_SUB_GAME` from that module at runtime, so this widening adds **no new layer edge**
+> — `app` already depends inward on `domain` (D1), and no domain service, mutable state,
+> truth ownership or rule execution becomes reachable. Read-only use only: a message module
+> may never redefine, shadow or re-export these constants.
+>
+> *Reported, deliberately not changed:* `protocol.messages` still says
+> `app.peer_messages` **(type references only)**. A wire⇄semantic mapper *constructs*
+> semantic values, so that phrasing has the same defect this note just fixed twice.
+> It is left alone because `protocol.messages` is not resuming, exactly as Stage
+> 4F-R1-FIX1 left this row alone for the same reason, and it is tracked as a mandatory
+> preflight for the protocol stage instead of being fixed speculatively here.
 
 > **Stage 4F-R1 reconciliation (implementation-discovered, internal).** Stage 4F found
 > that a SHA-256 digest result is needed by `app.peer_messages` (messages carry

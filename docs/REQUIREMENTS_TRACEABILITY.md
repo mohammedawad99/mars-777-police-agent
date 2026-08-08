@@ -203,3 +203,76 @@ two ready ones in `app.protocol_values` — `Sha256Digest` (lowercase 64-hex
 PROJECT-CONTRACT, no hashing) and `FinalAuditVerdict` (`Verified OK`/`TAMPERED`) —
 with `InvalidDigestError(ValueError)` as a supporting error, not a third value.
 No requirement, register or FIELD_MATRIX count is affected.
+
+**Stage 4E-R2 (peer message runtime contract readiness).** Documentation/design
+only. The `app.peer_messages` module row now permits the pure stdlib
+value-definition primitives (`typing`, `dataclasses`), immutable `domain` value
+types and `app.protocol_values` at runtime use; `enum` is withheld because no
+peer message defines a vocabulary of its own. All **10** peer-visible families
+were re-audited against ten readiness criteria: **1 READY** (Commitment =
+turn cursor + `Sha256Digest`, per PROTOCOL_TIMELINE event 5's "`H_commit` only"
+plus the cursor independently required by **PRD02-FR-044** and **PRD06-FR-086**)
+and **9 blocked**. `TurnCursor` is ready with `app.peer_messages` as its home and
+remains a projection, not an owner. Requirements consulted and **unchanged**:
+PRD02-FR-021/043/044/062/063, PRD01-FR-010/011/012/033/034/035/037,
+PRD06-FR-060/061/063/064/065/066/067/080/081/082/083/084/086, BAR-001…005,
+CRYPTO-002/008. Blockers recorded against existing contracts only —
+`LOG_CONTRACT.md` §C `by_role` (Family 6), the absent barrier-placement reveal
+path (Family 7), `INTEROPERABILITY_NEGOTIATION.md` NDEC-006's residual
+`mutual_agreement.confirmed` object form and the post-exchange timing of the bool
+(Family 14), and unfrozen association shapes (Families 11, 12). `docs/spec/**`
+was not edited. Requirements remain **91** (76/9/4/2); Appendix E **55**;
+Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC
+**7**; INV **15**; C-01…C-10; architecture ports **20**; `ProtocolPhase`
+definitions **1**; peer-visible families **10**; PRD-02 requirement IDs **87**;
+result fields **11**. No new source-level requirement.
+
+**Stage 4E-R2-FIX1 (current result-agreement contract + construction errors).**
+Documentation only. **NDEC-006** was corrected from the withdrawn
+`mutual_agreement.sha256` / `mutual_agreement.confirmed` nested object form to
+the live model — a separate top-level `result_sha256` and a separate
+`mutual_agreement` bool set only after the two digests compare equal — with an
+explicit scope limit recording that NDEC-006 freezes a **record** shape, not the
+Event-14 **message** shape. **NDEC IDs remain NDEC-001…NDEC-007 (7)**; no
+NDEC-008, JDEC-016, INV-16 or C-11 was created. `RESULT_CONTRACT.md`,
+`FIELD_MATRIX.md`, `CROSS_ARTIFACT_INVARIANTS.md` (INV-11) and
+`CONFLICT_REGISTER.md` (C-09) are unchanged; result artifact fields remain
+**11**. A mechanical sweep found the same object form still asserted by three
+**current** PRD requirements — **PRD06-FR-142**, **PRD07-FR-085** and
+**PRD07-FR-190**, with FR-085 contradicting **PRD07-FR-080** in its own table —
+which this stage was not authorized to edit; they are reported and tracked, and
+the stage therefore closes PARTIAL. No requirement text, modality or ownership
+changes: the affected IDs are recorded as **needing a future consistency
+correction**, not as new or reclassified requirements. The future static
+construction contract for `TurnCursor` and `Commitment` (built-in `ValueError`,
+zero supporting error types, no coercion) introduces no requirement and no
+register entry. Requirements remain **91** (76/9/4/2); Appendix E **55**;
+Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC
+**7**; INV **15**; C-01…C-10; architecture ports **20**; `ProtocolPhase`
+definitions **1**; peer-visible families **10** (**1 READY / 9 BLOCKED**);
+PRD-02 requirement IDs **87**; result fields **11**.
+
+**Stage 4E-R2-FIX2 (PRD propagation + constant dependency).** Documentation
+only. Three active requirements were corrected **in place** to the already-approved
+separate-field result-agreement model: **PRD06-FR-142** (core exclusion list),
+**PRD07-FR-085** (digest stored as a separate top-level field, resolving its
+contradiction with **PRD07-FR-080**) and **PRD07-FR-190** (both reports carry the
+same `result_sha256` and record `mutual_agreement = true` separately once the
+comparison establishes equality). **PRD-06 and PRD-07 requirement-ID counts, IDs,
+ordering, modality, ownership and provenance are unchanged**; nothing was added,
+deleted, renumbered or reclassified, and no acceptance criterion was created to
+carry the correction. PRD status is unchanged (**APPROVED — PHASE 2 LOCKED**).
+Each corrected row is explicitly a **record** requirement and freezes no Event-14
+message multiplicity, so **Family 14 remains BLOCKED-BY-PAYLOAD-SHAPE**. The
+`app.peer_messages` module row was narrowly widened to permit read-only use of the
+globally-FIXED `domain` constants `FIRST_SUB_GAME` and `FIXED_NUM_GAMES`; this adds
+no layer edge (`app.orchestrator` already imports `FIRST_SUB_GAME` at runtime) and
+creates no second numeric authority (`FIXED_NUM_GAMES: Final[int] = 6` is the only
+`= 6` series length in the source tree). `RESULT_CONTRACT.md`, `FIELD_MATRIX.md`,
+`PROJECT_CONTRACT_DECISIONS.md`, `CROSS_ARTIFACT_INVARIANTS.md` (INV-11),
+`CONFLICT_REGISTER.md` (C-09) and the FIX1 change to
+`INTEROPERABILITY_NEGOTIATION.md` are all unchanged. Requirements remain **91**
+(76/9/4/2); Appendix E **55**; Appendix F **32 = 14/9/9**; FIELD_MATRIX
+**75 = 16/39/9/11**; JDEC **15**; NDEC **7**; INV **15**; C-01…C-10; architecture
+ports **20**; `ProtocolPhase` definitions **1**; peer-visible families **10**
+(**1 READY / 9 BLOCKED**); PRD-02 requirement IDs **87**; result fields **11**.

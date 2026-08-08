@@ -239,3 +239,92 @@
   The lesson is that an API can be semantically flawless and still be inconsistent with
   the language it is written in, and with the project's own conventions - neither the
   test suite nor the type checker had any reason to complain.
+- **Stage 4E-R2** was scheduled to unblock message implementation, and its most useful
+  output was three *refusals*. Paying the tracked debt was straightforward - the
+  `app.peer_messages` row allowed only "stdlib typing" and could not name
+  `app.protocol_values`, so a message literally could not hold the `Sha256Digest` the
+  previous stage had built for it - and the fix rhymed with 4F-R1-FIX1 closely enough
+  to be routine. What was not routine was declining to grant `enum` "while we are in
+  there": no peer message defines a vocabulary of its own, `Move` and
+  `FinalAuditVerdict` already exist, and a permission granted early is a permission
+  someone eventually uses. The cycle question got the same treatment: rather than
+  writing "`app.protocol_values` must not import `app.peer_messages`" as a rule to be
+  obeyed, the note records that it *cannot*, because its allow-list is pure stdlib -
+  a structural argument needs no discipline to hold.
+  Then the family audit contradicted the plan. The stage brief flagged Reveal and
+  Mutual result agreement as high-priority likely-ready; both turned out blocked, and
+  for reasons no amount of enthusiasm could paper over. A police turn may legally be a
+  barrier placement instead of a move, and BAR-001 requires the **exact cell** to be
+  declared openly - yet every contract describing the reveal says `move` + `hint`, so a
+  `(cursor, Move, hint)` record cannot express a legal police turn at all. That is not
+  a missing field; it is a missing contract. And result agreement failed on a residue:
+  Stage 4F-R1 corrected `RESULT_CONTRACT.md`'s `mutual_agreement` from object to bool
+  but never reached NDEC-006, which still says `.confirmed`. Worse, the corrected
+  contract sets the bool *after* the peers exchange hashes, so a single message cannot
+  honestly carry both its own digest and a verdict about agreement it has not yet
+  reached. Acknowledgement was the opposite case - two of its three open questions
+  dissolved once PRD06-FR-082 was read properly (the ack binds a *specific* digest for
+  a *specific* cursor, which settles both whether the digest is repeated and whether
+  `ack_of_step` is a second field) leaving one genuinely open question about the acking
+  role. One family out of ten survived: Commitment, whose timeline row says
+  "`H_commit` **only**", the rarest thing in this specification - an explicit
+  exclusivity statement. The lesson is that a readiness audit that returns the answer
+  the brief expected has probably not been performed.
+- **Stage 4E-R2-FIX1** was scoped as a two-item cleanup and turned into a lesson about
+  how far a withdrawn decision travels. Supervising review had spotted that NDEC-006
+  still carried the `mutual_agreement.sha256` / `.confirmed` object form Stage 4F-R1
+  removed from `RESULT_CONTRACT.md`, and the instruction was to correct that one cell.
+  Correcting it was easy. Running the sweep the instruction implied - every current
+  occurrence, classified CURRENT versus HISTORICAL - was not: the same withdrawn shape
+  is still asserted by **PRD06-FR-142**, **PRD07-FR-085** and **PRD07-FR-190**, and
+  FR-085 contradicts FR-080 four rows above it in the same table. Stage 4F-R1 had
+  corrected the document it was looking at and, reasonably, assumed that was the
+  contract; Stage 4E-R2 then found one more and, equally reasonably, assumed *that* was
+  the last. Both were wrong for the same reason: nobody had asked "where else does this
+  shape live?" until a sweep was mandated. The honest consequence is that this stage
+  closes **PARTIAL** - the object form is gone from `docs/spec/**` but is not extinct,
+  and the PASS wording would have asserted it was.
+  The provenance turned out to be the interesting part. The nesting is not a project
+  invention: it is the shape of the lecturer's extracted attachment example, recorded as
+  secondary provenance, which PRD07-FR-087 already says is not a verified parser schema.
+  It reached three PRDs because attachment compatibility was in view while they were
+  written. That reframes the remaining fix from "correct an error" to "stop treating a
+  compatibility example as a contract" - and it means no source requirement is at risk,
+  because Ch 9 requires a SHA-256-backed mutual approval, never a nesting.
+  The error-contract half went the other way: the audit *reduced* the plan. The obvious
+  move was a narrow `ValueError` subclass, matching `InvalidDigestError` next door. But
+  the same module also contains `FinalAuditVerdict`, which raises **native** `ValueError`
+  and has a test asserting exactly that - so the project already had a precedent for a
+  new semantic value needing no custom error, and `InvalidDigestError` being a
+  `ValueError` subclass means one `except ValueError` covers both modules regardless.
+  The deciding argument was asymmetry: adding a narrow subclass later is non-breaking,
+  removing one is not. So the contract is built-in `ValueError`, zero supporting types,
+  written down now rather than discovered during TDD - which was the actual point of the
+  exercise.
+- **Stage 4E-R2-FIX2** was the cleanup FIX1's PARTIAL had scoped, and it is worth
+  recording how ordinary it turned out to be once the sweep had already been done. The
+  three PRD rows were corrected in place in a few minutes; the hard work had been the
+  sweep that found them, one stage earlier. The lesson generalises: a contract
+  correction is cheap, and *knowing where the contract is asserted* is what costs. Two
+  stages had each corrected the one document in front of them and stopped.
+  The genuinely interesting half was the constant dependency, because it looked like a
+  formality and was not. The `app.peer_messages` row permitted "immutable `domain` value
+  **types**". `FIRST_SUB_GAME` and `FIXED_NUM_GAMES` are not types - they are
+  module-level `Final[int]` constants - so the row did not authorize them, and the
+  tempting move was to read "value types" loosely and move on. That is exactly the
+  reading this project has now refused three times: at 4D-R1 for `app.ports`, at
+  4F-R1-FIX1 for `app.protocol_values`, and here. An allow-list that is only true if you
+  squint is not an allow-list.
+  Choosing the fix required rejecting three plausible alternatives. A literal `6` in the
+  message module, or a copied constant, would have created a *second* authority for a
+  number Appendix F marks FIXED with "deviation disqualifies" - the cheapest possible way
+  to lose a match years from now. Deriving the bound from a `SeriesConfig`, which was
+  already permitted and therefore needed no architecture change at all, was the subtlest
+  wrong answer: it would have made a *transmitted* cursor look like it depended on locked
+  configuration it does not carry, or forced a third field onto a value frozen at two.
+  The bound a cursor needs is the global constant, not a config value, and those are
+  different things even when they hold the same integer. Checking the claim mechanically
+  was worth the thirty seconds: exactly one `= 6` exists in the source tree, and
+  `app.orchestrator` was already importing `FIRST_SUB_GAME` at runtime - so the widening
+  documented a dependency the codebase had been relying on lawfully all along, which is
+  the most comfortable kind of architecture correction to make.
