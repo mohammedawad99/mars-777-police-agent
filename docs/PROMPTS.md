@@ -77,6 +77,9 @@
 | 4E-R6-FIX1 | Final-nonce contract hardening: recomputation rationale, CSPRNG separation, sub-game batch, full type inventory | Referenced |
 | 4E-R6-FIX2 | Nonce representation negotiation consistency: one v1 profile, pre-match echo, no alternative codec | Referenced |
 | 4E-R6-CLOSE | Remaining turn-protocol + module organization final audit, tracking, commit, push, CI | Referenced |
+| 4E-R7 | Peer-message module reorganization - pure behaviour-preserving migration, tests first | Referenced |
+| 4E-R7-SUPPLEMENT | Mandatory report completion (evidence only; no code change) | Referenced |
+| 4E-R7-CLOSE | Module reorganization final audit, tracking, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

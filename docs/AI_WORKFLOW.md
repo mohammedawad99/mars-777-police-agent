@@ -554,3 +554,30 @@
   step is a parsing-safety property, not the reason recomputation would otherwise fail. Each time
   I reached for the strongest-sounding justification available rather than the true one; the
   pattern is worth naming, because it survived one correction and came back in a new form.
+- **Stage 4E-R7** is the first stage where I broke something mid-flight, and the interesting
+  part is what caught it. The migration needed to lift five definitions out of one module and
+  drop them into two others *without changing a character of them*. My first helper sliced the
+  blocks by hardcoded line numbers, which is the kind of shortcut that works right up until it
+  does not: an assertion on the expected last line of a block failed - by one line - after the
+  façade had already been written over the source module. For a moment the only copy of those
+  definitions was in git.
+  That is exactly why the recovery was boring rather than dramatic. Restore from HEAD, verify
+  the hash matches the byte-for-byte value recorded in the baseline step, delete the partial
+  modules, start again. The baseline hashes existed because the stage instructions asked for
+  them before any edit, and they turned a potential reconstruction job into a thirty-second
+  `git show`. The retry then used AST-derived ranges and re-parsed every extracted block to
+  prove it matched the original definition *before* writing anything - which is what I should
+  have done first, since the whole task was "move this without changing it" and an AST is the
+  only thing that actually knows where a definition begins and ends.
+  The second lesson is about what counts as proof of a behaviour-preserving move. The strongest
+  evidence is not my new tests - it is the three committed behaviour test modules passing with
+  **zero edits**. My layout tests can only check the things I thought to check; the old tests
+  check the things the project already decided mattered, and they were written before this
+  migration existed. Any temptation to "just update" one of them would have quietly converted
+  the acceptance criterion into something I controlled.
+  A smaller thing worth keeping: my own layout test initially scanned raw module source for the
+  string "peer_messages" to prove there was no back edge, and it failed on a docstring that
+  merely *mentions* the façade. Prose is not an import. Rewriting it to inspect `ImportFrom`
+  nodes with `level == 1` made it both correct and stronger, and the same distinction bit twice
+  in this stage - a grep for `^class ` also reports the façade's docstring line beginning "class
+  objects". Text search is a fine way to find candidates and a poor way to prove structure.

@@ -474,3 +474,28 @@ Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC 
 INV **15**; C-01…C-10; ports **20**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result
 fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events **15**;
 `num_games` **6 FIXED**.
+
+**Stage 4E-R7 (peer-message module reorganization).** Pure behaviour-preserving
+migration of the architecture D32 froze; **CLOSED / COMMITTED / CI-GREEN** at
+Stage 4E-R7-CLOSE. No requirement, contract or family semantics changed: the
+values `TurnCursor` (**PRD02-FR-044/FR-063**), `Commitment` (**PRD06-FR-086**),
+`Acknowledgement` (**PRD06-FR-082**) and `Reveal` (Ch 5 §5.3.2, **PRD01-FR-010**)
+were relocated **unchanged**, proved by executable-AST equivalence against the
+committed parent for all five moved definitions. `app.peer_messages` is now a
+façade re-exporting identity-equal class objects, so every public import path is
+preserved and the three committed behaviour test modules passed **with zero
+edits**. `app/__init__.py`, `app/protocol_values.py`, `app/turn_service.py`,
+`domain/actions.py` and `domain/rules.py` are byte-unchanged, and the import graph
+stays acyclic and inward per `DEPENDENCY_RULES.md` and `MODULE_BOUNDARIES.md`. The
+former 150/150-LOC capacity blocker is removed with real headroom in every module.
+**No new semantic family was implemented** — `NonceValue`, `InvalidNonceError`,
+`NonceRevealEntry`, `FinalNonceReveal`, `MoveValidation` and `FinalAudit` all
+remain absent from Python, and `FinalNonceReveal` stays **READY-TO-IMPLEMENT** in
+contract only. Peer-visible families remain **10** — **3 implemented, 1 ready, 6
+blocked** — and **Stage 4E as a whole is NOT COMPLETE**. **No requirement was
+added, removed, reclassified or re-owned; no JDEC-016, NDEC-008, INV-16 or C-11
+was created.** Requirements remain **91** (76/9/4/2); Appendix E **55**; Appendix F
+**32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**; INV
+**15**; C-01…C-10; ports **20**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result
+fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events **15**;
+`num_games` **6 FIXED**.
