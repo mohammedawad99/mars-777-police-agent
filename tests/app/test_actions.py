@@ -16,6 +16,7 @@ from mars777_police.app.turn_service import (
     LocalActionResult,
     MoveAction,
 )
+from mars777_police.domain.actions import InvalidPhysicalActionError
 from mars777_police.domain.board import Position
 from mars777_police.domain.rules import Move
 
@@ -57,9 +58,10 @@ def test_actions_are_immutable() -> None:
 
 
 def test_actions_reject_wrong_payload_types() -> None:
-    with pytest.raises(ApplicationError):
+    """Structural construction is a *domain* failure since Stage 4E-R5."""
+    with pytest.raises(InvalidPhysicalActionError):
         MoveAction("N")  # type: ignore[arg-type]
-    with pytest.raises(ApplicationError):
+    with pytest.raises(InvalidPhysicalActionError):
         BarrierAction((2, 3))  # type: ignore[arg-type]
 
 
@@ -129,3 +131,13 @@ def test_the_service_rejects_an_unknown_action_object() -> None:
     with pytest.raises(UnsupportedActionError):
         service.apply(truth, "MOVE N")  # type: ignore[arg-type]
     assert truth.completed_steps == 0
+
+
+def test_the_app_action_names_are_the_domain_classes_not_copies() -> None:
+    """One definition, possibly two import paths - never two classes."""
+    from mars777_police.app import turn_service
+    from mars777_police.domain import actions
+
+    assert turn_service.MoveAction is actions.MoveAction
+    assert turn_service.BarrierAction is actions.BarrierAction
+    assert turn_service.ActionKind is actions.ActionKind

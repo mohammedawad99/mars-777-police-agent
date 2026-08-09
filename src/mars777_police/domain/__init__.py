@@ -16,6 +16,13 @@ and reporting are **not** implemented here.
 No type in this package carries opponent truth (PRD01-FR-021).
 """
 
+from .actions import (
+    ActionKind,
+    BarrierAction,
+    InvalidPhysicalActionError,
+    MoveAction,
+    PhysicalAction,
+)
 from .barriers import (
     MIN_MAX_BARRIERS,
     BarrierQuota,
@@ -89,6 +96,8 @@ __all__ = [
     "SURVIVAL_SCORE",
     "TECHNICAL_LOSS_SCORE",
     "TIE_SCORE",
+    "ActionKind",
+    "BarrierAction",
     "BarrierQuota",
     "Board",
     "DomainError",
@@ -97,11 +106,14 @@ __all__ = [
     "InvalidBarrierError",
     "InvalidBoardError",
     "InvalidGridConfigError",
+    "InvalidPhysicalActionError",
     "InvalidScentError",
     "InvalidSeriesError",
     "InvalidTurnLimitsError",
     "Move",
+    "MoveAction",
     "Outcome",
+    "PhysicalAction",
     "Position",
     "ScentField",
     "ScentKernel",

@@ -435,3 +435,29 @@
   error from `ApplicationError` to `DomainError`. Writing that expected test change down now,
   while it is a design consequence, is cheaper than discovering it mid-slice and calling it a
   surprise.
+- **Stage 4E-R5** is the stage where the *process* step I had previously treated as ceremony
+  actually paid for itself twice. The R4 close had ordered a mandatory mechanical impact scan
+  before any edit, and R4's own desk audit had predicted the affected files. The scan disagreed
+  with that prediction in both directions: `app/__init__.py` turned out to need no change at all,
+  and two constraints nobody had written down turned up in `tests/app/test_turn_boundaries.py` -
+  a subprocess probe that pins the `app.turn_service` import path, and a vocabulary scan that
+  forbids words like `commitment` anywhere in that module's source. The second one rejected my
+  first migration docstring, which had cheerfully explained *why* the types moved by naming the
+  future commitment producer. The test was right and the docstring was wrong: a layer-purity
+  guard that only fails on real imports and not on prose would be a weaker guard.
+  The bigger lesson was the Thief migration. I copied Police's finished `turn_service.py` across
+  with a package-name substitution, exactly as I had legitimately done for byte-identical files
+  earlier in the project, and broke six Thief role tests instantly. The two services are *not*
+  the same file: the thief refuses a barrier through its own capability policy. The habit that
+  worked for `domain/actions.py`, which genuinely is role-neutral and byte-identical, is wrong
+  for a file whose whole point is role-specific behaviour. The fix was to restore Thief's file
+  from its own HEAD and apply the same *delta* rather than the same *content* - and the useful
+  generalization is that cross-repo mirroring is a property of the file, not of the project, so
+  it has to be decided per file rather than assumed.
+  Worth noting what the regression suite did here: it caught the error in seconds, and it caught
+  it because the role tests exist and are specific. That is the second time in this stage a test
+  I did not write during this stage did the work. The migration itself was mechanically dull -
+  move three classes down, re-export them, prove there is exactly one of each - and the only
+  design judgement was the error boundary, which the supervisor settled cleanly: malformed domain
+  value is a `DomainError`, malformed message composition is a `ValueError`, and Reveal never
+  constructs an action so the two never meet.

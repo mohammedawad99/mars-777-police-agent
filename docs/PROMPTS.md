@@ -69,6 +69,8 @@
 | 4E-RESUME2-CLOSE-FIX1 | External Claude-memory boundary audit and narrow repair (repositories untouched) | Referenced |
 | 4E-R4 | Shared physical action + canonical move representation reconciliation: action home, type model, turn_service migration, sealed `move` encoding | Referenced |
 | 4E-R4-CLOSE | Shared physical-action reconciliation final audit, tracking, commit, push, CI | Referenced |
+| 4E-R5 | Shared physical-action foundation + LocalTurnService migration - tests first, impact-scan-derived scope | Referenced |
+| 4E-R5-CLOSE | Physical-action migration final audit, Reveal readiness, tracking, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

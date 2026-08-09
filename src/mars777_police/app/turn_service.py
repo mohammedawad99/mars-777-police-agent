@@ -15,12 +15,15 @@ exhaustion is a local refusal, never a terminal verdict.
 """
 
 from dataclasses import dataclass
-from enum import StrEnum
 
+from ..domain.actions import ActionKind as ActionKind
+from ..domain.actions import BarrierAction as BarrierAction
+from ..domain.actions import MoveAction as MoveAction
+from ..domain.actions import PhysicalAction
 from ..domain.barriers import BarrierQuota, place_barrier
 from ..domain.board import Board, Position
 from ..domain.errors import DomainError
-from ..domain.rules import Move, apply_move
+from ..domain.rules import apply_move
 from ..domain.terminal import TurnLimits
 from ..domain.truth import LocalTruth
 
@@ -41,46 +44,16 @@ class InvalidActionError(ApplicationError):
     """Raised when the domain rejects the proposed action."""
 
 
-class ActionKind(StrEnum):
-    """The kinds of local action a turn may consist of."""
+LocalAction = PhysicalAction
+"""The action this service applies - the domain's `PhysicalAction`, not a copy.
 
-    MOVE = "MOVE"
-    BARRIER = "BARRIER"
-
-
-@dataclass(frozen=True, slots=True)
-class MoveAction:
-    """Move exactly one cell, or STAY. Carries no placement target."""
-
-    move: Move
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.move, Move):
-            raise ApplicationError(f"move must be a Move, got {type(self.move).__name__}")
-
-    @property
-    def kind(self) -> ActionKind:
-        """Return this command's action kind."""
-        return ActionKind.MOVE
-
-
-@dataclass(frozen=True, slots=True)
-class BarrierAction:
-    """Place a barrier on one cell. Carries no move."""
-
-    target: Position
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.target, Position):
-            raise ApplicationError(f"target must be a Position, got {type(self.target).__name__}")
-
-    @property
-    def kind(self) -> ActionKind:
-        """Return this command's action kind."""
-        return ActionKind.BARRIER
-
-
-LocalAction = MoveAction | BarrierAction
+Stage 4E-R5 moved `ActionKind`, `MoveAction` and `BarrierAction` down to
+`domain.actions`, because the same chosen action must also be reachable by outer
+protocol modules that may not import this one. The names stay importable here so
+callers keep working, but they are **the same class objects** - there is exactly
+one definition of each, and this alias is a second name for the domain's own
+union, never a second union.
+"""
 
 
 @dataclass(frozen=True, slots=True)

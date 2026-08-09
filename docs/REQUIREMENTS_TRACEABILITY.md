@@ -375,3 +375,28 @@ Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC
 **7**; INV **15**; C-01…C-10; ports **20**; `ProtocolPhase` **1**; PRD-02 IDs
 **87**; result fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline
 events **15**; `num_games` **6 FIXED**.
+
+**Stage 4E-R5 (shared physical-action foundation + `LocalTurnService` migration).**
+Implementation of the design D29 froze; **CLOSED / COMMITTED / CI-GREEN** at Stage
+4E-R5-CLOSE. `domain.actions` now holds the only `ActionKind`, `MoveAction`,
+`BarrierAction`, `PhysicalAction` and `InvalidPhysicalActionError`, satisfying
+**PRD01-FR-003** (the FIXED `move_set` stays the movement vocabulary and gains no
+barrier token), **PRD01-FR-010** (one action per turn, made structural by an
+exclusive union), **PRD01-FR-002** (the barrier binds an exact `[row, col]`
+`Position`) and **PRD01-FR-011/FR-012** (validate strictly before effect; state
+byte-identical on rejection). Legality stays where **PRD-01 §17** and the LIVE
+rules put it: bounds, role, the thief prohibition, adjacency, occupancy and quota
+are never checked in a value constructor. Malformed *construction* raises
+`InvalidPhysicalActionError(DomainError)` while message composition keeps the
+built-in `ValueError`, an intentional split by layer ownership that creates no new
+error class. `app/peer_messages.py` is **byte-unchanged**; `domain.rules.Move`
+remains exactly five tokens. **Reveal is reclassified BLOCKED-BY-FUTURE-SEMANTIC-TYPE
+→ READY-TO-IMPLEMENT** (**PRD06-FR-082/FR-083**, **PRD02-FR-044/FR-063** already
+satisfied by `TurnCursor`); the other nine families are unchanged, giving **2
+implemented, 1 ready, 7 blocked** of **10**, and **Stage 4E as a whole is NOT
+COMPLETE**. **No requirement was added, removed, reclassified or re-owned; no
+JDEC-016, NDEC-008, INV-16 or C-11 was created.** Requirements remain **91**
+(76/9/4/2); Appendix E **55**; Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 =
+16/39/9/11**; JDEC **15**; NDEC **7**; INV **15**; C-01…C-10; ports **20**;
+`ProtocolPhase` **1**; PRD-02 IDs **87**; result fields **11**; PRD-06 IDs **129**;
+PRD-07 IDs **140**; timeline events **15**; `num_games` **6 FIXED**.
