@@ -595,3 +595,39 @@ F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**; IN
 **15**; C-01…C-10; ports **20**; error IDs **20**; `ProtocolPhase` **1**; PRD-02
 IDs **87**; result fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**;
 timeline events **15**; `num_games` **6 FIXED**.
+
+**Stage 4E-R9-RESUME (canonical commitment codec + recompute foundation).** The
+scope the original Stage 4E-R9 correctly stopped on, resumed once 4E-R9-R1 and
+4E-R9-R2 made all eight sealed members contract-ready and implemented;
+**CLOSED / COMMITTED / CI-GREEN** at Stage 4E-R9-RESUME-CLOSE. Implements
+**CRYPTO-009** (every operation states exactly which bytes it covers) and
+**PRD06-FR-001…FR-009** in the architecture-frozen `protocol.canonical` and
+`protocol.commitment`: canonical JSON with `sort_keys=True`,
+`separators=(",",":")`, **`ensure_ascii=False`** (**PRD06-FR-002/005**), UTF-8
+with NFC-normalised text (**PRD06-FR-003**), LF and no trailing newline
+(**PRD06-FR-004**); the eight-field sealed record of **NDEC-001** with the
+`state` mapping of **JDEC-012 / NDEC-002 / PRD06-FR-068** and the action mapping
+of **NDEC-001 / Stage 4E-R4**; and `H_commit` as unkeyed SHA-256 into the
+existing `Sha256Digest`. Barriers are emitted in the order `SealedState` fixed
+(**PRD06-FR-007**) — the mapper never sorts. The builder refuses
+`state.step != cursor.step` and `state.role != role` **before hashing**, a local
+composition defect rather than a `TAMPERED` verdict. One `compute_commitment`
+primitive serves both the initial commitment and the later recomputation from the
+revealed nonce (**PRD06-FR-065**: the nonce is consumed, never generated), and
+digest inequality returns a plain `bool` — `E-HASH-MISMATCH` and
+`FinalAuditVerdict.TAMPERED` remain owned above this layer, as Stage 4E-R9-R1
+froze. Three supervisor known-answer vectors were verified **independently, before
+production existed**, by a stdlib-only one-off script that imported no project
+code, and match exactly in both repositories (**PRD06-FR-009**, cross-OS
+byte-identity). `app/**` and `domain/**` are byte-unchanged and **no committed
+test required maintenance**. `MODULE_BOUNDARIES.md`'s `protocol.commitment`
+dependency list was reconciled to include `app.turn_cursor` — documentation
+reconciliation of the already-frozen builder input, not a new decision. No
+peer-visible family was added: peer-visible families remain **10** — **4
+implemented, 0 ready, 6 blocked** — and **Stage 4E as a whole is NOT COMPLETE.**
+**No requirement was added, removed, reclassified or re-owned; no JDEC-016,
+NDEC-008, INV-16 or C-11 was created.** Requirements remain **91** (76/9/4/2);
+Appendix E **55**; Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**;
+JDEC **15**; NDEC **7**; INV **15**; C-01…C-10; ports **20**; error IDs **20**;
+`ProtocolPhase` **1**; PRD-02 IDs **87**; result fields **11**; PRD-06 IDs
+**129**; PRD-07 IDs **140**; timeline events **15**; `num_games` **6 FIXED**.

@@ -667,3 +667,33 @@
   The strongest evidence in the stage is the least dramatic - every committed test passed with
   **zero edits**. Three new types, a new module and three new exports, and nothing already agreed
   had to move.
+- **Stage 4E-R9-RESUME** is the payoff for a stop that produced nothing. The original R9 halted
+  `BLOCKED-BEFORE-CODE` with three sealed members unrepresented; two reconciliation stages later
+  the same scope was written in one pass, with every test green on the first run after
+  production. That is worth naming precisely, because the tempting lesson - "the stop cost two
+  stages" - is backwards. Had I written the codec then, `role` would have been serialized as
+  whichever of four spellings I happened to pick, and the error would have surfaced as a false
+  TAMPERED against a real opponent, at which point the match is void with no appeal. The stop
+  did not delay the work; it is the reason the work was writable at all.
+  The single most valuable instruction in the stage was the external known-answer oracle. Three
+  canonical strings and digests, produced independently of this repository, verified with a
+  stdlib-only script *before any production existed*. That inverts the usual failure mode of
+  codec tests: written after the fact, they record whatever the implementation happens to emit,
+  and a test that computes its own expectation proves only self-consistency. Here the digest was
+  a fact about the contract before it was a fact about my code, and my code had to meet it. If I
+  had produced a different byte ordering, a `\u05e9` escape or a trailing newline, the failure
+  would have been immediate and unarguable rather than discovered by an opponent.
+  Two design choices are worth defending. `canonical_json_bytes` accepts only `str`, `int`,
+  `list` and `dict`, and refuses `None`, `bool` and `float` - even though the wider
+  canonicalization contract has rules for numbers and nulls in *other* artifacts. A sealed
+  commitment record contains none of them, so implementing those rules now would mean writing
+  untested branches against a contract this payload does not exercise. The narrow domain is
+  extendable the day a payload needs it; a speculative general-purpose serializer is not
+  something you can un-ship. And the module refuses a non-NFC string rather than normalising it,
+  which looks unhelpful until you notice that silently repairing it one step before hashing would
+  hide exactly the producer defect the NFC rule exists to catch.
+  The last one is about not writing code: `recompute` does not exist. The obvious shape is a
+  function named for the audit-time use, and I did not write it, because two implementations of
+  one hash can drift and a drifting verifier reports tampering that never happened. Recomputation
+  is `compute_commitment` called again with the revealed nonce, and the test says so explicitly
+  rather than leaving it as a comment.
