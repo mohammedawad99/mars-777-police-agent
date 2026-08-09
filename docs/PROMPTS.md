@@ -85,6 +85,8 @@
 | 4E-R9 | Canonical commitment codec + recompute foundation - dependency audit first, then tests-first implementation if ready | Referenced |
 | 4E-R9-R1 | Sealed commitment semantic prerequisites reconciliation (role, intent, state, ensure_ascii, hash-mismatch ownership) | Referenced |
 | 4E-R9-R1-CLOSE | Semantic prerequisites final audit, tracking, commit, push, CI | Referenced |
+| 4E-R9-R2 | Sealed record semantic values foundation - ActorRole, Intent and SealedState, tests first | Referenced |
+| 4E-R9-R2-CLOSE | Sealed record semantic values final audit, tracking, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

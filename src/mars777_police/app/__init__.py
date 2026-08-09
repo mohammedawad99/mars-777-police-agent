@@ -46,6 +46,7 @@ from .protocol_values import (
     NonceValue,
     Sha256Digest,
 )
+from .sealed_record_values import ActorRole, Intent, SealedState
 from .state_machine import (
     FAULT_PHASES,
     NORMAL_PHASES,
@@ -73,6 +74,7 @@ __all__ = [
     "Acknowledgement",
     "ActionKind",
     "ActionsExhaustedError",
+    "ActorRole",
     "ApplicationError",
     "BarrierAction",
     "Commitment",
@@ -80,6 +82,7 @@ __all__ = [
     "FinalNonceReveal",
     "IllegalSubGameBranchError",
     "IllegalTransitionError",
+    "Intent",
     "InvalidActionError",
     "InvalidDigestError",
     "InvalidNonceError",
@@ -93,6 +96,7 @@ __all__ = [
     "ProtocolMachine",
     "ProtocolPhase",
     "Reveal",
+    "SealedState",
     "Sha256Digest",
     "TransitionEvidence",
     "TransitionResult",

@@ -643,3 +643,27 @@
   and three spec documents that implementers actually read said only "fixed & agreed". A value
   that exists in exactly one artifact nobody consults at implementation time is, in practice, an
   implementation-time choice. Freezing a decision and *placing* it are two different jobs.
+- **Stage 4E-R9-R2** had one moment worth recording, and it happened before any production
+  code existed. The `SealedState` test file came out at 169 lines against a hard 150-line rule,
+  and the cheap fixes were all available: drop the parametrised cases down to one representative
+  each, merge the unsorted and duplicate tests, delete the docstrings explaining *why* a
+  permissive case is deliberate. Every one of those would have kept the file under the limit and
+  quietly reduced what the file proves.
+  The split was the honest move: shape, composition and immutability in one file, the barrier
+  ordering contract in another. That contract had earned its own file anyway - it is the single
+  place where two honest peers most easily diverge, because barriers are logically a set and
+  serializing a set without a fixed order is exactly how byte-identity breaks. Splitting also
+  happened *while still tests-first*, so it cost nothing and disturbed no evidence. The general
+  rule I want to keep: a line limit is a signal about how many responsibilities a file has taken
+  on, not an instruction to say less about the same ones.
+  Two smaller judgements. `True` had to be rejected as a `step` by **exact type**, because in
+  Python a bool *is* an int and a `step >= 1` check alone would have cheerfully accepted `True`
+  as step 1 - the kind of thing that surfaces months later as a step-numbering bug. And when the
+  test tried to prove an `ActorRole` subclass is refused, `type("LooseRole", (ActorRole,), {})`
+  raised `AttributeError` from deep inside the enum machinery rather than the `TypeError` I
+  expected. The dynamic call bypasses the path the normal `class X(ActorRole)` statement takes.
+  The instruction anticipated this and said to record the Python fact rather than invent a proxy,
+  so the test now asserts the real behaviour: an `Enum` with members cannot be extended at all.
+  The strongest evidence in the stage is the least dramatic - every committed test passed with
+  **zero edits**. Three new types, a new module and three new exports, and nothing already agreed
+  had to move.

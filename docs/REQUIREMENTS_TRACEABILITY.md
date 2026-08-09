@@ -562,3 +562,36 @@ Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC 
 INV **15**; C-01…C-10; ports **20**; error IDs **20**; `ProtocolPhase` **1**; PRD-02 IDs
 **87**; result fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events
 **15**; `num_games` **6 FIXED**.
+
+**Stage 4E-R9-R2 (sealed record semantic values foundation).** Implementation of
+the three semantic prerequisites Stage 4E-R9-R1 froze at contract level;
+**CLOSED / COMMITTED / CI-GREEN** at Stage 4E-R9-R2-CLOSE. Tests-first from the
+exact clean committed parents, with genuine `ModuleNotFoundError` RED proved
+while `app/__init__.py`, `app/protocol_values.py` and `domain/board.py` were all
+byte-identical to HEAD. `ActorRole` implements the **PROJECT-CONTRACT**
+`police`/`thief` vocabulary (NDEC-001) and `Intent` the **SOURCE-REQUIRED**
+`truth`/`lie` vocabulary (Ch 5 p.51, **PRD04-FR-016/017**); `SealedState`
+implements the own-known snapshot of **JDEC-012 / NDEC-002 / PRD06-FR-068** with
+sorted duplicate-free barriers (**PRD06-FR-007**) that are never silently
+repaired. The runtime `ROLE`/`VALID_ROLES` constants and the PRD-01 score keys
+`{cop, thief}` (**PRD01-FR-070/071/072**) are unchanged and provably distinct
+from the sealed vocabulary. Structural validation only: board bounds, barrier
+legality, quotas, capture and the builder's `state.step == cursor.step` /
+`state.role == role` invariants all remain with their owners, and **no opponent
+truth is representable**. No serialization, canonical JSON, NFC runtime, UTF-8
+codec, SHA-256, recomputation, digest comparison, `FinalAudit` or `protocol/`
+package was added. `app/protocol_values.py`, `app/turn_cursor.py`,
+`app/peer_turn_messages.py`, `app/peer_final_messages.py`, `app/peer_messages.py`,
+`app/turn_service.py`, `domain/board.py`, `domain/actions.py` and
+`domain/rules.py` are byte-unchanged, and **no committed test required
+maintenance**. `ActorRole`, `Intent` and `SealedState` are internal semantic
+prerequisites, **not peer-message families**: peer-visible families remain **10**
+— **4 implemented, 0 ready, 6 blocked** — the eight sealed members remain
+contract-ready, the original R9 codec scope is now implementation-unblocked but
+not started, and **Stage 4E as a whole is NOT COMPLETE.** **No requirement was
+added, removed, reclassified or re-owned; no JDEC-016, NDEC-008, INV-16 or C-11
+was created.** Requirements remain **91** (76/9/4/2); Appendix E **55**; Appendix
+F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**; INV
+**15**; C-01…C-10; ports **20**; error IDs **20**; `ProtocolPhase` **1**; PRD-02
+IDs **87**; result fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**;
+timeline events **15**; `num_games` **6 FIXED**.
