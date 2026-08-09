@@ -37,7 +37,7 @@ from .orchestrator import (
     LocalOrchestrator,
     OrchestratorResult,
 )
-from .peer_messages import Commitment, TurnCursor
+from .peer_messages import Acknowledgement, Commitment, TurnCursor
 from .protocol_values import FinalAuditVerdict, InvalidDigestError, Sha256Digest
 from .state_machine import (
     FAULT_PHASES,
@@ -63,6 +63,7 @@ from .turn_service import (
 __all__ = [
     "FAULT_PHASES",
     "NORMAL_PHASES",
+    "Acknowledgement",
     "ActionKind",
     "ActionsExhaustedError",
     "ApplicationError",

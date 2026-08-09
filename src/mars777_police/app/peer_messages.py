@@ -7,10 +7,11 @@ serialized, and nothing here computes a hash: a caller supplies an already
 validated ``Sha256Digest``, so this module never learns what was hashed, how the
 sealed record was canonicalized, or which nonce sealed it.
 
-Of the ten peer-visible families in `PROTOCOL_TIMELINE.md`, exactly one is
-implementable today (Stage 4E-R2): **Commitment**. The other nine remain blocked
-on payload shapes, value representations and association shapes that no current
-contract freezes - so no placeholder for them exists here.
+Of the ten peer-visible families in `PROTOCOL_TIMELINE.md`, exactly two are
+implementable today: **Commitment** (Stage 4E-R2) and **Acknowledgement** (Stage
+4E-R3, once `by_role` was classified as local log attribution). The other eight
+remain blocked on payload shapes, value representations and association shapes
+that no current contract freezes - so no placeholder for them exists here.
 
 Malformed construction raises the built-in ``ValueError``. That is the category
 ``FinalAuditVerdict`` already raises natively and that ``InvalidDigestError``
@@ -70,6 +71,41 @@ class Commitment:
     wrapped, and a pair is refused rather than turned into a cursor, so each
     value keeps one authoritative constructor and a caller can always tell which
     contract validated a field.
+    """
+
+    cursor: TurnCursor
+    h_commit: Sha256Digest
+
+    def __post_init__(self) -> None:
+        if type(self.cursor) is not TurnCursor:
+            raise ValueError(
+                f"cursor must be a TurnCursor, got {type(self.cursor).__name__}",
+            )
+        if type(self.h_commit) is not Sha256Digest:
+            raise ValueError(
+                f"h_commit must be a Sha256Digest, got {type(self.h_commit).__name__}",
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class Acknowledgement:
+    """The peer-visible acknowledgement: the turn cursor and the acked digest.
+
+    Ch 5 §5.3.2 gives its whole content - the opponent confirms it *received the
+    commitment* and is *locked onto it* - and PRD06-FR-082 renders that as
+    binding receipt of a **specific** ``H_commit`` for a **specific**
+    ``(sub_game, step)``. Those are exactly the two members here.
+
+    Three deliberate absences (Stage 4E-R3). ``by_role`` is **log attribution**,
+    not payload: the source names an acknowledging party but never a field, and
+    the writer already knows it from the one opponent process and the role
+    mapping frozen at ``CONFIG_LOCKED`` - so nothing is transmitted for a hostile
+    peer to forge. ``ack_of_step`` is the *persisted* name of ``cursor.step``,
+    not a second field. And there is no ``accepted`` flag: an acknowledgement is
+    positive by existing, while a stale or mismatched one is a live rejection.
+
+    It shares its component types with `Commitment` and is still a different
+    family; the class identity carries that, so no message-kind value exists.
     """
 
     cursor: TurnCursor

@@ -320,3 +320,29 @@ eleventh barrier family. Requirements remain **91** (76/9/4/2); Appendix E **55*
 Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC
 **7**; INV **15**; C-01…C-10; ports **20**; `ProtocolPhase` **1**; PRD-02 IDs
 **87**; result fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**.
+
+**Stage 4E — RESUME 2 (Acknowledgement foundation).** Implementation of the
+contract D27 had already frozen; **no contract was re-derived and none changed**.
+`Acknowledgement` implements **PRD06-FR-082** (binding receipt of a *specific*
+`H_commit` for a *specific* `(sub_game, step)`) over the cursor required by
+**PRD02-FR-044/FR-063**, reusing the `Sha256Digest` value from Stage 4F and the
+`TurnCursor` from the previous slice — so **0** new supporting error classes and
+**0** new dependencies. `LOG_CONTRACT.md` §C `by_role` stays **local log
+attribution**, derived from the emitted/received direction plus the role frozen at
+`CONFIG_LOCKED` (**ARCH-001/002**, **PRD06-FR-048**) and never transmitted;
+`ack_of_step` stays the *persisted* name of `cursor.step`, not a second message
+field; and no `accepted`/`ok` status exists, the reference FastMCP `{"accepted": …}`
+snippet remaining **NON-BINDING**. `Commitment` and `TurnCursor` are byte-unchanged.
+**Reveal remains BLOCKED-BY-VALUE-REPRESENTATION** — its two blockers are carried
+forward to Stage 4E-R4. Peer-visible families remain **10**, now **2 implemented**
+(Commitment, Acknowledgement) and **8 blocked**; **Stage 4E as a whole is NOT
+COMPLETE**. One authorized regression-maintenance line in
+`tests/app/test_peer_messages.py` replaced the now-implemented `Acknowledgement`
+with the still-blocked `ResultAgreement` in a blocked-family absence assertion,
+preserving the assertion count and all coverage. **No requirement was added,
+removed, reclassified or re-owned; no JDEC-016, NDEC-008, INV-16 or C-11 was
+created.** Requirements remain **91** (76/9/4/2); Appendix E **55**; Appendix F
+**32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**; INV
+**15**; C-01…C-10; ports **20**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result
+fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events **15**;
+`num_games` **6 FIXED**.
