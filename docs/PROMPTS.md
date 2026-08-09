@@ -80,6 +80,8 @@
 | 4E-R7 | Peer-message module reorganization - pure behaviour-preserving migration, tests first | Referenced |
 | 4E-R7-SUPPLEMENT | Mandatory report completion (evidence only; no code change) | Referenced |
 | 4E-R7-CLOSE | Module reorganization final audit, tracking, commit, push, CI | Referenced |
+| 4E-R8 | Final nonce reveal foundation - nonce value, reveal entry and batched reveal, tests first | Referenced |
+| 4E-R8-CLOSE | Final nonce reveal final audit, tracking, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

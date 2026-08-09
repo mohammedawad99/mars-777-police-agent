@@ -37,8 +37,15 @@ from .orchestrator import (
     LocalOrchestrator,
     OrchestratorResult,
 )
-from .peer_messages import Acknowledgement, Commitment, Reveal, TurnCursor
-from .protocol_values import FinalAuditVerdict, InvalidDigestError, Sha256Digest
+from .peer_final_messages import NonceRevealEntry
+from .peer_messages import Acknowledgement, Commitment, FinalNonceReveal, Reveal, TurnCursor
+from .protocol_values import (
+    FinalAuditVerdict,
+    InvalidDigestError,
+    InvalidNonceError,
+    NonceValue,
+    Sha256Digest,
+)
 from .state_machine import (
     FAULT_PHASES,
     NORMAL_PHASES,
@@ -70,14 +77,18 @@ __all__ = [
     "BarrierAction",
     "Commitment",
     "FinalAuditVerdict",
+    "FinalNonceReveal",
     "IllegalSubGameBranchError",
     "IllegalTransitionError",
     "InvalidActionError",
     "InvalidDigestError",
+    "InvalidNonceError",
     "LocalActionResult",
     "LocalOrchestrator",
     "LocalTurnService",
     "MoveAction",
+    "NonceRevealEntry",
+    "NonceValue",
     "OrchestratorResult",
     "ProtocolMachine",
     "ProtocolPhase",

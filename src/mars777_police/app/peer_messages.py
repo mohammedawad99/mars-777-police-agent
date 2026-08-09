@@ -7,6 +7,7 @@ as before, without wrappers, subclasses or a second definition. It deliberately
 names no blocked family: a family appears here only once it is implemented.
 """
 
+from .peer_final_messages import FinalNonceReveal as FinalNonceReveal
 from .peer_turn_messages import Acknowledgement as Acknowledgement
 from .peer_turn_messages import Commitment as Commitment
 from .peer_turn_messages import Reveal as Reveal
@@ -15,6 +16,7 @@ from .turn_cursor import TurnCursor as TurnCursor
 __all__ = [
     "Acknowledgement",
     "Commitment",
+    "FinalNonceReveal",
     "Reveal",
     "TurnCursor",
 ]

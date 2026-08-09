@@ -31,7 +31,10 @@ DEFINING = {
     "Commitment": peer_turn_messages,
     "Acknowledgement": peer_turn_messages,
     "Reveal": peer_turn_messages,
+    "NonceRevealEntry": peer_final_messages,
+    "FinalNonceReveal": peer_final_messages,
 }
+FACADE_NAMES = ("TurnCursor", "Commitment", "Acknowledgement", "Reveal", "FinalNonceReveal")
 APP_DIR = Path(inspect.getfile(peer_messages)).parent
 
 
@@ -51,9 +54,11 @@ def test_each_value_has_exactly_one_definition_in_its_owning_module(name: str) -
     assert owners == [DEFINING[name]]
 
 
-@pytest.mark.parametrize("name", sorted(DEFINING))
+@pytest.mark.parametrize("name", FACADE_NAMES)
 def test_the_facade_re_exports_the_same_class_object(name: str) -> None:
+    """`NonceRevealEntry` is a supporting value, so it stays off the façade."""
     assert getattr(peer_messages, name) is getattr(DEFINING[name], name)
+    assert not hasattr(peer_messages, "NonceRevealEntry")
 
 
 @pytest.mark.parametrize("name", sorted(DEFINING))
@@ -68,16 +73,16 @@ def test_the_facade_defines_no_class_of_its_own() -> None:
     assert _classes_defined_in(peer_messages) == set()
 
 
-def test_the_finalization_module_is_an_empty_boundary_for_now() -> None:
-    """R7 is a migration; `FinalNonceReveal` is READY in docs, absent in Python."""
-    assert _classes_defined_in(peer_final_messages) == set()
-    for family in ("NonceValue", "NonceRevealEntry", "FinalNonceReveal", "InvalidNonceError"):
-        assert not hasattr(peer_final_messages, family)
+def test_the_finalization_module_owns_exactly_the_final_reveal_pair() -> None:
+    """R7 left this boundary empty; Stage 4E-R8 filled it with exactly two values."""
+    assert _classes_defined_in(peer_final_messages) == {"NonceRevealEntry", "FinalNonceReveal"}
+    assert "NonceValue" not in _classes_defined_in(peer_final_messages)
+    assert "InvalidNonceError" not in _classes_defined_in(peer_final_messages)
 
 
 @pytest.mark.parametrize(
     "family",
-    ["FinalNonceReveal", "MoveValidation", "FinalAudit", "Declaration", "ResultAgreement"],
+    ["MoveValidation", "FinalAudit", "Declaration", "ResultAgreement"],
 )
 def test_the_facade_still_names_no_blocked_family(family: str) -> None:
     assert not hasattr(peer_messages, family)
@@ -117,7 +122,7 @@ def test_the_defining_modules_do_not_import_the_facade() -> None:
     assert "peer_messages" not in _sibling_imports(peer_final_messages)
     assert _sibling_imports(turn_cursor) == set()
     assert _sibling_imports(peer_turn_messages) == {"protocol_values", "turn_cursor"}
-    assert _sibling_imports(peer_final_messages) == set()
+    assert _sibling_imports(peer_final_messages) == {"protocol_values", "turn_cursor"}
 
 
 def test_every_peer_message_module_stays_within_the_line_budget() -> None:

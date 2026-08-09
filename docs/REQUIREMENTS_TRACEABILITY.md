@@ -499,3 +499,30 @@ was created.** Requirements remain **91** (76/9/4/2); Appendix E **55**; Appendi
 **15**; C-01…C-10; ports **20**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result
 fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events **15**;
 `num_games` **6 FIXED**.
+
+**Stage 4E-R8 (final nonce reveal foundation).** Implementation of the contract
+R6/FIX1/FIX2 froze; **CLOSED / COMMITTED / CI-GREEN** at Stage 4E-R8-CLOSE.
+Tests-first from the exact clean committed parents, with genuine RED proved while
+all four production files were byte-identical to HEAD. `NonceValue` and
+`InvalidNonceError(ValueError)` implement the NDEC-001 nonce profile
+(**PROJECT-CONTRACT**, exactly `[0-9a-f]{32}`, never normalised);
+`NonceRevealEntry` + `FinalNonceReveal` implement `PROTOCOL_TIMELINE.md` event 11
+and Figure 6's *Final Reveal: all Nonces* (**PRD06-FR-087**, Ch 5 §5.4 p.55) as
+**one batched message per peer per sub-game**, associated by `TurnCursor` alone.
+Representation is separated from generation: **CRYPTO-010 stays a producer runtime
+obligation** and secrecy-until-final-reveal stays a protocol invariant, so neither
+is a structural check and a low-entropy-looking value is valid. Completeness,
+uniqueness, ordering and same-sub-game agreement remain **LIVE**. No requirement
+was re-owned and no contract text changed: `docs/` diff was **0** at implementation
+time. `app/turn_cursor.py`, `app/peer_turn_messages.py`, `app/turn_service.py`,
+`domain/actions.py` and `domain/rules.py` are byte-unchanged. **No nonce generator,
+hashing, canonicalization, commitment verification or `FinalAudit`** — `FinalAudit`,
+`MoveValidation` and the mutual result agreement stay `BLOCKED-BY-PAYLOAD-SHAPE`.
+Peer-visible families remain **10** — **4 implemented, 0 ready, 6 blocked** — and
+**Stage 4E as a whole is NOT COMPLETE.** **No requirement was added, removed,
+reclassified or re-owned; no JDEC-016, NDEC-008, INV-16 or C-11 was created.**
+Requirements remain **91** (76/9/4/2); Appendix E **55**; Appendix F
+**32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**; INV
+**15**; C-01…C-10; ports **20**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result
+fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events **15**;
+`num_games` **6 FIXED**.

@@ -581,3 +581,31 @@
   nodes with `level == 1` made it both correct and stronger, and the same distinction bit twice
   in this stage - a grep for `^class ` also reports the façade's docstring line beginning "class
   objects". Text search is a fine way to find candidates and a poor way to prove structure.
+- **Stage 4E-R8** was the first stage in a while with no correction to make, and the reason is
+  worth recording rather than enjoyed. Everything hard about it had already been argued out in
+  R6, FIX1 and FIX2 - what a nonce is allowed to look like, why that shape is a project contract
+  and *not* a mathematical requirement of recomputation, and that one batched message per peer
+  per sub-game is what Figure 6 actually draws. Implementation was then almost mechanical,
+  which is the shape a frozen contract is supposed to produce.
+  The one judgement that still had to be made in code is the one I would defend hardest:
+  `NonceValue("0" * 32)` constructs successfully. It looks like a bug and reads like a missing
+  check, and a reviewer skimming the file would reasonably flag it. But a constructor handed a
+  *received* string cannot distinguish a CSPRNG output from a typed-out run of zeros - the
+  entropy is a property of how the value was produced, not of the characters. Rejecting
+  low-entropy-looking values would buy nothing and would falsely advertise a guarantee the type
+  cannot make. So the test asserts the acceptance explicitly, with the reason next to it, which
+  turns a suspicious line into a documented boundary.
+  The same instinct decided the batch. Empty tuples, duplicate cursors, descending steps and
+  mixed sub-games all construct, and each of those is asserted on purpose. A value object that
+  refused them would have to know which steps were actually played, which sub-game is current
+  and which nonces it has already seen - that is game state, and a semantic value that reaches
+  for game state stops being a value. Structural validation answers "is this the right shape";
+  everything that needs context stays LIVE. Writing the permissive cases down as tests is what
+  stops a later stage from quietly "fixing" them.
+  Two smaller habits paid off again. Both historical tests were run unchanged against the new
+  production code *first*, so their failures are evidence rather than an inconvenience - the
+  blocked-family tuple genuinely stopped being true the moment `FinalNonceReveal` existed, and
+  the R7 layout test genuinely stopped being true the moment the finalization module stopped
+  being empty. And when the layout test was updated it was made *stronger*, asserting the exact
+  class inventory of that module rather than merely that it is no longer empty; a maintenance
+  edit that only loosens an assertion is a lost test.
