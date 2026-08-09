@@ -21,7 +21,7 @@ the wire yet.
 | 9 | **Verdict (validation record)** | opponent/local | legality + capture-truth result | (result) | — | log (separate record) | — | — |
 | 10 | **State transition** | both (state machine) | new positions/barriers | phase transition | opponent true pos (always) | — | — | — |
 | 11 | **Final nonce reveal** | each → each | all nonces | **nonces** | (none) | log (final_reveal) | — | recompute all `H_commit` |
-| 12 | **Final audit** | both (Replay Viewer) | full logs + nonces | **[RR]** audit verdicts — *the recomputation is local; whether a verdict is transmitted is unfrozen, see below (4E-R6)* | — | log (`audit.result`) | recompute SHA-256 per step | Verified OK / TAMPERED |
+| 12 | **Final audit** — *audit-material exchange + local mutual audit* | each → each (material); then **each side locally** | full logs + nonces | **the audit material / full log each side must disclose so the opponent can recompute independently** (Ch 5 §5.4) — **not** a verdict: no `FinalAuditVerdict`, `expected_digest`, `recomputed_digest` or reason is transmitted (C-11) | — | log (`audit.result`, `entries[].verified`, `audit.tampered_step`) | recompute SHA-256 per step **locally** | Verified OK / TAMPERED — **local** Replay-Viewer/log verdict |
 | 13 | **Result construction** | each team | per-sub-game scores, commit, tokens, four links | — | — | result | result-approval core (NDEC-006) | dual-report compare |
 | 14 | **Mutual result agreement** | both → both | agreed result core | `result_sha256` + agreement | — | result | `result_sha256` | both reports equal hash |
 | 15 | **Gmail reporting** | each team → lecturer | full **self-contained** result JSON (identities, four links, **FastMCP endpoints**, **signed hardware declarations + `hardware_auth`**, scores, commits, tokens; K3) | result JSON attachment | **key material** | (sent) | — | grader parse/attribution; **missing-from-either-side or contradictory ⇒ 0 to both (E-35, C-09)** |
@@ -65,13 +65,35 @@ invention:
   `{"accepted": is_valid, …}` return in the minimal FastMCP server (p.28) is
   **REFERENCE-EXAMPLE** about signature checking and was **not** promoted — the same
   snippet Stage 4E-R3 already refused to promote for the acknowledgement.
-- **Event 12's computation is local.** Ch 5 §5.4 (p.55) has each side rebuild the
-  opponent's record from *State, Move, Intent, Nonce* and compare against the
-  declared commitment, and Ch 2.2.1 makes independent verification the whole point
-  of having no central server. Ch 7 §7.5 + Figure 10 put the recomputation in the
-  **Replay Viewer** over the persisted log, emitting `Verified OK` / `TAMPERED`.
-  What the log holds is settled; whether a *verdict message* is exchanged is not,
-  and disagreement already has a path through result agreement and C-09.
+- **Event 12's computation is local — and Stage 4E-R10-R1 settled the rest.** Ch 5
+  §5.4 (p.55) has each side rebuild the opponent's record from *State, Move,
+  Intent, Nonce* and compare against the declared commitment, and Ch 2.2.1 makes
+  independent verification the whole point of having no central server. Ch 7 §7.5 +
+  Figure 10 put the recomputation in the **Replay Viewer** over the persisted log,
+  emitting `Verified OK` / `TAMPERED`. What was left open in 4E-R6 — *whether a
+  verdict message is exchanged* — is now closed as **NOT SOURCE-REQUIRED**, and the
+  project declines to invent one (**C-11**). Note the classification precisely: the
+  source does **not forbid** such a message; it simply never requires one, and
+  Figure 6 draws no arrow for it. Consequences, none of which shrink the audit:
+
+  | Aspect | Status |
+  |---|---|
+  | **Transmitted / made available** | the **audit material / full log** each side discloses, including its nonce reveals, so the opponent can recompute independently (Ch 5 §5.4) — **SOURCE-REQUIRED** |
+  | **Local** | recomputation, digest comparison, and the `FinalAuditVerdict` produced from it |
+  | **Persisted** | `entries[].verified`, `audit.result`, `audit.tampered_step` and the preserved digest evidence (PRD06-FR-104), already **LOCAL-ONLY** per `LOG_CONTRACT.md` §E |
+
+  There is therefore **no peer-visible `FinalAudit` family**, and the derived
+  peer-visible inventory is corrected **10 → 9**. What survives untouched:
+  `ProtocolPhase.FINAL_AUDIT` (a workflow phase is not a message family),
+  `FinalAuditVerdict` (local audit/log/replay vocabulary), and the TAMPERED
+  consequence with its frozen sanction. The exact **interchange shape** of the
+  audit material is a separate artifact/transport question, recorded as
+  `AUDIT-EXCHANGE-PAYLOAD: BLOCKED-BY-INTEROPERABILITY-SHAPE` in
+  `INTEROPERABILITY_BLOCKERS.md` — it is **not** a peer-message-family blocker.
+  Precise wording on the downstream link: a **completed mutual audit is a
+  precondition to mutual result agreement** (App E; PRD06-FR-100). Result agreement
+  is *downstream of* audit; it is **not** the transport of a verdict, and it stays
+  `BLOCKED-BY-PAYLOAD-SHAPE` in its own right.
 
 Event 11 needs no such caveat: *"Final Reveal: all Nonces"* is drawn in both
 directions, and p.55 says each agent submits its full log **including the nonce

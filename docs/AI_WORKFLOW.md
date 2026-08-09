@@ -697,3 +697,35 @@
   one hash can drift and a drifting verifier reports tampering that never happened. Recomputation
   is `compute_commitment` called again with the revealed nonce, and the test says so explicitly
   rather than leaving it as a comment.
+- **Stage 4E-R10** is the second stage that produced nothing, and unlike the first one it was
+  not the plan. The instruction was to freeze two payloads; I froze neither, because the source
+  audit turned up something the instruction had not anticipated - the mechanism Ch 5 §5.4
+  describes is *complete without* the message I had been asked to specify. Logs are exchanged,
+  each side recomputes locally, and the book says outright that "the cryptography, and not human
+  judgement, decides". A transmitted verdict is the other side's assertion about its own conduct,
+  which is precisely what an unforgeable local recomputation exists to make unnecessary.
+  What made the finding trustworthy was that three independent lines agreed: the Ch 5 prose, the
+  Ch 7 Replay Viewer placement of `Verified OK`/`TAMPERED` over a *persisted file*, and Figure 6
+  drawing four arrows and no fifth. One of those alone would have been an argument; three
+  converging is evidence. The instruction had an explicit escape hatch - report an inventory
+  contradiction and stop before touching the architecture - and using it was clearly right, since
+  the alternative was to delete a family from a count that appears across half the documentation
+  on my own authority.
+- **Stage 4E-R10-R1** then had to resolve it, and the real work was refusing the tidy answer. The
+  tidy answer is "there is no FinalAudit, delete it, nine families, done" - and it is wrong,
+  because it quietly loses a source requirement. The audit only works if the material reaches the
+  peer, and I had been assuming a `FinalAudit` message would carry it. Remove the message and the
+  obligation does not disappear; it becomes *visible*, and it turns out nothing in the project was
+  carrying it. The sealed record has eight members; Reveal discloses two of them and
+  `FinalNonceReveal` one more; the peer still cannot rebuild the record. That gap had been hiding
+  behind a family that should not have existed.
+  So the correction is three-way, not a deletion: an implemented message, a source-required
+  obligation that is *not* a message, and a local vocabulary. Writing it that way also forced a
+  new blocker into the open - the interchange shape of the audit material - which I deliberately
+  did not solve, because inventing bytes for it in the same stage that discovered it is how the
+  first mistake happened.
+  Two smaller disciplines. I kept writing "the source does not **require** a verdict message"
+  rather than "forbids", because the difference decides whether a future stage may add one. And I
+  corrected my own R10 wording that said the peer "learns the verdict through ResultAgreement" -
+  the supported claim is only that a completed audit is a *precondition to* result agreement.
+  Overstating a relationship is the same failure as inventing a field, just harder to notice.

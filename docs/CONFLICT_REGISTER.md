@@ -53,6 +53,8 @@ remain NOT CONFIRMED.
 
 | **C-10** | **Scent state bound vs additive update formula** (Stage 3B-FIX2; **post-lock, implementation-discovered**) | **Ch 4 §4.3 (PDF p.43 / book p.27)** defines the state variable: `τij(t) — עוצמת הריח בתא בזמן הנוכחי. **ערך רציף בתחום [0, 0.9]**` — τ is a continuous value **in [0, 0.9]**. This constrains the STATE, not merely the emission delta. | **Ch 4 §4.3 update equation:** `τij(t+1) = max(0, (1−ρ)·τij(t) + ∆τij)` — a lower clamp only, with centre `∆τ = 0.9`. Literal repeated emission yields e.g. `0.81 + 0.9 = 1.71`, which violates Source A. | **No** (App F fixes 0.9 / 0.10 / 5×5 but does not resolve the update expression) | Non-numeric semantic conflict → documented project interpretation (academic-freedom rule, PDF p.5) | **The state invariant wins: `0 <= τ <= 0.9`.** The implemented evolution is the saturated recurrence `τ_next = min(Decimal("0.9"), max(Decimal("0"), (1−ρ)·τ_cur + ∆τ))`. Below the bound the recurrence stays exactly additive — saturation is a boundary operation, not a replacement. | **Confirmed** (both statements quoted from the same section) | Upper saturation in `domain.scent`; construction-time `[0, 0.9]` validation of every `ScentField` cell; Figure 5 is corroborating illustration only | **RESOLVED — Stage 3B-FIX2 (post-lock)** |
 
+| **C-11** | **Peer-family inventory overreach — a transmitted `FinalAudit` verdict** (Stage 4E-R10 / R10-R1; **post-lock, reconciliation-discovered**) | **Derived project inventory:** our peer-visible message inventory counted a **Final audit** family, and `PROTOCOL_TIMELINE.md` event 12 carried `**[RR]** audit verdicts` as a transmitted item. | **Book:** Ch 5 §5.4 (p.55) has each side **submit its full log including every nonce reveal** and then **independently recompute** the opponent's commitments locally; Ch 7 §7.5 + Figure 10 place `Verified OK`/`TAMPERED` in the **Replay Viewer** over the persisted log; **Figure 6 (p.52) draws no audit-verdict arrow**; App E requires a comprehensive **mutual log audit** as a precondition to agreeing the shared result. | No | Non-numeric; App F silent. Source minimality: a family is peer-visible only where the source requires transmission. | **RESOLVED (Stage 4E-R10-R1).** There is **no peer-visible `FinalAudit` verdict family**; the derived inventory is corrected **10 → 9**. `FinalAuditVerdict` survives unchanged as the **local audit / log / replay** vocabulary, `ProtocolPhase.FINAL_AUDIT` survives as a workflow phase, and the **source-required end-of-game audit-material / full-log disclosure** survives as a separate artifact/transport obligation whose interchange shape is newly recorded as `AUDIT-EXCHANGE-PAYLOAD: BLOCKED-BY-INTEROPERABILITY-SHAPE`. **The source does not forbid a verdict message; it simply does not require one, and the project declines to invent it.** | High — three independent source lines converge, and Stage 4E-R10 stopped rather than change the inventory unilaterally. | Peer-visible families **9**; matrix **4 implemented / 0 ready / 5 blocked**. No Python changes: `FinalAuditVerdict`, `FINAL_AUDIT` and `FinalNonceReveal` are untouched, and no `FinalAudit` class ever existed. Timeline events stay **15**; no requirement, JDEC, NDEC, INV or Appendix count changes. | **Stage 4E-R10-R1 — supervising-authorized; awaiting CLOSE review** |
+
 **Stage 1D.1 correction (this pass):** added **C-09** (reporting-failure sanction:
 Ch 9 per-side non-credit vs App E #35 game-void/0-both). The Stage-1A high-risk-class
 line that called reporting sanctions "consistent / NOT CONFIRMED" is **corrected** —
@@ -92,9 +94,35 @@ alter the radial-kernel project contract · introduce a config field (the bound
 is a source-defined state-domain invariant, never negotiated and never written
 to an official artifact) · relate to `pheromone_min_center_intensity`.
 
-**Identifier note.** Conflict-Register **C-10** is distinct from the unrelated
-review-local finding label "C-10" used inside
-`docs/prd/PRD_05_07_REVIEW.md`, which numbers that document's own Stage-2C
-red-team findings and is **not** a Conflict-Register entry. That historical
-review is left unchanged. The Conflict Register is the single authority for
-`C-01…C-10`.
+## C-11 — scope and non-effects (Stage 4E-R10-R1)
+
+**Rationale.** (1) Ch 5 §5.4 describes an end-of-game mutual audit that is
+**complete without a verdict message**: logs are disclosed, each side recomputes
+the opponent's commitments itself, and *"the cryptography, and not human
+judgement, decides"* — a transmitted verdict would be the other side's assertion
+about its own conduct, which unforgeable local recomputation exists to make
+unnecessary. (2) Ch 7 §7.5 and Figure 10 place the `Verified OK`/`TAMPERED`
+verdict in the **Replay Viewer**, a local submission-requirement tool reading a
+persisted log file. (3) **Figure 6 (p.52) draws four arrows only** — Commit,
+Acknowledge, Reveal, Final Reveal — and no audit-verdict arrow. (4) App E and
+**PRD06-FR-100** make the mutual audit a **precondition to agreeing the shared
+result**, locating the outcome downstream rather than in an audit message.
+(5) **PRD06-FR-104** requires audit evidence to be *preserved*, not transmitted.
+
+**C-11 does NOT:** claim the source *forbids* an audit-verdict message (the
+correct classification is **NOT SOURCE-REQUIRED**) · delete or rename
+`FinalAuditVerdict` · remove `ProtocolPhase.FINAL_AUDIT` or the final-audit
+workflow · change any Python · delete timeline event 12 or change the event
+count · weaken the TAMPERED consequence, which keeps its frozen source sanction ·
+resolve `MoveValidation`, which stays `BLOCKED-BY-PAYLOAD-SHAPE` · resolve
+`ResultAgreement`, which stays `BLOCKED-BY-PAYLOAD-SHAPE` and is **not** the
+transport of a verdict · claim `FinalNonceReveal` is the complete audit material ·
+add a requirement, JDEC, NDEC, INV or Appendix-F row.
+
+**Identifier note.** Conflict-Register **C-10** and **C-11** are distinct from the
+unrelated review-local finding labels "C-10" and "C-11" used inside
+`docs/prd/PRD_05_07_REVIEW.md`, which number that document's own Stage-2C
+red-team findings (its "C-11" is a *profile-downgrade* risk row, resolved there,
+and has no relation to the peer-family inventory). Those are **not**
+Conflict-Register entries, and that historical review is left unchanged. The
+Conflict Register is the single authority for `C-01…C-11`.

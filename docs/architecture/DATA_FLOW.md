@@ -63,7 +63,8 @@ strategy cannot read what does not exist here (GUI-001/002, ARCH-002).
 | Reveal (move + hint; **nonce withheld**) | reveal | PUB after send, PER |
 | Receive peer reveal | peer move/hint | OPP → validated |
 | Validate legality/capture | verdict | DER, PER |
-| Final audit: release all nonces, recompute every `H_commit` | nonces + verdicts | PUB at audit, PER |
+| Final audit: disclose audit material (full log incl. nonces), recompute every `H_commit` | audit material + nonces | PUB at audit, PER |
+| Final audit: local verdict from that recomputation *(4E-R10-R1)* | `FinalAuditVerdict` | **DER, PER — local; never transmitted** (C-11) |
 
 **Privacy proof (nonce).** Exactly one custodian (`protocol.commitment`) and one
 release point (`FINAL_AUDIT`). No log, GUI event, report, or LLM prompt path can read

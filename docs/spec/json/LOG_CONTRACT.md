@@ -204,6 +204,27 @@ contradictory components. It is emphatically *not* a hash mismatch and *not* TAM
 nothing has been hashed yet, and no peer has done anything wrong. Hashing a
 self-contradictory record would be the actual defect.
 
+### Stage 4E-R10-R1 — what the end-of-game mutual audit actually needs
+
+`FinalNonceReveal` is **not** the complete audit material, and this contract must not
+be read as implying it is. The sealed record hashed into `H_commit` is the eight
+members of §B — `state`, `move`, `intent`, `hint`, `step`, `role`, `sub_game`,
+`nonce`. Of those, ordinary **Reveal** discloses the action and the hint (§D),
+**FinalNonceReveal** discloses the **nonce batch** (Stage 4E-R6/R8), and the peer
+therefore still lacks the disclosed `state` and `intent` it needs to rebuild the
+record and recompute the digest.
+
+Ch 5 §5.4 closes that gap at the source level: at the end of the game each agent
+**submits its full log, including the nonce reveals of all its steps**, and each side
+then reconstructs the opponent's data itself. So the source-required disclosure is
+the **audit material / full log**, of which the nonce batch is one part.
+
+That obligation is **not** a peer-message family (**C-11**): its interchange shape is
+recorded as `AUDIT-EXCHANGE-PAYLOAD: BLOCKED-BY-INTEROPERABILITY-SHAPE` in
+`INTEROPERABILITY_BLOCKERS.md` and belongs to the artifact/transport boundary.
+`FinalNonceReveal` is **unchanged and not expanded** by this note. The verdict
+produced from that recomputation stays local — see §E.
+
 ## E. Verification result
 
 Post-mortem audit: recompute each step's hash from the revealed data and compare

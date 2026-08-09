@@ -24,10 +24,36 @@ verification, result agreement, or mandatory reporting.
 
 ## Blocking items
 
-**None.** Every interoperability dependency required for config agreement,
-Commit-Reveal verification, replay verification, result agreement, and mandatory
-reporting is SOURCE-LOCKED, PROJECT-LOCKED, or NEGOTIATED-PRE-MATCH with a defined
-default, exchange, lock, detection (hash comparison), and failure behaviour.
+**One, opened at Stage 4E-R10-R1.**
+
+| Item | Status | Class | Basis |
+|---|---|---|---|
+| **`AUDIT-EXCHANGE-PAYLOAD` — the interchange representation of the end-of-game audit material** | **Unresolved.** Ch 5 §5.4 requires each side to disclose its **full log including every nonce reveal** so the opponent can recompute independently, but no source fixes *how that material crosses the boundary*. Deliberately **not** decided here: not raw log-file bytes, not the whole local JSON log object, not a tuple of sealed records, not "only the missing `state`/`intent`/`nonce` values", not an artifact URL and not a filesystem path. | **BLOCKING** (artifact/transport interoperability) | Ch 5 §5.4; App E mutual-log-audit row; PRD06-FR-100/101; **C-11** |
+
+Three things this blocker is **not**. It is **not a peer-message-family blocker**:
+the exchange is an artifact/transport obligation and is **not** counted as an
+`app.peer_messages` semantic family, so the family inventory is unaffected. It is
+**not** satisfied by `FinalNonceReveal`, which carries the nonce batch only — see
+the note below. And it does **not** re-open the sealed-record, canonicalization or
+commitment contracts, which are frozen and implemented.
+
+**Why it was invisible until now.** The obligation was hidden behind the assumption
+that a `FinalAudit` message would carry it. Once Stage 4E-R10-R1 established there is
+no such family (**C-11**), the underlying source requirement became visible on its
+own terms: the audit is only performable if the material actually reaches the peer.
+
+**Candidate ownership to reconcile later** (audited, none frozen): the **producer**
+(`infra.logger` / the finalized per-sub-game log material), **storage**
+(`infra.artifacts` / ArtifactStore), **transport** (`PeerTransportPort` / a future
+FastMCP submission operation) and the **consumer** (the audit verifier /
+`infra.replay` verification path). The reference implementation's `submit_audit`
+tool name remains a **REFERENCE-CONVENTION** and is deliberately **not**
+project-locked here.
+
+Every **other** interoperability dependency required for config agreement,
+Commit-Reveal verification, replay verification, result agreement and mandatory
+reporting remains SOURCE-LOCKED, PROJECT-LOCKED, or NEGOTIATED-PRE-MATCH with a
+defined default, exchange, lock, detection (hash comparison), and failure behaviour.
 
 ## Genuinely still REVIEW-REQUIRED (non-blocking — no interop dependency)
 

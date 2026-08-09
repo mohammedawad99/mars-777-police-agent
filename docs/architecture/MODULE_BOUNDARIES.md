@@ -48,6 +48,27 @@ rules vs. scoring), and that seam is named below.
 
 **Test boundary:** state-machine and contract tests with fake ports.
 
+> **Stage 4E-R10-R1 ruling - there is no `FinalAudit` peer-message family (design only; no
+> Python).** Stage 4E-R10 audited the two remaining audit-adjacent families and stopped with an
+> inventory contradiction; this ruling resolves it. Ch 5 §5.4 exchanges **logs** and makes each
+> side's recomputation **local**; Ch 7 §7.5 puts the `Verified OK`/`TAMPERED` verdict in the
+> **Replay Viewer** over a persisted file; Figure 6 (p.52) draws no audit-verdict arrow. So
+> **`app.peer_messages` must never contain `FinalAudit`**, `app.peer_final_messages` will not
+> gain one, and none is planned. The derived peer-visible family inventory is corrected
+> **10 → 9** (**C-11**). Classification matters: the source does **not forbid** such a message -
+> it simply does not require one, and the project declines to invent it.
+>
+> Three things survive untouched and must not be confused with a message family. **(i)**
+> `app.protocol_values.FinalAuditVerdict` keeps its exact `"Verified OK"` / `"TAMPERED"`
+> vocabulary as the **local audit / log / replay** result - its consumers are `infra.replay` and
+> the log, never a peer. **(ii)** `ProtocolPhase.FINAL_AUDIT` remains a workflow phase in
+> `app.state_machine`; a phase is not a family. **(iii)** The **source-required end-of-game
+> audit-material / full-log disclosure** remains a real obligation - it is what lets the opponent
+> recompute at all - but it belongs to the **artifact/transport boundary** (`infra.logger` produces,
+> `infra.artifacts` stores, `PeerTransportPort` carries, the replay/audit path consumes), **not**
+> to `app.peer_messages`, and its interchange shape is an open interoperability blocker rather than
+> a payload this layer owns. No module row, dependency permission or Python changes.
+
 > **Stage 4E-R9-R1 reconciliation - where the sealed-record semantic values live (design
 > frozen; no Python yet).** Stage 4E-R9 stopped before writing the commitment codec because
 > `role`, `intent` and `state` had no exact representation. Freezing their vocabularies is only

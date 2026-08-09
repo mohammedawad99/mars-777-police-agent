@@ -631,3 +631,39 @@ Appendix E **55**; Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**;
 JDEC **15**; NDEC **7**; INV **15**; C-01…C-10; ports **20**; error IDs **20**;
 `ProtocolPhase` **1**; PRD-02 IDs **87**; result fields **11**; PRD-06 IDs
 **129**; PRD-07 IDs **140**; timeline events **15**; `num_games` **6 FIXED**.
+
+**Stage 4E-R10 (final audit + move validation readiness).** Attempted and
+**stopped `INVENTORY-CONTRADICTION` before any documentation change; 0 files
+changed**, with the stop accepted by supervising review. Neither peer-visible
+payload could be frozen. No requirement was added, removed, reclassified or
+re-owned.
+
+**Stage 4E-R10-R1 (final-audit inventory + audit-material exchange
+reconciliation).** Documentation / architecture only; **CLOSED / COMMITTED /
+CI-GREEN** at Stage 4E-R10-R1-CLOSE with **0 Python and 0 tests**. Separates
+three previously-conflated things: the implemented `FinalNonceReveal` family; the
+**SOURCE-REQUIRED** end-of-game audit-material / full-log disclosure (Ch 5 §5.4,
+**PRD06-FR-100/101**) that lets each side reconstruct and verify the opponent's
+commitments; and `FinalAuditVerdict`, which remains the **local** audit / log /
+replay vocabulary owned by `infra.replay` and `LOG_CONTRACT.md` §E
+(**PRD-07 REPLAY-001/002**). There is **no peer-visible `FinalAudit` verdict
+family** — the source does not require one (Figure 6 draws no such arrow) and the
+project declines to invent it; the source is **not** claimed to forbid it.
+`ProtocolPhase.FINAL_AUDIT`, timeline event 12 and the **15**-event count all
+survive, as does the TAMPERED sanction (**PRD06-FR-085/103/104**). The exact
+interchange shape of the audit material is newly recorded as
+**`AUDIT-EXCHANGE-PAYLOAD: BLOCKED-BY-INTEROPERABILITY-SHAPE`**, an
+artifact/transport integration blocker and **not** a peer-message-family blocker.
+A completed mutual audit is a **precondition to** `ResultAgreement`, which is not
+the transport of a verdict and remains `BLOCKED-BY-PAYLOAD-SHAPE`.
+`MoveValidation` remains `BLOCKED-BY-PAYLOAD-SHAPE`. **The derived peer-visible
+family inventory is corrected 10 → 9** — **4 implemented, 0 ready, 5 blocked** —
+and the official Conflict Register grows **10 → 11** with **C-11**, distinct from
+the unrelated review-local label in `docs/prd/PRD_05_07_REVIEW.md`, which was not
+edited. **No requirement was added, removed, reclassified or re-owned; no
+JDEC-016, NDEC-008, INV-16 or C-12 was created.** Requirements remain **91**
+(76/9/4/2); Appendix E **55**; Appendix F **32 = 14/9/9**; FIELD_MATRIX
+**75 = 16/39/9/11**; JDEC **15**; NDEC **7**; INV **15**; **C-01…C-11**; ports
+**20**; error IDs **20**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result fields
+**11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events **15**;
+`num_games` **6 FIXED**. **Stage 4E as a whole is NOT COMPLETE.**
