@@ -32,6 +32,23 @@ silent about a score consequence, the column reads *none (spec silent)*.
 | `E-LLM-UNAVAILABLE` | Advisor failure/timeout/over-budget | yes then fallback | no | yes | none — deterministic fallback | no | no | low | fallback-used metric |
 | `E-LOCAL-DEFECT` | Programming defect / invariant violation | no | no | yes | none (fail fast) | yes | possibly | high | stack context (no secrets) |
 
+## Layer ownership of `E-HASH-MISMATCH` (Stage 4E-R9-R1)
+
+`E-HASH-MISMATCH` is unchanged — same code, same category, same terminal TAMPERED
+consequence. What Stage 4E-R9-R1 fixes is *who raises it*, because the commitment path
+spans three layers and an audit sanction must not end up inside a hash function:
+
+| Layer | Owner | On a digest that differs |
+|---|---|---|
+| Pure codec / recompute | `protocol.canonical`, `protocol.commitment` | returns **comparison material** (a plain `bool`) — **no exception**; a `False` is a correct, successful result |
+| Audit / consumer | the audit consumer over the persisted log (Ch 7 §7.5 Replay Viewer path) | interprets `False` as an integrity failure ⇒ **`E-HASH-MISMATCH`** and/or `FinalAuditVerdict.TAMPERED` |
+| Protocol / sanction | protocol + scoring | applies match-void / no-appeal per the locked spec |
+
+`API_BOUNDARIES.md`'s `CommitmentPort` "mismatch ⇒ `E-HASH-MISMATCH` (terminal)" is the
+**port outcome** of the middle layer, not a claim about the raw comparison primitive.
+`E-NONCE-MISMATCH` and `E-REPLAY-MISMATCH` follow the same split. **No error ID is
+added, removed, renamed or re-classified by this clarification.**
+
 ## Handling principles
 
 1. **Fail closed on integrity.** Any `E-AUTH-*`, `E-HASH-*`, `E-NONCE-*`, `E-REPLAY-*`

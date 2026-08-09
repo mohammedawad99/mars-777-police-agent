@@ -44,8 +44,51 @@ rules vs. scoring), and that seam is named below.
 | `app.peer_turn_messages` *(4E-R6; design frozen, not implemented)* | The **per-turn** peer-visible families: `Commitment`, `Acknowledgement`, `Reveal`, and a future move-validation family if one proves transmitted | `app.turn_cursor`, `app.protocol_values`, immutable `domain` value types (incl. `domain.actions`) | same as `app.peer_messages` | none | invalid message construction |
 | `app.peer_final_messages` *(4E-R6; design frozen, not implemented)* | The **end-of-sub-game** peer-visible families: `NonceRevealEntry` + `FinalNonceReveal` (one batch per peer per sub-game, 4E-R6-FIX1), and any finalization family later proved transmitted. The reusable `NonceValue` it carries lives in `app.protocol_values`, **not** here | `app.turn_cursor`, `app.protocol_values`, immutable `domain` value types | same as `app.peer_messages` | none | invalid message construction |
 | `app.protocol_values` *(4F-R1)* | **Immutable shared protocol semantic value representations** — the primitives that peer-message contracts and outer protocol implementations must agree on (e.g. a SHA-256 digest result, a final-audit verdict). Representation only: it never computes, serializes or knows what was hashed | pure stdlib **value-definition and validation primitives** only (`typing`, `dataclasses`, `enum`) | `protocol`, `infra`, any adapter, `hashlib`/`hmac`/`cryptography`/`secrets`/`random`, FastMCP/network libraries, I/O, JSON or any wire/artifact serialization, cryptographic computation, GUI, replay, reporting — everything else | none | invalid value representation |
+| `app.sealed_record_values` *(4E-R9-R1; design frozen, not implemented)* | The **sealed commitment record's semantic values**: `ActorRole` (`"police"`/`"thief"`), `Intent` (`"truth"`/`"lie"`) and `SealedState` (the own-known snapshot `config_sha256`, `self_pos`, `barriers`, `step`, `role`). Representation only — it never hashes, serializes or knows what a commitment is, and **no opponent truth is representable in it** | pure stdlib **value-definition and validation primitives** (`typing`, `dataclasses`, `enum`) + `app.protocol_values` (for `Sha256Digest`) + immutable `domain` value types (`domain.board.Position`) | `protocol`, `infra`, any adapter, `app` implementation modules (`turn_service`, `orchestrator`, `state_machine`), the peer-message modules, `hashlib`/`hmac`/`cryptography`/`secrets`/`random`, I/O, JSON or any serialization | none | invalid structural composition |
 
 **Test boundary:** state-machine and contract tests with fake ports.
+
+> **Stage 4E-R9-R1 reconciliation - where the sealed-record semantic values live (design
+> frozen; no Python yet).** Stage 4E-R9 stopped before writing the commitment codec because
+> `role`, `intent` and `state` had no exact representation. Freezing their vocabularies is only
+> half the answer; they also need a home that the *producers* and the *consumer* can both reach
+> legally, and that question was settled by the dependency rules rather than by convenience.
+>
+> The consumer is fixed: `protocol.commitment` maps the eight-field sealed record, and
+> `protocol.canonical` turns it into bytes. The producers are application-side - `app.turn_service`
+> assembles a turn's commitment. So the values must sit in a layer **`protocol` may import and
+> `app` may construct**, which by Rule D1 means an application-layer (or domain) module.
+>
+> `app.protocol_values` was the obvious first candidate and was rejected for a **boundary** reason,
+> not a size one: its allowed dependencies are pure stdlib value primitives only, while
+> `SealedState` must hold a `domain.board.Position`. Admitting `domain` there would widen a module
+> deliberately kept stdlib-pure since 4F-R1. (It is also at 137/150 LOC, so the three types could
+> not fit regardless - but the boundary argument stands on its own and is the operative one.)
+> `domain` was rejected because `SealedState` carries a `Sha256Digest`, which lives in
+> `app.protocol_values`, and a `domain → app` edge is forbidden; D23 already refused to move
+> digests into `domain` for the mirror-image reason. Defining them inside `protocol.commitment`
+> was rejected because `app.turn_service` would then have to import `protocol` - an outward edge.
+> The peer-message modules were rejected on ownership: **the sealed record is never transmitted**,
+> so it is not a peer-message family.
+>
+> What remains is one new application-layer module, `app.sealed_record_values`, holding `ActorRole`,
+> `Intent` and `SealedState` together - they are one contract (`SealedState.role` *is* an
+> `ActorRole`), so splitting them would create a two-module dependency for no gain. Its outward
+> permission for `protocol.commitment` and `protocol.canonical` is the **same outer→inner pattern
+> already authorized twice**: `protocol.messages` → `app.peer_messages` (4E-R1) and
+> `protocol.commitment`/`protocol.config_lock` → `app.protocol_values` (4F-R1). Exact future
+> import graph, all edges inward, no cycle:
+>
+> ```
+> domain.board.Position ──┐
+>                         ├──> app.sealed_record_values <── protocol.canonical
+> app.protocol_values ────┘            ^                 <── protocol.commitment
+>   (Sha256Digest)                     └── app.turn_service (producer)
+> ```
+>
+> `DEPENDENCY_RULES.md` is **unchanged**: no new layer, no new kind of edge, and the forbidden
+> list already covers everything this module must not do. No requirement, PRD, JDEC, NDEC, INV,
+> Conflict-Register or FIELD_MATRIX entry changes.
 
 > **Stage 4E-R6 - peer-message module organization (design frozen; no Python yet).**
 > `app.peer_messages` reached **exactly 150/150 LOC** at Stage 4E-RESUME3 with four values
@@ -180,8 +223,8 @@ rules vs. scoring), and that seam is named below.
 
 | Module | Responsibility | Allowed deps | Forbidden deps | State owned | Failure modes |
 |---|---|---|---|---|---|
-| `protocol.canonical` | Canonical JSON bytes (sorted keys, `(",",":")`, UTF-8, NFC, LF, no trailing NL) — JDEC-002 | stdlib | domain mutation | none | non-canonical input |
-| `protocol.commitment` | `H_commit` over the 8-field sealed record; verify at audit | canonical, domain, `app.protocol_values` (**runtime use**: constructs and returns the value contracts it produces) | transport | pending nonce (secret) | mismatch ⇒ TAMPERED |
+| `protocol.canonical` | Canonical JSON bytes (sorted keys, `(",",":")`, UTF-8, NFC, LF, no trailing NL) — JDEC-002 | stdlib; `ensure_ascii=False` is fixed, not chosen at implementation time (4E-R9-R1) | domain mutation | none | non-canonical input |
+| `protocol.commitment` | `H_commit` over the 8-field sealed record; verify at audit | canonical, domain, `app.protocol_values` and `app.sealed_record_values` (**runtime use**: constructs and returns the value contracts it produces, and consumes the sealed-record semantic values it maps) | transport | pending nonce (secret) | non-exact composed input; **digest inequality is a returned comparison result, not a failure** — `E-HASH-MISMATCH`/TAMPERED are owned by the audit consumer above it (4E-R9-R1) |
 | `protocol.keyed_auth` | Keyed authentication (HMAC-SHA256 default) over `context‖core`; `step0`/`config` domain separation | canonical | transport, logging of keys | none (**never key bytes**) | bad tag / unknown `key_id` |
 | `protocol.config_lock` | Canonical config, `config_sha256`, auth exchange, immutable lock | canonical, keyed_auth, domain.config_model, `app.protocol_values` (**runtime use**: constructs and returns the value contracts it produces) | strategy | locked config handle | hash/tag mismatch |
 | `protocol.messages` | Wire schema validation + mapping wire bytes ⇄ `app.peer_messages` semantic values | canonical, domain, `app.peer_messages` (type references only) | infra transport | none | malformed JSON |

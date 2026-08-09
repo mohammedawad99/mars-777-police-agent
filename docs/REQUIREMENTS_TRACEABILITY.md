@@ -526,3 +526,39 @@ Requirements remain **91** (76/9/4/2); Appendix E **55**; Appendix F
 **15**; C-01…C-10; ports **20**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result
 fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events **15**;
 `num_games` **6 FIXED**.
+
+**Stage 4E-R9 (canonical commitment codec + recompute foundation).** Attempted and
+**stopped `BLOCKED-BEFORE-CODE`** at the mandatory pre-code dependency audit, with the
+stop accepted by supervising review. Five of the eight sealed members were exact and
+implementation-ready — `move` (**PRD01-FR-003**, NDEC-001), `hint` (**PRD06-FR-003**),
+`step`, `sub_game` and `nonce` (NDEC-001) — while `role`, `state` and `intent` had no
+implementation-ready representation. **0 Python, 0 tests, 0 documentation** were
+produced. No requirement was added, removed, reclassified or re-owned.
+
+**Stage 4E-R9-R1 (sealed commitment semantic prerequisites reconciliation).**
+Documentation / contract / architecture only; **CLOSED / COMMITTED / CI-GREEN** at Stage
+4E-R9-R1-CLOSE with **0 Python and 0 tests**. Resolves exactly the three R9 blockers and
+two directly-related ambiguities, moving the sealed record from **5/8 to 8/8
+contract-ready**. `intent` is frozen to the **SOURCE-REQUIRED** `truth`/`lie` vocabulary
+(Ch 5 p.51 prints both words) under **PRD04-FR-016/017**; `role` to the
+**PROJECT-CONTRACT** `police`/`thief` vocabulary under **NDEC-001**, with the repository
+constants mapped explicitly and the PRD-01 score keys `{cop, thief}` (**PRD01-FR-070/071/072**)
+recorded as a deliberately separate reporting vocabulary that is **not** edited; `state`
+to the existing **JDEC-012 / NDEC-002 / PRD06-FR-068** own-known shape, tightened with
+sorted duplicate-free barriers (**PRD06-FR-007**) and the `state.step`/`state.role`
+equality invariants the builder must enforce before hashing. Complete future semantic
+contracts for `ActorRole`, `Intent` and `SealedState` are frozen in a legal
+dependency-safe home, `app.sealed_record_values`, with `DEPENDENCY_RULES.md` unchanged.
+Also reconciled: the stale `LOG_CONTRACT.md` REVIEW-REQUIRED text for `state`, the
+`[row,col]` coordinate citation (**JDEC-012**, not JDEC-006), **`ensure_ascii=False`**
+propagated from **PRD06-FR-005** into the central canonical contract and **NDEC-003**,
+and the three-layer separation keeping `E-HASH-MISMATCH` / `FinalAuditVerdict.TAMPERED`
+above the pure comparison primitive. `ActorRole`, `Intent` and `SealedState` are **not
+peer-message families** and are **not implemented**; peer-visible families remain **10**
+— **4 implemented, 0 ready, 6 blocked** — and **Stage 4E as a whole is NOT COMPLETE.**
+**No requirement was added, removed, reclassified or re-owned; no JDEC-016, NDEC-008,
+INV-16 or C-11 was created.** Requirements remain **91** (76/9/4/2); Appendix E **55**;
+Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**;
+INV **15**; C-01…C-10; ports **20**; error IDs **20**; `ProtocolPhase` **1**; PRD-02 IDs
+**87**; result fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events
+**15**; `num_games` **6 FIXED**.

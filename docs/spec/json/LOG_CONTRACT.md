@@ -39,12 +39,12 @@ identically (see `CANONICALIZATION_CONTRACT.md`).
 
 | Component | Proposed key | Provenance | Required | Type | Source |
 |---|---|---|---|---|---|
-| board state | `state` | SOURCE-SEMANTIC (named) | Required | string/object | Ch 5 p.51 |
+| board state | `state` | SOURCE-SEMANTIC (named); representation **PROJECT-LOCKED** (JDEC-012) | Required | object — exactly `{config_sha256, self_pos, barriers, step, role}` | Ch 5 p.51 |
 | physical **action** | `move` | SOURCE-SEMANTIC (named) | Required | tagged object `{kind,value}` — **frozen Stage 4E-R4**, see below | Ch 5 p.51 |
-| intent flag | `intent` | SOURCE-SEMANTIC (named; truth/lie) | Required | string enum | Ch 5 p.51 |
+| intent flag | `intent` | SOURCE-SEMANTIC (named; truth/lie) | Required | string, exactly `"truth"` \| `"lie"` — **both words printed in the source** | Ch 5 p.51 |
 | verbal hint | `hint` | SOURCE-SEMANTIC (part of full record) | Required | string | Ch 5 p.50 |
 | step number | `step` | SOURCE-SEMANTIC (part of full record) | Required | int | Ch 5 p.50 |
-| role | `role` | SOURCE-SEMANTIC (part of full record) | Required | string enum (police/thief) | Ch 5 p.50 |
+| role | `role` | SOURCE-SEMANTIC (part of full record); vocabulary **PROJECT-CONTRACT** (4E-R9-R1) | Required | string, exactly `"police"` \| `"thief"` | Ch 5 p.50 |
 | sub-game | `sub_game` | SOURCE-SEMANTIC (part of full record) | Required | int | Ch 5 p.50 |
 | nonce | `nonce` | SOURCE-SEMANTIC (named) | Required | string (crypto-random) | Ch 5 p.50–51 |
 
@@ -140,6 +140,70 @@ there is nothing for a hostile peer to forge. The reference FastMCP snippet's
 `{"accepted": ...}` return (p.28) is **NON-BINDING** example code for a different tool and
 introduces no `accepted` field here.
 
+### Stage 4E-R9-R1 — the three sealed members that had no exact representation
+
+Stage 4E-R9 audited all eight sealed members before writing a codec and stopped
+**BLOCKED-BEFORE-CODE**: `move`, `hint`, `step`, `sub_game` and `nonce` were exact, but
+`role`, `intent` and `state` were not. This section closes those three, and nothing
+else changes: the field set is still **8**, the peer-visible family inventory is still
+**10**, and no register ID was created.
+
+**`role` — three vocabularies existed, one is now the sealed one.** The source names
+the two sides but never fixes a byte string: Figure 6 (p.52) labels its lifelines
+**`Cop`** and **`Thief`**, which is explanatory terminology, not serialization law.
+Meanwhile the repositories carry `ROLE = "POLICE"` / `VALID_ROLES = {"POLICE","THIEF"}`
+and PRD-01 (FR-070/071/072, AC-008/009/010) keys **scores** as `{cop, thief}`. Three
+deliberately distinct vocabularies are therefore frozen:
+
+| # | Vocabulary | Values | Used for |
+|---|---|---|---|
+| 1 | source / explanatory | `Cop`, `Thief` | reading the book and Figure 6 — never serialized |
+| 2 | **canonical sealed role** | `"police"`, `"thief"` | the sealed record's `role` and `state.role` — **PROJECT-CONTRACT** |
+| 3 | score / reporting keys | `cop`, `thief` | PRD-01 score structures — unchanged |
+
+The runtime mapping is **explicit**, never derived: `"POLICE"` → `"police"` and
+`"THIEF"` → `"thief"`. No `lower()`, no case-folding, no normalisation, no synonym or
+alias acceptance; an unrecognised runtime role is refused at the owning boundary rather
+than mapped to a guess. Note explicitly: **the `cop` score key is *not* the canonical
+sealed role for police**, and PRD-01's score contracts are *not* re-spelled for
+cosmetic uniformity — two contracts may legitimately use two words for one side.
+
+**`intent` — the vocabulary was always in the source.** Ch 5 §5.3.1 (p.51) defines it
+as *"דגל הכוונה. ערך המציין אם הרמז המילולי הנלווה אמיתי **(truth)** או מטעה **(lie)**"* —
+a flag stating whether the accompanying verbal hint is true (`truth`) or misleading
+(`lie`), with both English words printed in the source. The vocabulary is therefore
+**SOURCE-REQUIRED**, not a project choice; only the Python type that will carry it is
+PROJECT-CONTRACT. No `unknown`, `neutral`, `honest`, `deceptive`, `true`/`false` or
+boolean substitute is admitted, and the empty string is not a value.
+
+**`intent` and `hint` are separate sealed members and both are always present.**
+`intent` is the truth/lie flag; `hint` is the verbal text itself. Changing either one
+alone changes the sealed bytes and therefore `H_commit`. `intent` is never inferred
+from the hint's wording, and it is never omitted on the grounds that Reveal transmits
+the hint separately — Reveal carries `action` + `hint` on the wire, while the *sealed*
+record carries all eight members including `intent` (that asymmetry is the whole point
+of a commitment).
+
+**`state` — locked shape, and the duplication with the top level is intentional.** The
+representation is the JDEC-012 / NDEC-002 / PRD06-FR-068 own-known object above. Its
+`barriers` are **lexicographically sorted by `(row, col)` and duplicate-free in the
+semantic value itself**, so the canonical mapper never sorts, deduplicates or repairs —
+it serializes an already-valid value. Empty barriers emit `[]`.
+
+`state` repeats `step` and `role`, which also appear at the top level. That is
+deliberate and is **not** a ninth field. Two invariants make the duplication safe, and
+the future sealed-record builder **must refuse an inconsistent record before hashing**:
+
+```
+state.step == <top-level step>          (= cursor.step)
+state.role == <top-level role>
+```
+
+A violation is a **builder/composition error** — the producer assembled two
+contradictory components. It is emphatically *not* a hash mismatch and *not* TAMPERED:
+nothing has been hashed yet, and no peer has done anything wrong. Hashing a
+self-contradictory record would be the actual defect.
+
 ## E. Verification result
 
 Post-mortem audit: recompute each step's hash from the revealed data and compare
@@ -171,7 +235,7 @@ Source-backed requirements (details + provenance in `CANONICALIZATION_CONTRACT.m
 - SOURCE-SEMANTIC: the full field set (state, move, intent, hint, step, role, sub_game, nonce, ack, reveal, verification).
 - PROJECT-CONTRACT: entry nesting & key spellings (JDEC-007), canonical params (JDEC-002), NN width (JDEC-004).
 - EXAMPLE-ONLY (NOT adopted): the 4-field `{state,move,intent,nonce}` core and the `nonce|move` verifier payload.
-- REVIEW-REQUIRED: exact `state` representation (string vs structured board); and whether ack/reveal are separate `entries[]` events or sub-objects of a turn entry. *(The `move` action representation was REVIEW-REQUIRED at Stage 4E-R3 and is **frozen at Stage 4E-R4** — see below.)*
+- REVIEW-REQUIRED: whether ack/reveal are separate `entries[]` events or sub-objects of a turn entry. *(The `move` action representation was REVIEW-REQUIRED at Stage 4E-R3 and is **frozen at Stage 4E-R4** — see below. The exact **`state`** representation was listed here too; that text was **stale** — `state` has been PROJECT-LOCKED since JDEC-012 / NDEC-002 and §B above, and Stage 4E-R9-R1 removed the contradiction. The `role` and `intent` value vocabularies were likewise pinned at Stage 4E-R9-R1.)*
 
 ## Illustrative example (Markdown only; not a real file)
 
@@ -224,8 +288,10 @@ final `audit` block (they are hidden until then).
   `audit.final_reveal` shape are **[PC]** (JDEC-007) — a defensible representation
   of the SOURCE-SEMANTIC Commit→Ack→Reveal→Audit flow; **[RR]** whether ack/reveal
   are separate events or nested under a turn.
-- `state` deliberately omitted from the illustrative reveal entry (its exact
-  representation is **[RR]**); it is part of the **hashed** payload (§B), which is a
-  distinct object from this persistent log entry.
+- `state` is deliberately omitted from the illustrative reveal entry because it is part
+  of the **hashed** payload (§B), a distinct object from this persistent log entry —
+  **not** because its representation is open. It is **PROJECT-LOCKED** by JDEC-012 /
+  NDEC-002 / PRD06-FR-068. *(Stage 4E-R9-R1: this note previously said "its exact
+  representation is **[RR]**", contradicting §B of this same file.)*
 - Placeholder hashes/nonces are literal `PLACEHOLDER…` strings — **not** real
   cryptographic material.

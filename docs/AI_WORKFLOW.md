@@ -609,3 +609,37 @@
   being empty. And when the layout test was updated it was made *stronger*, asserting the exact
   class inventory of that module rather than merely that it is no longer empty; a maintenance
   edit that only loosens an assertion is a lost test.
+- **Stage 4E-R9** is the first stage that produced nothing and was right to. The instruction
+  allowed it to continue straight into implementation if the dependency audit came back clean, and
+  the temptation to find it clean was real: five of the eight sealed members were exact, the
+  canonical JSON rules were fully frozen, and I could have written an action mapper and a
+  canonical-JSON helper in an hour. What stopped me was asking what the tests would prove. The
+  stage mandated known-answer digest vectors, and a digest vector needs all eight members - so a
+  partial codec ships with tests that assert `codec_output == codec_output`, which is the exact
+  anti-pattern the same instruction named a page earlier. A module whose tests cannot fail is
+  worse than no module, because it looks like progress.
+  The `role` blocker is the one I would have missed a few stages ago. Four spellings existed -
+  `Cop`/`Thief` in the book's Figure 6, `police`/`thief` in the log contract, `POLICE`/`THIEF` in
+  our own Python, `cop`/`thief` in the PRD-01 score keys - and the lowercase form *looked* frozen
+  because it appears in a locked document's Type column. The thing that settled it was noticing
+  that the same column describes `state` as `string/object`, which is demonstrably not a frozen
+  representation. A column that is a type sketch for one field cannot be serialization law for
+  another. That is a generalisable check: before treating a value as frozen, look at what else
+  the same sentence or the same column says about a field you already know is open.
+- **Stage 4E-R9-R1** then had to resolve those three, and the interesting decision was where the
+  new semantic types would live. My first instinct was `app.protocol_values` - it already holds
+  `Sha256Digest` and `NonceValue`, so it is the obvious shelf. It is also full, at 137 of 150
+  lines, and I noticed I was reaching for that fact as the argument. It is the weaker one. The
+  real reason is that `app.protocol_values` is contractually stdlib-pure, and `SealedState` must
+  hold a `domain.board.Position`; putting it there would quietly widen a boundary that was drawn
+  deliberately at 4F-R1. I wrote the boundary argument first and the LOC fact second, marked as
+  secondary, because if the module had been empty the answer would have been the same.
+  The other three candidates each failed on one edge: `domain` cannot import `app` (where the
+  digest lives), `protocol.commitment` would force `app.turn_service` to import outward, and the
+  peer-message modules are the wrong owner because **the sealed record is never transmitted** -
+  it is the one thing in this protocol that is deliberately never sent. Naming that out loud is
+  what made the choice obvious rather than arbitrary.
+  A smaller thing worth recording: `ensure_ascii` had a locked value all along, in PRD06-FR-005,
+  and three spec documents that implementers actually read said only "fixed & agreed". A value
+  that exists in exactly one artifact nobody consults at implementation time is, in practice, an
+  implementation-time choice. Freezing a decision and *placing* it are two different jobs.
