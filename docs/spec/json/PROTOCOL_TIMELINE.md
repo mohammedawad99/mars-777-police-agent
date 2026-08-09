@@ -17,11 +17,11 @@ the wire yet.
 | 5 | **Commitment** | agent → opponent | state, move, intent, hint, step, role, sub_game, nonce | `H_commit` only | move, hint, nonce | log | **sealed payload → `H_commit`** (NDEC-001/002/003) | at reveal + final audit |
 | 6 | **Acknowledgement** | opponent → agent | received `H_commit` | ack of step + commit | — | log | — | — |
 | 7 | **Reveal** | agent → opponent | move, hint | move + hint | **nonce** (still) | log | — | recompute vs `H_commit` |
-| 8 | **Move validation** | opponent (enforces physics) | move legality, capture claim | accept/reject | — | log | — | at audit |
+| 8 | **Move validation** | opponent (enforces physics) | move legality, capture claim | **[RR]** accept/reject — *shape unfrozen, see below (4E-R6)* | — | log | — | at audit |
 | 9 | **Verdict (validation record)** | opponent/local | legality + capture-truth result | (result) | — | log (separate record) | — | — |
 | 10 | **State transition** | both (state machine) | new positions/barriers | phase transition | opponent true pos (always) | — | — | — |
 | 11 | **Final nonce reveal** | each → each | all nonces | **nonces** | (none) | log (final_reveal) | — | recompute all `H_commit` |
-| 12 | **Final audit** | both (Replay Viewer) | full logs + nonces | audit verdicts | — | log (`audit.result`) | recompute SHA-256 per step | Verified OK / TAMPERED |
+| 12 | **Final audit** | both (Replay Viewer) | full logs + nonces | **[RR]** audit verdicts — *the recomputation is local; whether a verdict is transmitted is unfrozen, see below (4E-R6)* | — | log (`audit.result`) | recompute SHA-256 per step | Verified OK / TAMPERED |
 | 13 | **Result construction** | each team | per-sub-game scores, commit, tokens, four links | — | — | result | result-approval core (NDEC-006) | dual-report compare |
 | 14 | **Mutual result agreement** | both → both | agreed result core | `result_sha256` + agreement | — | result | `result_sha256` | both reports equal hash |
 | 15 | **Gmail reporting** | each team → lecturer | full **self-contained** result JSON (identities, four links, **FastMCP endpoints**, **signed hardware declarations + `hardware_auth`**, scores, commits, tokens; K3) | result JSON attachment | **key material** | (sent) | — | grader parse/attribution; **missing-from-either-side or contradictory ⇒ 0 to both (E-35, C-09)** |
@@ -46,3 +46,34 @@ the wire yet.
 - **Reporting (K3/C-09):** event 15's report is self-contained and both-sided; the
   keyed hardware evidence (`hardware_auth`) mirrors the event-1 `step0_auth`. No key
   byte is ever transmitted or persisted at any event.
+
+## Stage 4E-R6 — what Figure 6 actually puts on the wire
+
+**Figure 6 (p.52) draws exactly four message arrows**, in both directions:
+*Commit: H_commit only* → *Acknowledge (locked)* → *Reveal: Move + Hint (Nonce
+hidden)* → *Final Reveal: all Nonces (end of game)*, captioned as the four stages
+**Commit → Acknowledge → Reveal → Audit**. There is **no move-validation arrow and
+no audit-verdict arrow.** Two consequences, both recorded rather than resolved by
+invention:
+
+- **Event 8 is real but its shape is not source-frozen.** App E #14 *does* require
+  the opponent to reject an illegal move (*"no diagonal moves — sanction: move
+  rejected by the opponent → loss"*), and Ch 6.5 requires the local algorithm to
+  reject any illegal move its own model proposes. So rejection exists. What no
+  source fixes is whether it travels as a **peer-visible message with a payload**
+  or is a local enforcement decision surfacing through the sanction path. The
+  `{"accepted": is_valid, …}` return in the minimal FastMCP server (p.28) is
+  **REFERENCE-EXAMPLE** about signature checking and was **not** promoted — the same
+  snippet Stage 4E-R3 already refused to promote for the acknowledgement.
+- **Event 12's computation is local.** Ch 5 §5.4 (p.55) has each side rebuild the
+  opponent's record from *State, Move, Intent, Nonce* and compare against the
+  declared commitment, and Ch 2.2.1 makes independent verification the whole point
+  of having no central server. Ch 7 §7.5 + Figure 10 put the recomputation in the
+  **Replay Viewer** over the persisted log, emitting `Verified OK` / `TAMPERED`.
+  What the log holds is settled; whether a *verdict message* is exchanged is not,
+  and disagreement already has a path through result agreement and C-09.
+
+Event 11 needs no such caveat: *"Final Reveal: all Nonces"* is drawn in both
+directions, and p.55 says each agent submits its full log **including the nonce
+reveals of all its steps** — so it is **one batched message per side covering that
+side's own steps**, not one message per turn.

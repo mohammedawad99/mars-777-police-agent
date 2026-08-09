@@ -73,6 +73,10 @@
 | 4E-R5-CLOSE | Physical-action migration final audit, Reveal readiness, tracking, commit, push, CI | Referenced |
 | 4E-RESUME3 | Reveal foundation - tests first (the third peer-message family) | Referenced |
 | 4E-RESUME3-CLOSE | Reveal final audit, module-capacity ruling, tracking, commit, push, CI | Referenced |
+| 4E-R6 | Remaining turn-protocol readiness (#8/#11/#12) + peer-message module organization reconciliation | Referenced |
+| 4E-R6-FIX1 | Final-nonce contract hardening: recomputation rationale, CSPRNG separation, sub-game batch, full type inventory | Referenced |
+| 4E-R6-FIX2 | Nonce representation negotiation consistency: one v1 profile, pre-match echo, no alternative codec | Referenced |
+| 4E-R6-CLOSE | Remaining turn-protocol + module organization final audit, tracking, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

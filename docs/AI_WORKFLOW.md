@@ -487,3 +487,70 @@
   that before editing it is what makes the subsequent one-line change maintenance rather than
   convenience, and it is now the third stage in a row where the discipline of looking before
   editing paid for itself.
+- **Stage 4E-R6** is the stage where two habits the project built up finally paid off at the
+  same time, and one of them was uncomfortable. The comfortable one was measurement. The module
+  question - where do the next message families live - looks like an architecture-taste question,
+  and I could have argued for any of four shapes. Counting settled it in about a minute: the
+  obvious answer, move the four existing values into one new module, lands at roughly 145 lines
+  and hits the identical wall one family later. That is not a matter of preference, it is
+  arithmetic, and it eliminated the option that would otherwise have felt tidiest.
+  The uncomfortable habit was going back to the book instead of to our own timeline. Our
+  `PROTOCOL_TIMELINE.md` has said for many stages that event 8 transmits *accept/reject* and
+  event 12 transmits *audit verdicts*. Figure 6 on page 52 draws exactly four arrows, and neither
+  of those is among them. Chasing the wording back, the only "accepted" in the whole book is the
+  return value of the minimal FastMCP example server - the same snippet Stage 4E-R3 already
+  declined to promote when it was tempting to read it as an acknowledgement schema. It was
+  tempting for the same reason twice: it is the only concrete shape anywhere near the topic.
+  So both families moved sideways rather than forward, and the honest report is that one blocker
+  label was simply wrong. #8 was carrying `BLOCKED-BY-VALUE-REPRESENTATION` long after R4 and R5
+  had actually solved value representation, and #12 was carrying `BLOCKED-BY-ASSOCIATION-SHAPE`
+  even though the association is spelled out in section 5.4 and the log contract. Stale blocker
+  labels are worse than blunt ones, because they send the next stage to fix something already
+  fixed. Only the third family genuinely advanced, and it advanced because a single small gap -
+  what a nonce actually looks like - could be closed inside an existing NDEC rather than by
+  inventing a new one.
+  The thing I want to remember: a reconciliation stage's most valuable output can be *demoting
+  its own previous conclusions*. Two of three results here were "we were describing this wrongly",
+  and only one was "this is now ready". A stage that reported three green lights would have been
+  more satisfying and considerably less true.
+- **Stage 4E-R6-FIX1** caught me doing the thing this project keeps warning about, in a new
+  disguise. I froze a nonce representation and justified it with a sentence that sounded
+  cryptographic and was simply false: that peers disagreeing on lettercase or length "cannot
+  recompute identical bytes". They can. The receiver rebuilds the sealed record from the exact
+  string the sender revealed, so the format is irrelevant to the arithmetic. The rule I wanted
+  was defensible - strict parsing, invariance under our own NFC step, a 128-bit entropy floor -
+  but I reached for a *necessity* argument when only a *policy* argument was available, and a
+  necessity argument is exactly the kind that stops anyone asking whether the rule is negotiable.
+  The related slip was making "CSPRNG-produced" part of a value's contract. A constructor handed
+  a received string cannot possibly verify how it was generated; that is a producer duty and a
+  runtime invariant, not something a dataclass can assert. Writing it into the representation
+  would have created a check that reads as a guarantee and delivers nothing.
+  The second thing this fix surfaced was a real gap in the previous stage's honesty about
+  readiness. I had called the family READY while leaving the type inventory - value name, home,
+  error category, entry shape, tuple strictness, empty-batch rule - to whoever implemented it.
+  That is not readiness, it is deferral wearing readiness's label, and the same standard that
+  made me demote two other families should have applied here. Re-auditing it also overturned my
+  own batch assumption: I had written "spans all six sub-games", and the project's own locked
+  artifact is one log file *per* sub-game with its own final_reveal and audit result. The source
+  term is genuinely ambiguous, so the boundary is a project reading and is now labelled as one.
+- **Stage 4E-R6-FIX2** is the sequel to the previous fix and a sharper lesson than it. Having
+  been corrected for over-claiming that a fixed nonce format was *necessary*, I softened the
+  wording in the obvious direction: I said the format was our default and that a peer proposing
+  another deterministic form could be accommodated by agreement. That sounds appropriately
+  humble and it quietly broke the contract, because in the same stage I had frozen `NonceValue`
+  to accept exactly thirty-two lowercase hex characters. A negotiation clause that admits a
+  value the semantic type rejects is not flexibility, it is two contracts disagreeing, and the
+  disagreement would have surfaced as a peer we had promised to accommodate being refused by our
+  own constructor.
+  The real distinction I had blurred is between *negotiating which codec to use* and *confirming
+  that both sides require the same one*. Our NDEC rows are the second thing. For v1 there is one
+  supported nonce representation, both peers echo it before config lock, and a mismatch refuses
+  counted play there - not at audit, not by normalising the other side's value, and not through
+  an invented sanction. Supporting a second representation is a version change with code behind
+  it, not a sentence in a table.
+  Two smaller corrections rode along, and both are the same species of imprecision. Thirty-two
+  hex characters fix a *width*, not entropy - only the producer's CSPRNG supplies randomness, and
+  a constructor validating syntax proves nothing about it. And ASCII-hex stability under our NFC
+  step is a parsing-safety property, not the reason recomputation would otherwise fail. Each time
+  I reached for the strongest-sounding justification available rather than the true one; the
+  pattern is worth naming, because it survived one correction and came back in a new form.

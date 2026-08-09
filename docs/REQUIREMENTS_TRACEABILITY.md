@@ -428,3 +428,49 @@ F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**; IN
 **15**; C-01…C-10; ports **20**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result
 fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events **15**;
 `num_games` **6 FIXED**.
+
+**Stage 4E-R6 (remaining turn-protocol readiness + peer-message module
+organization).** Documentation / architecture / contract only; **0 Python**;
+**CLOSED / COMMITTED / CI-GREEN** at Stage 4E-R6-CLOSE, including corrections
+R6-FIX1 and R6-FIX2. Re-derived from the authoritative book: Ch 5 §5.3.2 + Figure 6 (p.51–52), Ch 5
+§5.4 (p.55), Ch 2.2.1, Ch 6.5, Ch 7 §7.5 + Figure 10 (p.72–74), App E #14. Freezes
+a four-module organization for the peer-message contracts — `app.turn_cursor`,
+`app.peer_turn_messages`, `app.peer_final_messages` behind an `app.peer_messages`
+façade re-exporting identity-equal classes — chosen by measured LOC and adding no
+message hierarchy, enum or registry, consistent with `MODULE_BOUNDARIES.md` and the
+inward dependency rule. **#11 Final nonce reveal is reclassified
+BLOCKED-BY-VALUE-REPRESENTATION → READY-TO-IMPLEMENT**: it is one batched
+per-side message over that side's own steps (**PRD06** commit-reveal integrity,
+**PRD02-FR-044/FR-063** for the cursor), and the last gap — the nonce's structural
+form — is frozen in **NDEC-001 in place** as the **PROJECT-CONTRACT** profile
+`[0-9a-f]{32}` lowercase, `secrets.token_hex(16)` remaining REFERENCE-EXAMPLE.
+*(Stage 4E-R6-FIX2: current v1 supports exactly one nonce representation, so
+NEGOTIATED-PRE-MATCH means both peers echo that required profile before
+`CONFIG_LOCKED`; a differing profile refuses counted play as a LIVE compatibility
+check, never an `InvalidNonceError`, tampering verdict or invented sanction.)* *(Stage 4E-R6-FIX1 corrected the rationale: a fixed
+case/length is **not** required for recomputation, since the receiver rebuilds the
+record from the exact revealed string; it is kept for parser strictness,
+NFC-invariance and a 128-bit entropy floor. CSPRNG production (**CRYPTO-010**) and
+secrecy-until-reveal are producer/runtime duties, not structural checks.)* FIX1 also
+froze the full inventory — `NonceValue` + `InvalidNonceError` in
+`app.protocol_values`, `NonceRevealEntry` and `FinalNonceReveal` in
+`app.peer_final_messages` — and the **sub-game batch boundary**, matching the locked
+per-sub-game log artifact (**INV-02**, **JDEC-004**, **JDEC-007**). **#8 Move validation** (BLOCKED-BY-VALUE-REPRESENTATION →
+**BLOCKED-BY-PAYLOAD-SHAPE**) and **#12 Final audit** (BLOCKED-BY-ASSOCIATION-SHAPE →
+**BLOCKED-BY-PAYLOAD-SHAPE**) both keep their old labels only in the sense that they
+remain blocked: the value-representation and association questions are answered, and
+what is unfrozen for each is whether anything is **transmitted** at all — Figure 6
+draws no arrow for either, and `LOG_CONTRACT.md` §E already fixes what the audit
+records. `TAMPERED` (verdict) stays distinct from technical loss (sanction, p.55) and
+from `FAILED` (protocol terminal). Contracts corrected in place:
+`MODULE_BOUNDARIES.md` (three future module rows + an organization note),
+`PROTOCOL_TIMELINE.md` (events 8 and 12 marked REVIEW-REQUIRED with the Figure-6
+evidence), `INTEROPERABILITY_NEGOTIATION.md` (**NDEC-001** amended — **NDEC count
+still 7**) and `LOG_CONTRACT.md` (the nonce PC default). Implemented families remain
+**3**; peer-visible families remain **10**; **Stage 4E as a whole is NOT COMPLETE**.
+**No requirement was added, removed, reclassified or re-owned; no JDEC-016, NDEC-008,
+INV-16 or C-11 was created.** Requirements remain **91** (76/9/4/2); Appendix E **55**;
+Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**;
+INV **15**; C-01…C-10; ports **20**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result
+fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events **15**;
+`num_games` **6 FIXED**.

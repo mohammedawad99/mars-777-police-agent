@@ -161,7 +161,7 @@ Source-backed requirements (details + provenance in `CANONICALIZATION_CONTRACT.m
 - **Fixed separators** — Ch 5 p.50; reference `separators=(",",":")` is EXAMPLE-ONLY → adopting it is **PROJECT-CONTRACT** (JDEC-002).
 - **UTF-8** encoding before hashing — Ch 5 p.53 (`.encode("utf-8")`).
 - **SHA-256** — Ch 5 §5.3, App E #17.
-- **Fresh crypto nonce** — Ch 5 p.51,53 (`secrets.token_hex(16)` in reference; using a CSPRNG is CRYPTO-010; exact length is EXAMPLE-ONLY → PC).
+- **Fresh crypto nonce** — Ch 5 p.51,53. The source requires a *fresh cryptographic* nonce, secret until the final reveal; `secrets.token_hex(16)` is **REFERENCE-EXAMPLE** and fixes no encoding or length. Using a CSPRNG is CRYPTO-010, a **producer** duty that no receiver can verify from the string alone. Stage 4E-R6 adopts `[0-9a-f]{32}` as the **PROJECT-CONTRACT / NEGOTIATED-PRE-MATCH default** (NDEC-001) for parser strictness, NFC-invariance and a 128-bit entropy floor — **not** because recomputation needs it: the receiver recomputes with the exact revealed string.
 - **Exact same bytes on both peers** — Ch 5 p.50 ("both peers hash byte-identical input").
 - **`ensure_ascii`**: the book is **silent**. It is **NOT** claimed as a lecturer requirement. Because hints may be non-ASCII (natural language), a deterministic choice is required for byte-identity → **PROJECT-CONTRACT** (JDEC-002), not SOURCE-EXPLICIT.
 

@@ -40,9 +40,32 @@ rules vs. scoring), and that seam is named below.
 | `app.ports` | **Abstract port definitions only** (`API_BOUNDARIES.md`) | stdlib typing **+ immutable `domain` value types, as type references only** | `protocol`, `infra`, any adapter, network/FastMCP/HTTP libraries, `app` implementation modules, domain services with side effects — everything else | none | — |
 | `app.strategy_api` | `Observation` in → `ProposedAction` out contract | domain.observation | infra, protocol | none | no legal action |
 | `app.peer_messages` *(4E-R1; deps 4E-R2/FIX2)* | **Immutable internal peer-protocol semantic contracts** — the values application control flow consumes and produces (state-changing inbound events reach the Turn Executor) and that `protocol.messages` maps to/from; **never** wire JSON | pure stdlib **value-definition and validation primitives** only (`typing`, `dataclasses`) + immutable `domain` value types + immutable **globally-FIXED `domain` constants read as structural bounds** (currently `FIRST_SUB_GAME`, `FIXED_NUM_GAMES` from `domain.config_model`; **read-only**, never redefined) + `app.protocol_values` (**runtime use**: constructs and stores the shared semantic values its messages carry) | `protocol`, `infra`, any adapter, `app` implementation modules (`app.state_machine`, `app.orchestrator`, `app.turn_service`), `enum` (no message-local vocabulary exists — reuse `domain.rules.Move` and `app.protocol_values.FinalAuditVerdict`), `hashlib`/`hmac`/`cryptography`/`secrets`/`random`, FastMCP/network libraries, wire serialization, JSON, artifact storage, cryptographic computation, I/O, GUI, replay, reporting — everything else | none | invalid message construction |
+| `app.turn_cursor` *(4E-R6; design frozen, not implemented)* | The shared **turn-identity value** `TurnCursor` (and its private int guard). Extracted because *both* future message modules need it and neither should depend on the other - not because a file filled up | pure stdlib value primitives + the globally-FIXED `domain.config_model` bounds (read-only) | `protocol`, `infra`, adapters, `app` implementation modules, `enum`, crypto, JSON, I/O | none | invalid cursor construction |
+| `app.peer_turn_messages` *(4E-R6; design frozen, not implemented)* | The **per-turn** peer-visible families: `Commitment`, `Acknowledgement`, `Reveal`, and a future move-validation family if one proves transmitted | `app.turn_cursor`, `app.protocol_values`, immutable `domain` value types (incl. `domain.actions`) | same as `app.peer_messages` | none | invalid message construction |
+| `app.peer_final_messages` *(4E-R6; design frozen, not implemented)* | The **end-of-sub-game** peer-visible families: `NonceRevealEntry` + `FinalNonceReveal` (one batch per peer per sub-game, 4E-R6-FIX1), and any finalization family later proved transmitted. The reusable `NonceValue` it carries lives in `app.protocol_values`, **not** here | `app.turn_cursor`, `app.protocol_values`, immutable `domain` value types | same as `app.peer_messages` | none | invalid message construction |
 | `app.protocol_values` *(4F-R1)* | **Immutable shared protocol semantic value representations** — the primitives that peer-message contracts and outer protocol implementations must agree on (e.g. a SHA-256 digest result, a final-audit verdict). Representation only: it never computes, serializes or knows what was hashed | pure stdlib **value-definition and validation primitives** only (`typing`, `dataclasses`, `enum`) | `protocol`, `infra`, any adapter, `hashlib`/`hmac`/`cryptography`/`secrets`/`random`, FastMCP/network libraries, I/O, JSON or any wire/artifact serialization, cryptographic computation, GUI, replay, reporting — everything else | none | invalid value representation |
 
 **Test boundary:** state-machine and contract tests with fake ports.
+
+> **Stage 4E-R6 - peer-message module organization (design frozen; no Python yet).**
+> `app.peer_messages` reached **exactly 150/150 LOC** at Stage 4E-RESUME3 with four values
+> in it (`TurnCursor` 27, `Commitment` 25, `Acknowledgement` 28, `Reveal` 31, the private
+> int guard 8, plus a 16-line module docstring and imports). No further family fits, and the
+> reviewed prose-only compression that made `Reveal` fit must not be repeated. R6 freezes the
+> organization **by measurement, not by taste**: keeping all four together in one relocated
+> module would land at ~145 LOC and reproduce the same wall one family later, so the split is
+> `app.turn_cursor` (~54) + `app.peer_turn_messages` (~107, room for one more turn family) +
+> `app.peer_final_messages` (new, ~0 today), with **`app.peer_messages` becoming a pure
+> façade** (~36) that re-exports **the same class objects**. `TurnCursor` is extracted because
+> both message modules need it and neither should import the other; that is ownership
+> evidence, not a capacity workaround. **Forbidden and not used:** a `PeerMessage` base class,
+> a `MessageKind` enum for filing, a registry, a factory, a generic payload dict, dynamic
+> import machinery or reflection - ordinary modules, imports, dataclasses and explicit
+> re-exports only. The public surface `from <pkg>.app.peer_messages import …` and
+> `from <pkg>.app import …` **must keep working with identity-equal classes**, since three
+> test modules import that path directly and one imports the module object itself to assert
+> blocked families are absent. Dependency direction is acyclic by construction:
+> `turn_cursor` <- `peer_turn_messages` / `peer_final_messages` <- `peer_messages` façade.
 
 > **Stage 4E-R2 reconciliation (implementation-discovered, internal).** The
 > `app.peer_messages` row was written before `app.protocol_values` existed and carried
