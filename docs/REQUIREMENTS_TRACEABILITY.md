@@ -400,3 +400,31 @@ JDEC-016, NDEC-008, INV-16 or C-11 was created.** Requirements remain **91**
 16/39/9/11**; JDEC **15**; NDEC **7**; INV **15**; C-01…C-10; ports **20**;
 `ProtocolPhase` **1**; PRD-02 IDs **87**; result fields **11**; PRD-06 IDs **129**;
 PRD-07 IDs **140**; timeline events **15**; `num_games` **6 FIXED**.
+
+**Stage 4E — RESUME 3 (Reveal foundation).** Implementation of the shape R4 froze
+over the value type R5 supplied; **CLOSED / COMMITTED / CI-GREEN** at Stage
+4E-RESUME3-CLOSE. `Reveal(cursor, action, hint)` satisfies the ordinary-reveal
+content of **Ch 5 §5.3.2** (the action plus the verbal sentence, nonce withheld)
+over the cursor required by **PRD02-FR-044/FR-063**, carrying the physical action
+of **PRD01-FR-010** including a police placement's exact cell
+(**PRD01-FR-002/FR-035**, **PRD06-FR-060/FR-084**). Structural validation only:
+exact `(MoveAction, BarrierAction)` membership with subclass rejection and no
+coercion, exact `TurnCursor`, exact `str`; malformed composition raises the
+built-in `ValueError` while malformed *domain* construction stays
+`InvalidPhysicalActionError(DomainError)` — an intentional split by layer that
+adds no error class. `hint_max_words` (**PRD06**) stays LIVE, so empty,
+whitespace and very long hints are structurally accepted. No canonicalization,
+hashing or live protocol validation; `domain.actions`, `app.turn_service` and
+`domain.rules.Move` are byte-unchanged, and `Commitment`, `Acknowledgement` and
+`TurnCursor` are executable-AST identical to the parent after prose-only
+compression. `app/peer_messages.py` is at **150/150 LOC** — compliant, but no
+further family may be added there until Stage 4E-R6 reconciles module
+organization. Peer-visible families remain **10**, now **3 implemented
+(Commitment, Acknowledgement, Reveal) and 7 blocked**; no family was reclassified
+by this slice, and **Stage 4E as a whole is NOT COMPLETE**. **No requirement was
+added, removed, reclassified or re-owned; no JDEC-016, NDEC-008, INV-16 or C-11
+was created.** Requirements remain **91** (76/9/4/2); Appendix E **55**; Appendix
+F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**; INV
+**15**; C-01…C-10; ports **20**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result
+fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events **15**;
+`num_games` **6 FIXED**.

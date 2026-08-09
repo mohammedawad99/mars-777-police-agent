@@ -37,7 +37,7 @@ from .orchestrator import (
     LocalOrchestrator,
     OrchestratorResult,
 )
-from .peer_messages import Acknowledgement, Commitment, TurnCursor
+from .peer_messages import Acknowledgement, Commitment, Reveal, TurnCursor
 from .protocol_values import FinalAuditVerdict, InvalidDigestError, Sha256Digest
 from .state_machine import (
     FAULT_PHASES,
@@ -81,6 +81,7 @@ __all__ = [
     "OrchestratorResult",
     "ProtocolMachine",
     "ProtocolPhase",
+    "Reveal",
     "Sha256Digest",
     "TransitionEvidence",
     "TransitionResult",

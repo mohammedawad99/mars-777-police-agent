@@ -461,3 +461,29 @@
   design judgement was the error boundary, which the supervisor settled cleanly: malformed domain
   value is a `DomainError`, malformed message composition is a `ValueError`, and Reveal never
   constructs an action so the two never meet.
+- **Stage 4E — RESUME 3** was the first time a hard constraint - the 150-line rule - actually
+  shaped the work rather than merely being satisfied by it. The module was at 132 lines and the
+  new family needed about 32. There were three ways out and only one of them was honest. I could
+  have invented a base class or a registry and called it design; that would have added an
+  abstraction to solve a file-length problem, and the stage instructions rightly forbade it. I
+  could have moved the family to a new module on my own initiative, which is a real option but an
+  architectural decision, not an implementation one. Or I could reclaim lines from prose.
+  Prose reclamation is the option that sounds safest and is actually the easiest to get wrong,
+  because "I only touched comments" is exactly the kind of claim people make right before they
+  have not only touched comments. So I stopped asserting it and proved it instead: parse both
+  revisions, strip every docstring, compare the ASTs. `TurnCursor`, `Commitment`,
+  `Acknowledgement` and `_require_int` came back executable-AST identical with `Reveal` the only
+  added name. That check took a minute to write and converted a promise into evidence, which is
+  the same move that made the clean-parent RED replay worth doing two stages ago.
+  The squeeze itself was still unpleasant, and worth recording as a smell rather than a triumph.
+  I compressed four docstrings, mangled a sentence at one point and had to repair it, and landed
+  at exactly 150/150 with zero headroom. The file is compliant and the contracts survived intact,
+  but "compliant with nothing to spare" is a warning, not a win: the next family cannot go in
+  there at all. Saying that plainly in the report - rather than quietly celebrating that it fit -
+  is what turned it into the R6 agenda instead of a trap for whoever writes family four.
+  One smaller thing worth keeping. The test that mattered most here was the *old* one. Running
+  the committed `test_peer_messages.py` unmodified, after Reveal existed, produced exactly one
+  failure for exactly the right reason - its blocked-family list still said `Reveal`. Observing
+  that before editing it is what makes the subsequent one-line change maintenance rather than
+  convenience, and it is now the third stage in a row where the discipline of looking before
+  editing paid for itself.

@@ -130,7 +130,13 @@ def test_the_message_module_neither_hashes_nor_names_a_second_family() -> None:
 
     for forbidden in ("hashlib", "sha256", "hexdigest", "compute", "json", "enum"):
         assert not hasattr(peer_messages, forbidden)
-    for family in ("Reveal", "MoveValidation", "FinalAudit", "Declaration", "ResultAgreement"):
+    for family in (
+        "FinalNonceReveal",
+        "MoveValidation",
+        "FinalAudit",
+        "Declaration",
+        "ResultAgreement",
+    ):
         assert not hasattr(peer_messages, family)
 
 

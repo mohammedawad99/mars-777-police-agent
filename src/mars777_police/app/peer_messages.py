@@ -2,25 +2,21 @@
 
 The values application control flow consumes and produces, and that
 ``protocol.messages`` will later map to and from wire bytes - **never** wire JSON
-itself (`MODULE_BOUNDARIES.md`, Stage 4E-R1/R2). No state is owned, nothing is
-serialized, and nothing here computes a hash: a caller supplies an already
-validated ``Sha256Digest``, so this module never learns what was hashed, how the
-sealed record was canonicalized, or which nonce sealed it.
+itself (`MODULE_BOUNDARIES.md`). No state is owned, nothing is serialized and
+nothing computes a hash - callers supply already-validated values.
 
-Of the ten peer-visible families in `PROTOCOL_TIMELINE.md`, exactly two are
-implementable today: **Commitment** (Stage 4E-R2) and **Acknowledgement** (Stage
-4E-R3, once `by_role` was classified as local log attribution). The other eight
-remain blocked on payload shapes, value representations and association shapes
-that no current contract freezes - so no placeholder for them exists here.
-
-Malformed construction raises the built-in ``ValueError``. That is the category
-``FinalAuditVerdict`` already raises natively and that ``InvalidDigestError``
-subclasses, so one ``except ValueError`` covers every value in the application
-contract modules. No supporting error type is defined (Stage 4E-R2-FIX1).
+Three of the ten peer-visible families in `PROTOCOL_TIMELINE.md` are
+implementable - **Commitment**, **Acknowledgement** and **Reveal**; the other
+seven stay blocked on payload, value and association shapes no current contract
+freezes, so no placeholder exists here. Malformed construction raises the
+built-in ``ValueError`` - the category ``FinalAuditVerdict`` raises natively and
+``InvalidDigestError`` subclasses - so one ``except ValueError`` covers every
+application contract value, and no supporting error type is defined.
 """
 
 from dataclasses import dataclass
 
+from ..domain.actions import BarrierAction, MoveAction, PhysicalAction
 from ..domain.config_model import FIRST_SUB_GAME, FIXED_NUM_GAMES
 from .protocol_values import Sha256Digest
 
@@ -30,16 +26,14 @@ class TurnCursor:
     """The transmitted identity of one turn-scoped message.
 
     Exactly ``(sub_game, step)`` (PRD-02 §8; PRD02-FR-044/FR-063). **No phase**:
-    the receiver already owns the single authoritative ``ProtocolMachine`` and
-    checks admissibility against it (FR-021/FR-062, STATE-003), so transmitting a
-    phase would either duplicate that authority or be uncomputable in lockstep.
-
-    A *projection*, never an owner: the sub-game index belongs to
-    ``app.orchestrator`` and the step to ``domain.truth``. Validation here is
-    **structural only**. ``sub_game`` may be bounded because ``num_games`` is
-    globally FIXED at six, and the bound reads that one authority rather than
-    restating it; ``step`` has no context-free ceiling, because ``max_moves`` is
-    per-sub-game locked configuration this value deliberately does not carry.
+    the receiver owns the single authoritative ``ProtocolMachine`` and checks
+    admissibility against it (FR-021/FR-062, STATE-003), so a transmitted phase
+    would duplicate that authority or be uncomputable in lockstep. A
+    *projection*, never an owner - the sub-game index belongs to
+    ``app.orchestrator``, the step to ``domain.truth`` - validation is
+    **structural only**: ``sub_game`` reads the one globally FIXED ``num_games``
+    authority rather than restating six, while ``step`` has no context-free
+    ceiling because ``max_moves`` is per-sub-game locked config it never carries.
     """
 
     sub_game: int
@@ -60,17 +54,13 @@ class TurnCursor:
 class Commitment:
     """The peer-visible commitment: a turn cursor and the commitment digest.
 
-    `PROTOCOL_TIMELINE.md` event 5 transmits "``H_commit`` **only**", and the
-    cursor is required independently (PRD02-FR-044; PRD06-FR-086 rejects a second
-    commitment for an already-committed ``(sub_game, step)``). Nothing else
+    `PROTOCOL_TIMELINE.md` event 5 transmits "``H_commit`` **only**", with the
+    cursor required independently (PRD02-FR-044; PRD06-FR-086). Nothing else
     travels: the sealed record's state, move, intent, hint, role, sub-game and
-    nonce stay inside the digest, and the hiding property of the commitment
-    (PRD06-FR-067) is exactly why none of them may appear beside it.
-
-    Composition **never coerces**. A raw 64-hex string is refused rather than
-    wrapped, and a pair is refused rather than turned into a cursor, so each
-    value keeps one authoritative constructor and a caller can always tell which
-    contract validated a field.
+    nonce stay inside the digest, and the hiding property (PRD06-FR-067) is
+    exactly why none may appear beside it. Composition **never coerces** - a raw
+    64-hex string is refused rather than wrapped, and a pair is refused rather
+    than turned into a cursor - so each value keeps one authoritative constructor.
     """
 
     cursor: TurnCursor
@@ -91,21 +81,16 @@ class Commitment:
 class Acknowledgement:
     """The peer-visible acknowledgement: the turn cursor and the acked digest.
 
-    Ch 5 §5.3.2 gives its whole content - the opponent confirms it *received the
-    commitment* and is *locked onto it* - and PRD06-FR-082 renders that as
-    binding receipt of a **specific** ``H_commit`` for a **specific**
-    ``(sub_game, step)``. Those are exactly the two members here.
-
-    Three deliberate absences (Stage 4E-R3). ``by_role`` is **log attribution**,
-    not payload: the source names an acknowledging party but never a field, and
-    the writer already knows it from the one opponent process and the role
-    mapping frozen at ``CONFIG_LOCKED`` - so nothing is transmitted for a hostile
-    peer to forge. ``ack_of_step`` is the *persisted* name of ``cursor.step``,
-    not a second field. And there is no ``accepted`` flag: an acknowledgement is
-    positive by existing, while a stale or mismatched one is a live rejection.
-
-    It shares its component types with `Commitment` and is still a different
-    family; the class identity carries that, so no message-kind value exists.
+    Ch 5 §5.3.2 and PRD06-FR-082 make it binding receipt of a **specific**
+    ``H_commit`` for a **specific** ``(sub_game, step)`` - exactly these two
+    members. Three deliberate absences (Stage 4E-R3): ``by_role`` is **log
+    attribution** the writer derives from send/receive direction and the
+    ``CONFIG_LOCKED`` role map, so nothing is transmitted for a hostile peer to
+    forge; ``ack_of_step`` is the *persisted* name of ``cursor.step``; and there
+    is no ``accepted`` flag, because an acknowledgement
+    is positive by existing while a stale one is a live rejection. It shares its
+    component types with `Commitment` and is still a different family, carried by
+    the class identity, so no message-kind value exists.
     """
 
     cursor: TurnCursor
@@ -120,6 +105,39 @@ class Acknowledgement:
             raise ValueError(
                 f"h_commit must be a Sha256Digest, got {type(self.h_commit).__name__}",
             )
+
+
+@dataclass(frozen=True, slots=True)
+class Reveal:
+    """The peer-visible reveal: the turn cursor, the chosen action and the hint.
+
+    Ch 5 §5.3.2 (p.51) sends *"the action (Move) and the verbal sentence"* with
+    the nonce hidden until final audit, so ordinary reveal is deliberately
+    incomplete beside audit material: no nonce, state, intent, role, sealed record
+    or ``H_commit``. The member is ``action`` because it holds the domain's
+    `PhysicalAction`; the *sealed* key stays ``move``, mapped later by the
+    canonical layer. That alias is a union, so the rule is exact membership
+    of ``(MoveAction, BarrierAction)`` - never ``type(x) is PhysicalAction`` - and
+    composition **never coerces**: a bare ``Move``, a ``Position``, a token or a
+    canonical mapping is refused rather than wrapped, because building an action
+    is the domain's job and raises its own ``DomainError``, while a wrong
+    component *here* is a message fault raising ``ValueError``. ``hint`` is a
+    ``str`` structurally - ``hint_max_words`` is locked config and stays LIVE.
+    """
+
+    cursor: TurnCursor
+    action: PhysicalAction
+    hint: str
+
+    def __post_init__(self) -> None:
+        if type(self.cursor) is not TurnCursor:
+            raise ValueError(f"cursor must be a TurnCursor, got {type(self.cursor).__name__}")
+        if type(self.action) not in (MoveAction, BarrierAction):
+            raise ValueError(
+                f"action must be a MoveAction or BarrierAction, got {type(self.action).__name__}",
+            )
+        if type(self.hint) is not str:
+            raise ValueError(f"hint must be a str, got {type(self.hint).__name__}")
 
 
 def _require_int(value: object, name: str) -> None:
