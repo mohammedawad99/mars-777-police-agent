@@ -47,6 +47,21 @@ hashlib.sha256(...).hexdigest()
   final audit (Ch 5 p.51).
 - The Ch 7 `f"{nonce}|{move}"` verifier payload is **EXAMPLE-ONLY** and does **not**
   define the real payload (see LOG_CONTRACT).
+- **`move` value representation (Stage 4E-R4).** `move` is the generic *physical
+  action* (Ch 5 p.51), so its value is a **tagged, structurally-exclusive object**
+  with exactly two sorted keys:
+
+  ```
+  movement : {"kind":"MOVE","value":"N"}          value ∈ move_set (App F T15 FIXED)
+  barrier  : {"kind":"BARRIER","value":[row,col]} value = the exact placed cell
+  ```
+
+  The tag makes the two forms unambiguous without relying on JSON type-sniffing,
+  and keeps the slot extensible for the source's *"etc."* without re-negotiating
+  the sealed field set. `[row,col]` is **not** a new convention: it is the
+  coordinate array already locked by JDEC-006 and used by JDEC-012's `state`.
+  Adopting this exact shape is **PROJECT-CONTRACT**, carried pre-match by
+  **NDEC-001**; Ch 5 p.53's `move: str` is EXAMPLE-ONLY and prescribes nothing.
 
 ## Layer 3 — SHA-256 verification procedure
 
@@ -115,6 +130,9 @@ than hoping both sides serialize identically.
 | booleans | SL | JSON `true`/`false` |
 | Hebrew/non-ASCII strings | PL | NFC + agreed `ensure_ascii` (NDEC-003) |
 | barrier-coordinate ordering | PL | sorted `[row,col]` (JDEC-012) |
+| sealed `move` action encoding | PL | tagged object, two sorted keys `{kind,value}`; `kind ∈ {"MOVE","BARRIER"}` (NDEC-001, Stage 4E-R4) |
+| movement token inside `move` | SL | a `move_set` token verbatim — `"N"`,`"S"`,`"E"`,`"W"`,`"STAY"` (App F T15 FIXED); never an integer or long name |
+| barrier target inside `move` | PL | the exact placed cell as `[row,col]` (JDEC-006/012); never derived from position, direction or context |
 
 ## Provenance summary
 

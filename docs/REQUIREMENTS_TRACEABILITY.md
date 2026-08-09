@@ -346,3 +346,32 @@ created.** Requirements remain **91** (76/9/4/2); Appendix E **55**; Appendix F
 **15**; C-01…C-10; ports **20**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result
 fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events **15**;
 `num_games` **6 FIXED**.
+
+**Stage 4E-R4 (shared physical action + canonical `move` representation).**
+Documentation / architecture / contract only; **0 Python**; **CLOSED / COMMITTED /
+CI-GREEN** at Stage 4E-R4-CLOSE. Re-derived from the authoritative book: Ch 5 §5.3.1/§5.3.2 (p.51), Ch 5 p.50, Ch 3 §3.4 + Iron Rules
+(p.37–38). Freezes the action's **home** (a new domain-owned `domain.actions`,
+reachable by `app.turn_service`, `app.peer_messages` and the future
+`protocol.commitment`, none of which `domain` imports) and its **canonical
+encoding** under the unchanged sealed key `move`: a tagged, structurally-exclusive
+`{kind,value}` object, consistent with **PRD01-FR-002/FR-003/FR-010** (cells as
+`[row,col]`, the FIXED `move_set`, one action per turn), **PRD01-FR-035** and
+**PRD06-FR-060/FR-084** (barrier placement and its exact declared cell), and
+**PRD06-FR-007** (canonically sorted arrays). Contracts corrected in place:
+`INTEROPERABILITY_NEGOTIATION.md` (**NDEC-001** amended — **NDEC count still 7**),
+`CANONICALIZATION_CONTRACT.md` (Layer 2 note + three byte-affecting rows),
+`LOG_CONTRACT.md` (§B/§D `[RR]` resolved, the Stage-4E-R3 note updated, one
+illustrative reveal entry), `PROTOCOL_TIMELINE.md` (one conclusion line) and
+`MODULE_BOUNDARIES.md` (a `domain.actions` row + an `app.turn_service` migration
+note). The sealed set stays **exactly eight fields** — no `action`,
+`barrier_target` or `action_kind` was added — and `domain.rules.Move` stays the
+five-token movement vocabulary. **Reveal is reclassified
+BLOCKED-BY-VALUE-REPRESENTATION → BLOCKED-BY-FUTURE-SEMANTIC-TYPE**; the other
+nine families are unchanged, implemented families remain **2**, and **Stage 4E as
+a whole is NOT COMPLETE**. **No requirement was added, removed, reclassified or
+re-owned; no JDEC-016, NDEC-008, INV-16 or C-11 was created.** Peer-visible
+families remain **10**. Requirements remain **91** (76/9/4/2); Appendix E **55**;
+Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC
+**7**; INV **15**; C-01…C-10; ports **20**; `ProtocolPhase` **1**; PRD-02 IDs
+**87**; result fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline
+events **15**; `num_games` **6 FIXED**.

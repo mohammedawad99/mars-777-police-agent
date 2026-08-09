@@ -40,7 +40,7 @@ identically (see `CANONICALIZATION_CONTRACT.md`).
 | Component | Proposed key | Provenance | Required | Type | Source |
 |---|---|---|---|---|---|
 | board state | `state` | SOURCE-SEMANTIC (named) | Required | string/object | Ch 5 p.51 |
-| physical **action** | `move` | SOURCE-SEMANTIC (named) | Required | **[RR]** — see below | Ch 5 p.51 |
+| physical **action** | `move` | SOURCE-SEMANTIC (named) | Required | tagged object `{kind,value}` — **frozen Stage 4E-R4**, see below | Ch 5 p.51 |
 | intent flag | `intent` | SOURCE-SEMANTIC (named; truth/lie) | Required | string enum | Ch 5 p.51 |
 | verbal hint | `hint` | SOURCE-SEMANTIC (part of full record) | Required | string | Ch 5 p.50 |
 | step number | `step` | SOURCE-SEMANTIC (part of full record) | Required | int | Ch 5 p.50 |
@@ -88,7 +88,7 @@ until end-of-game audit (Ch 5 §5.3.2, p.51).
 
 | Field | Proposed key | Provenance | Required | Type | Source |
 |---|---|---|---|---|---|
-| revealed **action** | `move` | SOURCE-SEMANTIC (named) | Required | **[RR]** — same representation as §B | Ch 5 p.51 |
+| revealed **action** | `move` | SOURCE-SEMANTIC (named) | Required | **the same tagged object as §B** — one action, one encoding | Ch 5 p.51 |
 | revealed hint | `hint` | SOURCE-SEMANTIC | Required | string | Ch 5 p.51 |
 | (nonce — final audit only) | `nonce` | SOURCE-SEMANTIC | Required at audit | string | Ch 5 p.51,55 |
 
@@ -111,14 +111,22 @@ printed 22). A police barrier placement with its exact cell is therefore carried
 ordinary `move` action at Reveal and bound by the same `H_commit` — **no eleventh
 peer-visible family is needed, and none is created.**
 
-**Still REVIEW-REQUIRED:** the *representation* of that action. The movement form is a
-token from `move_set`; the barrier form needs its exact cell, and **no contract freezes
-how either is written into the canonical bytes** — `NDEC-002` freezes `state`'s
-representation for byte-identity but no equivalent exists for `move` (see NDEC-001's
-Stage 4E-R3 note). Until it is frozen, a barrier-carrying sealed record cannot be
-recomputed byte-identically by the peer, so **Reveal stays BLOCKED**. The reference
-`commit(state, move: str, intent)` snippet (p.53) is **EXAMPLE-ONLY** — the book labels
-that 4-field core a simplification — and does **not** narrow `move` to a movement string.
+**RESOLVED at Stage 4E-R4 — the action representation is now frozen.** The value of
+`move` is a **tagged, structurally-exclusive object** with exactly two sorted keys:
+`{"kind":"MOVE","value":"<move_set token>"}` for the movement form and
+`{"kind":"BARRIER","value":[row,col]}` for the police barrier-placement form. The
+movement form reuses the FIXED `move_set` vocabulary verbatim; the barrier form carries
+**the exact placed cell** as the `[row,col]` coordinate array already locked by JDEC-006
+and used by JDEC-012's `state`, so no new coordinate convention is invented. The tag
+keeps the two forms unambiguous without JSON type-sniffing and leaves the slot
+extensible for the source's *"etc."* without re-opening the sealed field set. A
+barrier-carrying record is therefore now recomputable byte-identically, which removes
+the byte-identity blocker; **Reveal is reclassified BLOCKED-BY-FUTURE-SEMANTIC-TYPE**,
+waiting only on the shared `domain.actions` value being implemented. The exact shape is
+**PROJECT-CONTRACT** carried pre-match by **NDEC-001** — the reference
+`commit(state, move: str, intent)` snippet (p.53) is **EXAMPLE-ONLY**, the book labels
+that 4-field core a simplification, and it neither narrows `move` to a movement string
+nor prescribes any JSON shape.
 
 **`by_role` (§C) is LOG ATTRIBUTION, not transmitted content.** Ch 5 §5.3.2 says only
 *"**היריב מאשר** כי קיבל את ההתחייבות וכי הוא נעול עליה"* — the opponent confirms it
@@ -163,7 +171,7 @@ Source-backed requirements (details + provenance in `CANONICALIZATION_CONTRACT.m
 - SOURCE-SEMANTIC: the full field set (state, move, intent, hint, step, role, sub_game, nonce, ack, reveal, verification).
 - PROJECT-CONTRACT: entry nesting & key spellings (JDEC-007), canonical params (JDEC-002), NN width (JDEC-004).
 - EXAMPLE-ONLY (NOT adopted): the 4-field `{state,move,intent,nonce}` core and the `nonce|move` verifier payload.
-- REVIEW-REQUIRED: exact `state` representation (string vs structured board); **the exact `move` action representation (Stage 4E-R3 — see below)**; and whether ack/reveal are separate `entries[]` events or sub-objects of a turn entry.
+- REVIEW-REQUIRED: exact `state` representation (string vs structured board); and whether ack/reveal are separate `entries[]` events or sub-objects of a turn entry. *(The `move` action representation was REVIEW-REQUIRED at Stage 4E-R3 and is **frozen at Stage 4E-R4** — see below.)*
 
 ## Illustrative example (Markdown only; not a real file)
 
@@ -196,7 +204,7 @@ final `audit` block (they are hidden until then).
       "step": 1,
       "role": "police",
       "phase": "reveal",
-      "move": "N",
+      "move": {"kind":"MOVE","value":"N"},
       "hint": "circling near the north gate",
       "intent": "lie",
       "verified": true

@@ -408,3 +408,30 @@
   code substitutes for that. Restarting from the committed parent cost one session and bought a
   provenance chain that survives review. Carrying the drift forward cost a full review cycle and
   bought nothing.
+- **Stage 4E-R4** is the second time going back to the primary text changed the answer, and
+  it is worth recording *which* part it changed. The semantics were already right after R3:
+  `move` is the generic physical action. What R4 had to settle was smaller and harder — where
+  that action *lives* in the code, and how its *bytes* are written. Neither is in the book, and
+  that is exactly the point. Chapter 5 page 53's `commit(state, move: str, …)` is the closest
+  thing the source has to an answer, and the book itself labels that core a simplification. It
+  would have been very easy to read `move: str` as permission to seal `"N"` and `"BARRIER:3,4"`
+  and call it source-backed. It is not source-backed; it is a sample.
+  So the honest classification is that the *semantics* are SOURCE-REQUIRED, byte-identical
+  recomputation is SOURCE-ENTAILED, and the tagged `{kind,value}` shape we chose is
+  **PROJECT-CONTRACT** that a second group has to agree to before counted play. Saying that
+  plainly is what lets the existing NDEC-001 echo carry it — and what stopped us inventing an
+  `action_codec` field to negotiate something the config hash already pins.
+  The reuse discipline mattered more than the new design here. The barrier's exact cell is
+  `[row,col]` because JDEC-006 and JDEC-012 already locked that array for `state`; the movement
+  token is a `move_set` value because Appendix F fixes that vocabulary; the tag is `ActionKind`'s
+  existing `MOVE`/`BARRIER` because inventing a parallel vocabulary would have created a second
+  authority for one fact. Almost nothing in this reconciliation is new — the work was proving
+  which existing contract already owned each piece, and then not duplicating it.
+  The one genuinely new thing is a module, and even that was forced by arithmetic rather than
+  taste: `domain.rules` is 118 lines, the action types do not fit under 150, and legality is a
+  different responsibility from the action value anyway. The migration note is the part I expect
+  to matter later — `domain.actions` and `app.turn_service`'s local copies must never both be
+  alive, so the implementation slice is atomic by construction, and it changes a construction
+  error from `ApplicationError` to `DomainError`. Writing that expected test change down now,
+  while it is a design consequence, is cheaper than discovering it mid-slice and calling it a
+  surprise.
