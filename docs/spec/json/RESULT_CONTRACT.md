@@ -595,7 +595,7 @@ game/declaration/group, commit-or-core inconsistency, or returned-digest mismatc
 `ResultAgreement` belongs in **`app.peer_final_messages`** (currently 71 of its
 150 permitted lines), re-exported identity-equal through the **`app.peer_messages`**
 façade per **D32**. `ResultContribution`, `ResultContributionEntry` and
-`GitCommitSha` belong in a sibling **`app.result_values`** module — the same
+`GitCommitSha` belong in a sibling **`app.result_values`** module *(amended Stage 4E-R14-R1-FIX: `GitCommitSha` — and the `UtcTimestamp` added at §R13-R2-10 — are **cross-artifact** primitives also required by the declaration, so they are owned by **`app.artifact_values`**; `app.result_values` keeps `ResultContribution` and `ResultContributionEntry`)* — the same
 pattern as `app.sealed_record_values` and `app.auth_values` — because the three
 values plus their validation will not fit beside the existing final-message
 classes within the 150-line rule. `Sha256Digest` is reused unchanged from
@@ -750,7 +750,7 @@ Existing IDs only — **error IDs remain 20**: malformed timestamp ⇒
 ### R13-R2-10 — module ownership and what is unchanged
 
 `UtcTimestamp` joins `ResultContribution`, `ResultContributionEntry` and
-`GitCommitSha` in **`app.result_values`**; `ResultAgreement` stays in
+`GitCommitSha` in **`app.artifact_values`** as **cross-artifact primitives shared with the declaration** *(amended Stage 4E-R14-R1-FIX; they were assigned to `app.result_values` when only the result needed them, and `app.result_values` keeps `ResultContribution` and `ResultContributionEntry`)*; `ResultAgreement` stays in
 **`app.peer_final_messages`**, re-exported identity-equal through the
 **`app.peer_messages`** façade per **D32**. `Sha256Digest` is reused unchanged.
 

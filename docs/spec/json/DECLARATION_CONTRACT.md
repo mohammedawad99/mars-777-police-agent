@@ -337,7 +337,11 @@ invented for a pre-game failure.**
 
 ### R12-FIX-7 — future module and façade identity
 
-`Declaration` and `Step0DeclarationExchange` are **`app.peer_pregame_messages`**
+`Step0DeclarationExchange` is **`app.peer_pregame_messages`**
+*(narrowed Stage 4E-R14-R1-FIX: this sentence also named `Declaration`, which
+§R14-R1-8 subsequently placed in **`app.declaration_values`** — `Declaration` is
+declaration **subject data**, not a peer-message family, and there is exactly one
+definition of it)*
 — the fourth defining peer-message module, sibling to the frozen
 `app.peer_turn_messages` and `app.peer_final_messages`, re-exported as
 identity-equal classes through the **`app.peer_messages`** façade exactly as
@@ -577,3 +581,288 @@ removes none. No requirement, JDEC, NDEC, INV or Conflict-Register entry was
 created. `TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION` is untouched
 and still visible for later Stage-4 completion, and `ResultAgreement` remains
 `BLOCKED-BY-PAYLOAD-SHAPE`.
+
+## Stage 4E-R14-R1 — the `Declaration` semantic model (implementation dependency frozen)
+
+Stage 4E-R14 stopped **BLOCKED-BEFORE-CODE** because
+`Step0DeclarationExchange(declaration, auth)` names a `Declaration` type that has
+never existed in `src`. This section freezes it. **No Python is written here.**
+
+### R14-R1-1 — the lifecycle contradiction, and why one type still suffices
+
+Five committed facts had to become one implementable lifecycle: the Step-0 core
+covers only the **producer's own** subtree plus shared identity, `game_start` and
+the token cap (§R12-FIX-2); the **opponent's subtree is excluded** because it is
+not observable before the event-1 exchange; **`times.game_end` is excluded**
+because it may be set at close; the persisted `declaration_<game_id>.json` is a
+**whole-game artifact carrying both participants**; and there is **one
+authoritative `Declaration` value** that `Step0DeclarationExchange` must not
+flatten into a second schema.
+
+**Resolution (PROJECT-CONTRACT).** One immutable `Declaration` type whose
+*instances* represent different lifecycle moments. Nothing is mutated in place;
+each later moment constructs a **new** immutable value:
+
+| Lifecycle moment | Content |
+|---|---|
+| **PARTIAL PRE-GAME SNAPSHOT** | exactly one participant subtree — the producer's own; no fabricated opponent subtree; no `game_end` |
+| **MERGED PRE-GAME SNAPSHOT** | both participant subtrees, after both Step-0 exchanges; still no `game_end` |
+| **FINAL ARTIFACT SNAPSHOT** | both subtrees plus the final `game_end` |
+
+These are **lifecycle descriptions, not three classes, three wire schemas, three
+peer families or a phase field**. **No `declaration_state` member is added**, and
+`ProtocolPhase` does not appear in `Declaration`. Which completeness level an
+operation requires is an application-level decision.
+
+### R14-R1-2 — the 15 rows split 12 + 3
+
+`FIELD_MATRIX.md` carries **15** declaration rows. They are **not** 15 members of
+one semantic value:
+
+- **12 subject rows** — `game_id`, `game_uid`, team identity, members, repos,
+  `mcp_endpoint`, hardware, `llm_model`, `code_version`, `github_commit`,
+  `token_budget_per_series`, `times` — are the **`Declaration` subject data**.
+- **3 envelope rows** — `step0_auth.auth_alg`, `.key_id`, `.auth_tag` — are the
+  **artifact serialization of the separately-carried `AuthProof`**.
+
+`Declaration` therefore does **not** own an auth value: `Step0DeclarationExchange`
+carries `AuthProof` beside it, the Step-0 core **excludes** the envelope for
+non-self-reference (§R12-FIX-3), and a later artifact writer persists the proof
+into the three envelope keys. **There is exactly one authoritative auth value and
+no duplication**, and `FIELD_MATRIX` is unchanged at **74 = 15/39/9/11**.
+
+### R14-R1-3 — exact type decomposition
+
+```
+Declaration(
+    game_id:  str,
+    game_uid: str,
+    token_budget_per_series: int,
+    times: DeclarationTimes,
+    teams: DeclarationTeams,
+)
+
+DeclarationTeams(group_a: TeamDeclaration | None, group_b: TeamDeclaration | None)
+
+DeclarationTimes(game_start: UtcTimestamp, game_end: UtcTimestamp | None)
+
+TeamDeclaration(
+    group_id: str,
+    group_name: str,
+    members: tuple[str, ...],
+    repos: RepositoryLinks,
+    mcp_endpoint: str,
+    hardware: HardwareDeclaration,
+    llm_model: str,
+    code_version: str,
+    github_commit: GitCommitSha,
+)
+
+RepositoryLinks(police: str, thief: str)
+
+HardwareDeclaration(
+    os: str,
+    cpu_cores: int,
+    cpu_freq_ghz: Decimal,
+    ram_gb: int,
+    gpu: str | Literal[False],
+    vram_gb: int | None,
+)
+```
+
+**No `dict[str, object]`, `Mapping[str, object]`, `Any` or free-form nested
+dict.** `cpu_cores` and `ram_gb` are **exact `int`** (`bool` rejected) and
+`cpu_freq_ghz` is a **`Decimal`** under the existing `require_decimal` policy —
+never `float` *(corrected Stage 4E-R14-R1-FIX; an earlier draft of this block
+typed `ram_gb` as `Decimal`)*. **Hash membership does not determine a semantic
+numeric type**: every one of these values is inside the hashed Step-0 core, and
+that fact alone says nothing about whether the quantity is integral. `gpu` is the
+frozen `string/bool` union: a model name, or exactly `False` for "no GPU".
+`members` is a non-empty immutable tuple. `vram_gb` is **`int | None`** under the
+conditional rule frozen in **R14-R1-FIX-2**.
+
+### R14-R1-4 — optionality matrix (every `None` has a frozen rule)
+
+| Member | Optional? | Frozen rule |
+|---|---|---|
+| `teams.group_a` | yes | absent in a partial snapshot when the producer occupies the `group_b` slot |
+| `teams.group_b` | yes | absent in a partial snapshot when the producer occupies the `group_a` slot |
+| **at least one of the two** | **required** | a `Declaration` with neither subtree is rejected — it declares nothing |
+| both present | permitted | the merged and final snapshots |
+| `times.game_end` | yes | absent until close; present only in the final artifact snapshot |
+| `hardware.vram_gb` | conditional | present **exactly when** `gpu is not False` — derivable, **not a free option** (§R12-FIX-2 member 15). Type **`int | None`**, with the exact conditional rule in **R14-R1-FIX-2** |
+
+**No placeholder empty strings, no zero-as-unknown, no dummy `TeamDeclaration`.**
+Absence is `None` in the semantic value; how absence is (or is not) serialized is
+a later artifact concern, and **absence never becomes JSON `null` inside a hashed
+Step-0 core** — the projection simply omits non-members.
+
+### R14-R1-5 — participant-slot ownership is a LIVE rule
+
+**Structural:** the value may hold a valid partial or merged snapshot; it infers
+nothing about who sent it.
+**LIVE (Step-0 validation):** the authenticated sender identity must correspond
+to the participant subtree that sender is entitled to contribute; a hostile
+sender may not populate or overwrite the opponent's subtree as its own
+authoritative contribution. **No `sender_id` is added to `Declaration`** —
+authenticated operation direction and the declared participant mapping own that
+check.
+
+### R14-R1-6 — the Step-0 core projection
+
+`Declaration` → *deterministic producer-scoped projection* → `step0_core`. The
+projection emits **only the 19 frozen members of §R12-FIX-2** and hashes neither
+the whole snapshot, the opponent subtree, `times.game_end`, the `AuthProof`, nor
+any artifact-local metadata. **No second semantic record type is created for the
+projection**; the future `protocol.declaration` builder performs it, and
+**R14-R1 does not implement that mapper.**
+
+### R14-R1-7 — shared cross-artifact primitives
+
+Two primitives are needed by `Declaration` now and by `ResultAgreement` later, so
+they are **cross-artifact application values, not result-only values**:
+
+- **`GitCommitSha`** — exactly 40 lowercase hex characters. The declaration row
+  states "40-hex" and every live example is lowercase; `RESULT_CONTRACT.md`
+  §R13-R1-3 already froze the lowercase form, so the two agree and one type
+  serves `teams.<g>.github_commit` and `sub_games[].github_commit` alike.
+- **`UtcTimestamp`** — exactly `YYYY-MM-DDTHH:MM:SSZ`, 20 ASCII characters,
+  second precision. `times.game_start`/`game_end` use JDEC-011 ISO-8601 UTC `Z`,
+  the same representation §R13-R2-3 froze for the result timestamp, and every
+  live example matches. They are **unified because the contracts already agree**,
+  not cosmetically.
+
+Their module home is **`app.artifact_values`** (§R14-R1-8). *(Stage
+4E-R14-R1-FIX: `RESULT_CONTRACT.md` §R13-R1-11 and §R13-R2-10 previously assigned
+both to `app.result_values`, which was correct when only the result needed them.
+That amendment is now authorized and applied there, so every current-live contract
+agrees: `app.artifact_values` owns `GitCommitSha` and `UtcTimestamp`, while
+`app.result_values` keeps `ResultContribution` and `ResultContributionEntry`.)*
+
+### R14-R1-8 — module ownership and the R14-R2 layout
+
+Every planned production module stays **≤150 lines**; `domain/config_model.py` is
+already **150/150** and `app/protocol_values.py` **137/150**, so neither may
+absorb new types.
+
+| Module | Owns |
+|---|---|
+| `app.artifact_values` | `GitCommitSha`, `UtcTimestamp` |
+| `app.auth_values` | `AuthProfile`, `KeyId`, `AuthProof` |
+| `app.declaration_values` | `Declaration`, `DeclarationTeams`, `DeclarationTimes` |
+| `app.team_declaration_values` | `TeamDeclaration`, `RepositoryLinks`, `HardwareDeclaration` |
+| `app.interop_profiles` | the nine profile enums + `InteropProfileSet` |
+| `app.peer_pregame_messages` | `Step0DeclarationExchange`, `ConfigProposal`, `ConfigLockContext`, `ConfigLockEvidence` |
+| `domain.config_sections` (+ measured-LOC sibling) | the seven `NegotiatedConfig` section values |
+| `domain.negotiated_config` | `NegotiatedConfig` |
+| `app.peer_messages` | façade re-exports only — identity-equal, no duplicated classes |
+
+**Import DAG (inward-only, D1 respected — no `domain` imports `app`):**
+
+```
+domain.board · domain.config_model · domain.actions   (existing)
+        ^
+domain.config_sections  ->  domain.negotiated_config
+                                      ^
+app.artifact_values                   |
+   ^          ^                       |
+app.auth_values   app.declaration_values <- app.team_declaration_values
+        ^                 ^           |
+        +--- app.interop_profiles ----+
+                     ^
+        app.peer_pregame_messages
+                     ^
+        app.peer_messages  (façade)
+```
+
+No cycle; no reusable value module depends on transport or protocol runtime.
+`Step0DeclarationExchange` stays in `app.peer_pregame_messages` per §R12-FIX-7.
+
+### R14-R1-9 — status
+
+**`DECLARATION-SEMANTIC-DEPENDENCY: RESOLVED-PROJECT`.**
+
+## Stage 4E-R14-R1-FIX — hardware types and shared-primitive ownership
+
+### R14-R1-FIX-1 — `ram_gb` is a strict `int`, not `Decimal`
+
+§R14-R1-3 typed `ram_gb` as `Decimal`. That contradicted the already-frozen
+§R12-FIX-6 structural sentence — *"`cpu_cores`/`ram_gb` exact `int` (never
+`bool`); `cpu_freq_ghz` a `Decimal` under the existing `require_decimal`
+policy"* — and the live example, which prints `"ram_gb": 16` beside
+`"cpu_freq_ghz": 3.2`. **Repaired to `int`.**
+
+The reasoning that produced the error is worth naming: *"it is inside the hashed
+core, therefore `Decimal`"*. **Hash membership does not determine a semantic
+numeric type.** `Decimal` exists here to keep a *fractional* quantity exact under
+canonical serialization; an integral quantity is already exact as an `int`, and
+widening it would change the canonical bytes for no reason. This is a
+derived-contract correction — **no JDEC, NDEC or Conflict-Register entry.**
+
+### R14-R1-FIX-2 — `vram_gb` numeric type: **`int | None`** (frozen)
+
+*(Stage 4E-R14-R1 recorded this as `BLOCKED-BY-UNFROZEN-TYPE`; the supervising
+ruling at Stage 4E-R14-R1-FIX2 resolves it. The audit that produced the block is
+kept below because it explains why the representation is a project decision.)*
+
+**Why it needed a ruling.** `vram_gb` was typed **nowhere**: the live field row
+says only `Optional | number | GB` — the same `number` expression that proved
+ambiguous enough to cause FIX-1; §R12-FIX-6's structural sentence names
+`cpu_cores`, `ram_gb` and `cpu_freq_ghz` and is **silent** on `vram_gb`;
+§R12-FIX-2 member 15 freezes only its **presence** rule; and both live examples
+declare `"gpu": false`, so **neither prints a `vram_gb` literal**. It was
+deliberately **not inferred from a neighbouring field**.
+
+**Ruling.** `HardwareDeclaration.vram_gb` is **`int | None`**.
+
+**Provenance, stated exactly.** The **presence** of VRAM in the hardware
+declaration is the existing SOURCE-SEMANTIC requirement (Ch 5 p.55 lists
+`GPU/VRAM` among the Step-0 machine spec). The **exact numeric representation is
+PROJECT-CONTRACT** — the book fixes no JSON or Python numeric subtype, and
+**`int` is not source-mandated.**
+
+**Exact conditional rule (structural):**
+
+| `gpu` | `vram_gb` |
+|---|---|
+| exactly `False` | **MUST be `None`** |
+| a non-empty `str` (model name) | **MUST be present**, `type(vram_gb) is int`, and `vram_gb > 0` |
+
+**Rejected, with no coercion of any kind:** `True` · `False` as a numeric VRAM ·
+`0` · a negative `int` · `float` · `Decimal` · `str` · `bytes` · `None` while
+`gpu` is a model string. **No `int(value)`, no rounding, no float or Decimal
+conversion, no string parsing.** The value is declared in **whole GB** under the
+project semantic contract, so an integral type is exact by construction.
+
+**The type was chosen semantically, not by hash membership.** `vram_gb` sits
+inside the hashed Step-0 core, and that fact is irrelevant to the choice —
+exactly the error FIX-1 corrected. The semantic type is selected by
+PROJECT-CONTRACT first; canonical serialization then serializes that already-typed
+value deterministically. **Hashing never determines whether a numeric field is
+`int` or `Decimal`.**
+
+**`DECLARATION-HARDWARE-VRAM-TYPE: RESOLVED-PROJECT`.** All six
+`HardwareDeclaration` members now have exact implementable types, so **no R14
+implementation dependency remains open.**
+
+### R14-R1-FIX-3 — complete hardware type matrix
+
+| Field | Frozen type | Structural validation | Provenance | Changed by R14-R1? |
+|---|---|---|---|---|
+| `os` | `str` | non-empty exact `str` | SOURCE-SEMANTIC + PC | no |
+| `cpu_cores` | `int` | exact `int`, `bool` rejected, `> 0` | SOURCE-SEMANTIC + PC; §R12-FIX-6 | no |
+| `cpu_freq_ghz` | `Decimal` | `require_decimal` policy, never `float` | SOURCE-SEMANTIC + PC; §R12-FIX-6 | no |
+| `ram_gb` | **`int`** | exact `int`, `bool` rejected, `> 0` | SOURCE-SEMANTIC + PC; §R12-FIX-6 | **yes — wrongly typed `Decimal`, repaired by FIX-1** |
+| `gpu` | `str \| Literal[False]` | a non-empty model name, or exactly `False` | SOURCE-SEMANTIC + PC | no |
+| `vram_gb` | **`int \| None`** | conditional on `gpu`; when present, exact `int`, `bool` rejected, `> 0` | presence SOURCE-SEMANTIC + PC; **numeric representation PROJECT-CONTRACT** | no — frozen by R14-R1-FIX2 |
+
+**All six are exact and implementable** *(Stage 4E-R14-R1-FIX2 closed the last one)*.
+
+### R14-R1-FIX-4 — what this FIX did not touch
+
+The Declaration lifecycle, optionality matrix, the 19-member Step-0 core
+projection, the Declaration/`AuthProof` separation, `AuthProof`, `KeyId`, every
+profile token, `NegotiatedConfig`, `ConfigProposal`, `ConfigLockContext`,
+`ConfigLockEvidence` and its structural equality invariant, the token-budget
+lifecycle, `ResultAgreement` and `FIELD_MATRIX` are all **unchanged**. Both
+original blockers remain **RESOLVED-PROJECT**.

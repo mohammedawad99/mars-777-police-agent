@@ -935,3 +935,71 @@ FIELD_MATRIX **74 = 15/39/9/11** with the repaired **result (11)** prose.
 untouched** — participant token values in the result are what the peers agree was
 **reported**, never proof that every actual LLM call was metered. **Stage 4E is NOT
 COMPLETE.**
+
+**Stage 4E-R14 family (pregame peer semantic types).** **CLOSED / COMMITTED /
+CI-GREEN** at Stage 4E-R14-CLOSE over **35 paths per repo** — the first Stage-4E
+family to add production Python since the commitment codec. Five stages, recorded
+as they happened:
+
+- **Stage 4E-R14** stopped **BLOCKED-BEFORE-CODE with 0 files written**. Two of
+  the stage's own pre-code gates fired: no authoritative `Declaration` semantic
+  type existed in `src` (`grep -rn "class Declaration"` → 0 matches), and four of
+  the eleven `InteropProfileSet` members — the tool-name, canonicalization,
+  sealed-record and `state`-representation profiles — had **no frozen value
+  vocabulary or member name**, only cross-references. Together they blocked 5 of
+  the 9 target types, so the stage delivered the audit rather than a guess.
+- **Stage 4E-R14-R1** closed both. `Declaration` became **one immutable type
+  whose instances are the lifecycle moments** — partial producer snapshot, merged
+  pre-game snapshot, final snapshot with `game_end` — with no state field, no
+  phase and no `sender_id`, and the 15 declaration rows split **12 subject + 3
+  `step0_auth` envelope** so the proof stays beside the subject data rather than
+  inside it. Every profile vocabulary was frozen, giving **10 closed types / 17
+  memberships / 16 unique tokens**, and `ConfigLockEvidence`'s profile/key_id
+  equality was ruled **structural**.
+- **Stage 4E-R14-R1-FIX** repaired four defects, three of them introduced by R1
+  itself: `ram_gb` had been retyped `Decimal`, contradicting the frozen
+  §R12-FIX-6 sentence — the faulty reasoning was *"it is inside the hashed core,
+  therefore `Decimal`"*, and **hash membership does not determine a semantic
+  numeric type**; the profile count read "nine closed types" when `AuthProfile`
+  made it ten; `GitCommitSha`/`UtcTimestamp` were relocated to
+  **`app.artifact_values`** as cross-artifact primitives; and §R12-FIX-7 still
+  placed `Declaration` in `app.peer_pregame_messages`. It then **stopped** on
+  `DECLARATION-HARDWARE-VRAM-TYPE`, which was typed nowhere.
+- **Stage 4E-R14-R1-FIX2** froze `vram_gb = int | None` with its `gpu`-dependent
+  presence rule — **PROJECT-CONTRACT, not source-mandated** — closing the last
+  dependency.
+- **Stage 4E-R14-R2** implemented the layer: **9 new production modules**, the
+  façade extended by re-export only, and **313 new tests per repo** at **100.00%
+  statement and branch coverage**, every production file **≤150 LOC**, all ten
+  production paths **byte-identical** across repos and all fourteen test files
+  identical modulo the package root.
+
+**What is now implemented, stated precisely.** The pregame **semantic value
+layer**: `GitCommitSha` and `UtcTimestamp` (`app.artifact_values`);
+`AuthProfile`, `KeyId`, `AuthProof` (`app.auth_values`); `RepositoryLinks`,
+`HardwareDeclaration`, `TeamDeclaration` (`app.team_declaration_values`);
+`DeclarationTimes`, `DeclarationTeams`, `Declaration`
+(`app.declaration_values`); nine profile enums plus `InteropProfileSet`
+(`app.interop_profiles`); the seven config section values and `NegotiatedConfig`
+(`domain.config_sections`, `domain.config_league_sections`,
+`domain.negotiated_config`); and `Step0DeclarationExchange`, `ConfigProposal`,
+`ConfigLockContext`, `ConfigLockEvidence` (`app.peer_pregame_messages`).
+
+**What is NOT implemented, equally precisely.** No FastMCP, no transport, no
+network, no public tunnel, no HMAC or Ed25519 computation or verification, no key
+loading, no config-negotiation orchestration, no `CONFIG_LOCKED` transition, no
+canonical serializer, no JSON Schema, no `ResultAgreement`, no Gmail and no
+token-accounting crypto evidence. **Step-0, config negotiation and config lock
+therefore remain READY, not IMPLEMENTED**: their semantic values exist, their
+protocol runtime does not. The peer-family matrix is unchanged at **8 = 4
+implemented / 4 ready / 0 blocked**.
+
+**No requirement, port, error ID, Appendix-E/F row, timeline event, peer family
+or FIELD_MATRIX row was added, removed or reclassified; no C-13, JDEC-016,
+NDEC-008 or INV-16 was created.** Requirements remain **91** (76/9/4/2);
+Appendix E **55**; Appendix F **32 = 14/9/9**; JDEC **15**; NDEC **7**; INV
+**15**; **C-01…C-12**; ports **20**; error IDs **20**; timeline events **15**;
+FIELD_MATRIX **74 = 15/39/9/11** — every type added here is a Python value, not
+an artifact row. **`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`
+is carried forward untouched, and Stage 4 must not be called complete merely
+because the peer-family semantic values now exist. Stage 4E is NOT COMPLETE.**

@@ -310,3 +310,33 @@ rules vs. scoring), and that seam is named below.
 - Nothing imports `mars777_police` from `mars777_thief` or vice-versa (TB-3).
 - `infra.series_launcher` **starts processes**; it never imports the other role's package,
   never holds game truth, and never validates a move (it is not a referee).
+
+## Stage 4E-R14-R1 — pregame semantic value modules (design frozen, not implemented)
+
+Planned homes for the Stage 4E-R14-R2 implementation. Every module stays **≤150
+physical lines**; `domain/config_model.py` is already **150/150** and
+`app/protocol_values.py` **137/150**, so neither may absorb new types.
+
+| Module | Owns | Depends on | Must not import |
+|---|---|---|---|
+| `app.artifact_values` | `GitCommitSha`, `UtcTimestamp` — cross-artifact primitives shared by the declaration and the result | stdlib value/validation primitives only | `domain`, `protocol`, `infra` |
+| `app.auth_values` | `AuthProfile`, `KeyId`, `AuthProof` | stdlib only | `hmac`, `hashlib`, `cryptography`, `secrets`, any key source |
+| `app.declaration_values` | `Declaration`, `DeclarationTeams`, `DeclarationTimes` | `app.artifact_values`, `app.team_declaration_values` | `protocol`, `infra` |
+| `app.team_declaration_values` | `TeamDeclaration`, `RepositoryLinks`, `HardwareDeclaration` | `app.artifact_values` | `protocol`, `infra` |
+| `app.interop_profiles` | the nine profile enums + `InteropProfileSet` | `app.auth_values` (for `AuthProfile`, `KeyId`) | `protocol`, `infra` |
+| `app.peer_pregame_messages` | `Step0DeclarationExchange`, `ConfigProposal`, `ConfigLockContext`, `ConfigLockEvidence` | `app.auth_values`, `app.declaration_values`, `app.interop_profiles`, `app.protocol_values`, `domain.negotiated_config` | `protocol`, `infra` |
+| `domain.config_sections` (+ measured-LOC sibling) | the seven `NegotiatedConfig` section values | `domain.config_model`, `domain.board` | **`app`** — D1 inward-only |
+| `domain.negotiated_config` | `NegotiatedConfig` | `domain.config_sections` | **`app`** |
+| `app.peer_messages` | **façade re-exports only** — identity-equal, no duplicated classes (**D32**) | the defining modules | — |
+
+**Dependency direction.** No `domain` module imports `app`; no reusable value
+module imports transport or protocol runtime; the façade imports the defining
+modules and never the reverse. The resulting DAG is acyclic:
+`app.artifact_values` → `app.auth_values` / `app.team_declaration_values` →
+`app.declaration_values` / `app.interop_profiles` → `app.peer_pregame_messages` →
+`app.peer_messages`, with `domain.config_sections` → `domain.negotiated_config`
+entering only at `app.peer_pregame_messages`.
+
+**Not a junk drawer.** `app.artifact_values` exists because two artifacts share
+exactly two primitives; it is cohesive by that definition and must not accumulate
+unrelated types. There is no `values.py` or `types.py`.

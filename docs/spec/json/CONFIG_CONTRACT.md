@@ -642,3 +642,129 @@ Per sub-game, both peers independently and symmetrically:
 **No unilateral first-sender winner** — neither side's evidence alone permits the
 transition. **No silent repair** at any step. **No technical loss before counted
 play** for failing to agree or lock; the outcome is refusal.
+
+## Stage 4E-R14-R1 — `InteropProfileSet` exact vocabulary (implementation dependency frozen)
+
+§R12-FIX-H enumerated the eleven SERIES-WIDE lock-context members as *concepts*
+with cross-references — enough to prove the lock context binds them, not enough to
+construct a typed value. Stage 4E-R14 stopped on exactly that. Each member's
+**field name**, **type** and **serialized token vocabulary** is frozen here. All
+tokens are **PROJECT-CONTRACT**; serialized values equal the identifiers exactly,
+with **no alias, no case folding, no normalization**.
+
+### R14-R1-A — the nine profile types
+
+| Type | Members | Note |
+|---|---|---|
+| `SeriesConvention` | `FIXED_ROLE` · `REFERENCE_ODD_EVEN_ALTERNATION` | already frozen (PRD05-FR-030); **neither is source-mandated** |
+| `AuthProfile` | `HMAC_SHA256` · `ED25519` | already frozen (R12-FIX-A); plain SHA-256 is not a member |
+| `CommitmentCodec` | `STRICT_PROJECT_COMMITMENT` · `LECTURER_REFERENCE_COMMITMENT` | already frozen; reference codec by explicit agreement only |
+| `ResultProfile` | `STRICT_PROJECT_RESULT` · `LECTURER_ATTACHMENT_COMPATIBILITY` | already frozen |
+| **`CompatibilityProfile`** | `STRICT_COUNTED_MATCH` · `LECTURER_REFERENCE_COMPATIBILITY` · `LECTURER_ATTACHMENT_COMPATIBILITY` | **newly exact** — the three profile headings `COMPATIBILITY_PROFILES.md` already prints. `STRICT_COUNTED_MATCH` is the default and the only emitter for a counted artifact; no profile may weaken a binding requirement |
+| **`ToolNameProfile`** | `PROJECT_LOGICAL_OPERATIONS` · `LECTURER_REFERENCE_ALIASES` | **newly exact.** The first uses the neutral logical operation identities; the second additionally enables the frozen aliases `negotiate` / `receive_turn` / `submit_audit` / `receive_control` (PRD02-FR-034, **not book-mandated**). **It never changes internal operation identity, and there is no enum member per tool name.** |
+| **`CanonicalizationProfile`** | `CANONICAL_JSON_V1` | **newly exact.** One token identifying the complete frozen NDEC-003 v1 bundle: `sort_keys=True`, `separators=(",",":")`, UTF-8, NFC where required, `ensure_ascii=False`, LF, no trailing newline in a hashed payload, the existing deterministic numeric rules. **The token identifies the bundle; it does not replace those rules.** No second v1 profile. |
+| **`SealedRecordProfile`** | `SEALED_RECORD_V1` | **newly exact.** Identifies the NDEC-001 v1 bundle: the exact eight-member sealed set, the frozen tagged action encoding, and the current `intent`/`role`/action contracts. **Distinct from `CommitmentCodec`** — that selects strict-vs-reference commitment compatibility behaviour, this identifies the sealed-record/action semantic profile inside the lock context. They are **not merged.** |
+| **`StateRepresentationProfile`** | `SEALED_STATE_V1` | **newly exact.** Identifies the NDEC-002 / JDEC-012 representation `{config_sha256, self_pos, barriers, step, role}` with its frozen structural rules. No second v1 profile. |
+| **`NonceRepresentationProfile`** | `LOWER_HEX_32` | **newly exact.** Identifies the current-v1 `NonceValue` representation `[0-9a-f]{32}` — 32 lowercase ASCII hex characters, no prefix, no whitespace, no normalization, no coercion. **PROJECT-CONTRACT: the source mandates a fresh nonce, not this encoding.** v1 supports exactly one. |
+
+`KeyId` is unchanged from `SIGNATURE_AND_HASH_PROVENANCE.md` R12-FIX-A.
+
+### R14-R1-B — `InteropProfileSet` final exact shape
+
+```
+InteropProfileSet(
+    series_convention:            SeriesConvention,
+    auth_profile:                 AuthProfile,
+    key_id:                       KeyId,
+    commitment_codec:             CommitmentCodec,
+    result_profile:               ResultProfile,
+    compatibility_profile:        CompatibilityProfile,
+    tool_name_profile:            ToolNameProfile,
+    canonicalization_profile:     CanonicalizationProfile,
+    sealed_record_profile:        SealedRecordProfile,
+    state_representation_profile: StateRepresentationProfile,
+    nonce_representation_profile: NonceRepresentationProfile,
+)
+```
+
+Field order exactly as written. All eleven are **SERIES-WIDE**, all are
+**required — no `Optional` member**, none is a raw `str` where a closed type
+exists, none is an arbitrary mapping, and **no default is hidden inside the value
+object**: a caller must state every profile explicitly, because a silent default
+is precisely how two peers end up believing they agreed on different things.
+
+### R14-R1-C — every serialized token
+
+`FIXED_ROLE` · `REFERENCE_ODD_EVEN_ALTERNATION` · `HMAC_SHA256` · `ED25519` ·
+`STRICT_PROJECT_COMMITMENT` · `LECTURER_REFERENCE_COMMITMENT` ·
+`STRICT_PROJECT_RESULT` · `LECTURER_ATTACHMENT_COMPATIBILITY` ·
+`STRICT_COUNTED_MATCH` · `LECTURER_REFERENCE_COMPATIBILITY` ·
+`PROJECT_LOGICAL_OPERATIONS` · `LECTURER_REFERENCE_ALIASES` ·
+`CANONICAL_JSON_V1` · `SEALED_RECORD_V1` · `SEALED_STATE_V1` · `LOWER_HEX_32`.
+
+**Ten closed profile types · 17 enum-member memberships · 16 unique serialized
+token strings** *(corrected Stage 4E-R14-R1-FIX; an earlier draft said "sixteen
+tokens across nine closed types", which undercounted the types)*.
+
+Memberships per type: `SeriesConvention` 2 · `AuthProfile` 2 · `CommitmentCodec` 2
+· `ResultProfile` 2 · `CompatibilityProfile` 3 · `ToolNameProfile` 2 ·
+`CanonicalizationProfile` 1 · `SealedRecordProfile` 1 ·
+`StateRepresentationProfile` 1 · `NonceRepresentationProfile` 1 = **17**.
+
+Memberships exceed unique strings by one because
+`LECTURER_ATTACHMENT_COMPATIBILITY` is deliberately the serialized token of
+**both** `ResultProfile.LECTURER_ATTACHMENT_COMPATIBILITY` **and**
+`CompatibilityProfile.LECTURER_ATTACHMENT_COMPATIBILITY`. They are **distinct
+typed members** that happen to share a string; **neither is renamed to make token
+strings globally unique**, because typed context already disambiguates them and
+renaming would break the alignment with `COMPATIBILITY_PROFILES.md`.
+
+**`KeyId` is the eleventh `InteropProfileSet` member but is not one of the ten
+closed profile types** — it is a validated value, not a closed vocabulary.
+
+### R14-R1-D — current-v1 single-profile restrictions
+
+`CanonicalizationProfile`, `SealedRecordProfile`, `StateRepresentationProfile` and
+`NonceRepresentationProfile` each have **exactly one v1 member**. That is
+deliberate and matches NDEC-001/002/003: for current counted play both peers echo
+the one required profile, and a differing echo **refuses counted play before
+`CONFIG_LOCKED`** rather than being normalised or accommodated. A second member is
+a **future-version change** requiring the contract extended, the representation
+defined and both repositories implementing it. Single-member enums are kept rather
+than elided so the lock context binds an explicit token instead of an implicit
+assumption.
+
+### R14-R1-E — `ConfigLockEvidence` cross-object invariant (STRUCTURAL)
+
+Supervising ruling, frozen: inside `ConfigLockEvidence`,
+
+```
+auth.profile == context.profiles.auth_profile
+auth.key_id  == context.profiles.key_id
+```
+
+**both MUST hold at construction.** All four values sit inside one immutable
+composite, so a mismatch makes the evidence **self-contradictory before any peer,
+network, key or clock is consulted** — that is a structural defect, not a runtime
+disagreement. A mismatch raises **`ValueError`** under the existing
+structural-validation policy; **`E-AUTH-*` identities are never constructor
+exceptions** — they belong to the boundary layers.
+
+This verifies **nothing cryptographic**. The LIVE layer still owns the
+pre-provisioned profile/key expectation, actual MAC or signature verification,
+peer identity, phase, replay/staleness and config-digest equality.
+
+**No equivalent check exists on `Step0DeclarationExchange`**: `Declaration` is
+subject data and deliberately owns **no** `auth_profile`/`key_id` source of truth
+(§R14-R1-2), so there is nothing to compare. Bootstrap profile and key equality
+stays LIVE against the pre-`BOOT` provisioned expectation, and **no auth member is
+inserted into `Declaration` merely to manufacture a structural comparison.**
+
+### R14-R1-F — status
+
+**`INTEROP-PROFILE-VOCABULARY: RESOLVED-PROJECT`.** `NegotiatedConfig` is
+untouched — still **35** core members, **15 FIXED / 9 MINIMUM / 9 NEGOTIABLE**,
+with `token_budget_per_series` keeping its SOURCE-NEGOTIABLE status and
+PRE-STEP0-AGREED / SERIES-WIDE / IMMUTABLE-AFTER-STEP0 project lifecycle.
+`FIELD_MATRIX.md` is unchanged at **74 = 15/39/9/11**: every type frozen here is a
+Python supporting value, **not an artifact row**.

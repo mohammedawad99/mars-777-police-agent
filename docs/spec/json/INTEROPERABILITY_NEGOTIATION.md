@@ -93,3 +93,23 @@ Unchanged: the `"config"` context string and its domain separation from
 bytes); the unkeyed `config_sha256` and its equality check; the out-of-band key
 and `key_id`-only serialization; `PRD06-FR-047`'s same-or-distinct key question;
 the refuse-counted-play outcome. **No NDEC was added, removed or weakened.**
+
+### Stage 4E-R14-R1 — v1 profile tokens for NDEC-001 / NDEC-002 / NDEC-003
+
+Each of these rows fixes one current-v1 representation that the config lock
+context must bind explicitly. Their profile tokens are frozen in
+`CONFIG_CONTRACT.md` §R14-R1-A and named here so the NDEC row and the lock
+context cannot drift apart:
+
+| Row | Representation | v1 profile token | Type |
+|---|---|---|---|
+| NDEC-001 | sealed-record composition + action encoding | `SEALED_RECORD_V1` | `SealedRecordProfile` |
+| NDEC-001 | nonce representation `[0-9a-f]{32}` | `LOWER_HEX_32` | `NonceRepresentationProfile` |
+| NDEC-002 | `state` representation | `SEALED_STATE_V1` | `StateRepresentationProfile` |
+| NDEC-003 | canonicalization parameters | `CANONICAL_JSON_V1` | `CanonicalizationProfile` |
+
+**Nothing in these rows changes.** The token *names* the already-frozen bundle;
+it does not replace, relax or re-specify any parameter, and each type has exactly
+one v1 member so "negotiation" remains what these rows already say it is — both
+peers echo the one required profile, and a differing echo refuses counted play
+before `CONFIG_LOCKED`. **No NDEC was added: the count stays 7.**

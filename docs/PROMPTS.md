@@ -112,5 +112,12 @@
 | 4E-R13-R2 | Result timestamp carriage + deterministic agreement cadence reconciliation | Referenced |
 | 4E-R13-CLOSE | ResultAgreement + joint result core final audit, tracking, commit, push, exact-SHA CI | Referenced |
 
+| 4E-R14 | Pregame peer semantic types implementation (stopped before code) | Referenced |
+| 4E-R14-R1 | Pregame semantic implementation dependency contract freeze | Referenced |
+| 4E-R14-R1-FIX | Hardware type + profile-count + shared-primitive ownership repair | Referenced |
+| 4E-R14-R1-FIX2 | VRAM numeric type final freeze | Referenced |
+| 4E-R14-R2 | Pregame peer semantic types - full implementation | Referenced |
+| 4E-R14-CLOSE | Pregame semantic types tracking, commit, push, exact-SHA CI | Referenced |
+
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

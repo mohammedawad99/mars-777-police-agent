@@ -896,3 +896,36 @@
   been sent alongside the six per-sub-game counts. Deriving it means the two can never disagree,
   and removes a whole class of "which one is authoritative?" question from a document two parties
   must approve byte-for-byte.
+
+- **The Stage 4E-R14 family** was the first implementation stage in a long while, and the useful
+  lesson is that it began by writing nothing at all.
+- **A pre-code gate is worth more than a partial implementation.** R14's instructions listed the
+  conditions under which to stop, and two of them were live: a type named by a frozen contract had
+  never been defined, and four profile members were cross-references rather than vocabularies. I
+  could have invented a 15-row declaration model and four enums and produced something that ran.
+  It would have been my design wearing the contract's name. Stopping with the exact audit turned
+  three follow-up stages into short, precise rulings instead of a rewrite.
+- **"Concepts with cross-references" is not a contract.** §R12-FIX-H listed eleven lock-context
+  members and I had treated it as complete because it was *enough to prove the lock binds them*.
+  Sufficient for one argument is not sufficient for another. The test that catches this is
+  concrete: can I write the type signature without inventing a token? For four members I could
+  not.
+- **I retyped a field because it was hashed, and that was simply wrong.** `ram_gb` became `Decimal`
+  on the reasoning that it sits inside the canonical Step-0 core. `Decimal` exists to keep a
+  *fractional* value exact under serialization; an integer is already exact, and widening it
+  changes the bytes for no gain. The general form is worth keeping: serialization is downstream of
+  the semantic type, never a reason to choose it.
+- **Refusing to infer one field cost one round-trip and was still right.** `vram_gb`'s row was
+  character-for-character identical to `ram_gb`'s, and I had just resolved that expression to
+  `int`. It was very tempting. But the neighbour's *ruling* is not the field's *contract*, and the
+  stage had a named blocker for exactly this. The ruling came back as one line; a wrong guess would
+  have been baked into a value object and its tests.
+- **Counting is a test, not prose.** The 35-member config proof counts dataclass fields rather than
+  asserting a number in a docstring, and the profile test derives 10/17/16 from the enums
+  themselves. Both would have caught the "nine closed types" error I shipped in R14-R1 - which is
+  precisely why the assertions belong in the suite and not in a paragraph.
+- **Name what is implemented narrowly.** The layer that now exists is *semantic values*. No socket
+  is opened, no MAC is computed, no key is read. Writing "Step-0 implemented" in the tracking would
+  have been the single most damaging sentence available, because every later reader would price the
+  remaining work wrongly. Step-0, config negotiation and config lock stay READY, and the tracking
+  says exactly which nouns are absent.
