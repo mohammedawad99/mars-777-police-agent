@@ -41,12 +41,37 @@ rules vs. scoring), and that seam is named below.
 | `app.strategy_api` | `Observation` in → `ProposedAction` out contract | domain.observation | infra, protocol | none | no legal action |
 | `app.peer_messages` *(4E-R1; deps 4E-R2/FIX2)* | **Immutable internal peer-protocol semantic contracts** — the values application control flow consumes and produces (state-changing inbound events reach the Turn Executor) and that `protocol.messages` maps to/from; **never** wire JSON | pure stdlib **value-definition and validation primitives** only (`typing`, `dataclasses`) + immutable `domain` value types + immutable **globally-FIXED `domain` constants read as structural bounds** (currently `FIRST_SUB_GAME`, `FIXED_NUM_GAMES` from `domain.config_model`; **read-only**, never redefined) + `app.protocol_values` (**runtime use**: constructs and stores the shared semantic values its messages carry) | `protocol`, `infra`, any adapter, `app` implementation modules (`app.state_machine`, `app.orchestrator`, `app.turn_service`), `enum` (no message-local vocabulary exists — reuse `domain.rules.Move` and `app.protocol_values.FinalAuditVerdict`), `hashlib`/`hmac`/`cryptography`/`secrets`/`random`, FastMCP/network libraries, wire serialization, JSON, artifact storage, cryptographic computation, I/O, GUI, replay, reporting — everything else | none | invalid message construction |
 | `app.turn_cursor` *(4E-R6; design frozen, not implemented)* | The shared **turn-identity value** `TurnCursor` (and its private int guard). Extracted because *both* future message modules need it and neither should depend on the other - not because a file filled up | pure stdlib value primitives + the globally-FIXED `domain.config_model` bounds (read-only) | `protocol`, `infra`, adapters, `app` implementation modules, `enum`, crypto, JSON, I/O | none | invalid cursor construction |
-| `app.peer_turn_messages` *(4E-R6; design frozen, not implemented)* | The **per-turn** peer-visible families: `Commitment`, `Acknowledgement`, `Reveal`, and a future move-validation family if one proves transmitted | `app.turn_cursor`, `app.protocol_values`, immutable `domain` value types (incl. `domain.actions`) | same as `app.peer_messages` | none | invalid message construction |
+| `app.peer_turn_messages` *(4E-R6; design frozen, not implemented)* | The **per-turn** peer-visible families: `Commitment`, `Acknowledgement`, `Reveal`. *(Stage 4E-R10-R3: no move-validation family will be added - the peer-facing legality rejection is a transport/port response, not a semantic message, C-12.)* | `app.turn_cursor`, `app.protocol_values`, immutable `domain` value types (incl. `domain.actions`) | same as `app.peer_messages` | none | invalid message construction |
 | `app.peer_final_messages` *(4E-R6; design frozen, not implemented)* | The **end-of-sub-game** peer-visible families: `NonceRevealEntry` + `FinalNonceReveal` (one batch per peer per sub-game, 4E-R6-FIX1), and any finalization family later proved transmitted. The reusable `NonceValue` it carries lives in `app.protocol_values`, **not** here | `app.turn_cursor`, `app.protocol_values`, immutable `domain` value types | same as `app.peer_messages` | none | invalid message construction |
 | `app.protocol_values` *(4F-R1)* | **Immutable shared protocol semantic value representations** — the primitives that peer-message contracts and outer protocol implementations must agree on (e.g. a SHA-256 digest result, a final-audit verdict). Representation only: it never computes, serializes or knows what was hashed | pure stdlib **value-definition and validation primitives** only (`typing`, `dataclasses`, `enum`) | `protocol`, `infra`, any adapter, `hashlib`/`hmac`/`cryptography`/`secrets`/`random`, FastMCP/network libraries, I/O, JSON or any wire/artifact serialization, cryptographic computation, GUI, replay, reporting — everything else | none | invalid value representation |
 | `app.sealed_record_values` *(4E-R9-R1; design frozen, not implemented)* | The **sealed commitment record's semantic values**: `ActorRole` (`"police"`/`"thief"`), `Intent` (`"truth"`/`"lie"`) and `SealedState` (the own-known snapshot `config_sha256`, `self_pos`, `barriers`, `step`, `role`). Representation only — it never hashes, serializes or knows what a commitment is, and **no opponent truth is representable in it** | pure stdlib **value-definition and validation primitives** (`typing`, `dataclasses`, `enum`) + `app.protocol_values` (for `Sha256Digest`) + immutable `domain` value types (`domain.board.Position`) | `protocol`, `infra`, any adapter, `app` implementation modules (`turn_service`, `orchestrator`, `state_machine`), the peer-message modules, `hashlib`/`hmac`/`cryptography`/`secrets`/`random`, I/O, JSON or any serialization | none | invalid structural composition |
 
 **Test boundary:** state-machine and contract tests with fake ports.
+
+> **Stage 4E-R10-R3 ruling - there is no `MoveValidation` peer-message family either (design
+> only; no Python).** Appendix E #14 requires the opponent to reject an illegal move, but that is a
+> *sanction* statement: no source passage gives the rejection a payload, cadence, vocabulary or
+> association, Figure 6 draws no arrow for it, and Ch 6.4-6.5 reserve legality to the local
+> algorithm. Stage 4E-R10-R2 stopped `BLOCKED-BY-EXISTENCE-EVIDENCE`; supervising review then chose
+> the mechanism. **`app.peer_messages` must never contain `MoveValidation`** - nor `ValidationAck`,
+> `ValidationResultMessage`, `MoveAcceptedMessage` or `MoveRejectedMessage` - and the derived
+> peer-visible inventory is corrected **9 → 8** (**C-12**). As with C-11, the source is **not**
+> claimed to forbid such a message; it simply never requires one.
+>
+> The obligation does not disappear, it relocates to contracts that already exist. `domain.rules`
+> decides legality and is already contracted as **`GameRulesPort`**, which *"never raises for
+> legality - returns a verdict"*; `app.turn_service` consumes that verdict; **`E-PROTO-ILLEGAL-MOVE`**
+> already owns the "opponent sent an illegal move" outcome with "received message + validator
+> verdict" as its evidence; and the peer-facing surface is the response of the ingress operation
+> (`PeerServerPort`). No new module, port, semantic concept or error ID is created.
+>
+> Transport must never re-implement game rules, apply a move, mutate `LocalTruth`, compute scoring
+> or choose technical loss - it exposes an already-computed outcome. And four acceptances stay
+> distinct: transport delivery/parsing, authentication, protocol phase/order, and **game legality**.
+> Only the last is what Appendix E #14 is about; the FastMCP example's `accepted` is the second.
+> The exact response shape is **not** frozen: `API_BOUNDARIES.md` defers concrete operation
+> signatures to Stage 2B-2C and both peer ports are **async**, so it is recorded as
+> `MOVE-REJECTION-TRANSPORT-SHAPE: BLOCKED-BY-TRANSPORT-SHAPE`.
 
 > **Stage 4E-R10-R1 ruling - there is no `FinalAudit` peer-message family (design only; no
 > Python).** Stage 4E-R10 audited the two remaining audit-adjacent families and stopped with an

@@ -729,3 +729,30 @@
   corrected my own R10 wording that said the peer "learns the verdict through ResultAgreement" -
   the supported claim is only that a completed audit is a *precondition to* result agreement.
   Overstating a relationship is the same failure as inventing a field, just harder to notice.
+- **Stage 4E-R10-R2** was the third stage in this sequence to produce nothing, and the
+  discipline that mattered was refusing the *symmetrical* answer. I had just removed `FinalAudit`
+  from the inventory on positive evidence, and `MoveValidation` looked like the same shape - no
+  Figure 6 arrow, no payload anywhere, a reference snippet that does something else. The tempting
+  move was to declare a second inventory contradiction and collect the matching result.
+  It would have been wrong, and the reason is worth keeping. For `FinalAudit` I could show the
+  audit mechanism is *complete without* the message: logs are exchanged, each side recomputes
+  locally, the book says the cryptography decides. For `MoveValidation` the source says the
+  opposite kind of thing - App E puts the rejection act **on the opponent**. I could not show the
+  peer does nothing, so I had no basis for claiming over-classification. Two findings that look
+  alike from a distance can need opposite verdicts, and "this resembles the last case" is not
+  evidence. So the stage returned `BLOCKED-BY-EXISTENCE-EVIDENCE` and asked for a decision.
+- **Stage 4E-R10-R3** received that decision, and the interesting part is what it did *not* let me
+  do. With the mechanism chosen - transport response, not a message family - the obvious next move
+  was to freeze the response: a `bool`, one meaning, done. I wrote the candidate down and then did
+  not freeze it, because `API_BOUNDARIES.md` says in its own header that concrete operation
+  signatures are deferred to Stage 2B-2C, and both peer ports are declared **async** with a generic
+  "protocol response" return. A bare `bool` on an async port whose contract does not exist yet
+  cannot preserve the four-way separation I had just written down in the same stage - delivery,
+  authentication, protocol order, legality. It would collapse them by accident, which is exactly
+  the failure the FastMCP example demonstrates: its `accepted` is `verify_signature(...)`, an
+  authentication result wearing the word that everyone reads as legality.
+  So the stage closes PARTIAL on purpose, and the tracking says so rather than rounding up. The
+  useful realisation is that two separate blockers - this one and the audit-material exchange - are
+  now both waiting on the *same* missing thing: the peer operation contract. That is not a
+  coincidence to note in passing, it is the shape of the next stage, and it is why R11 is scoped
+  around the operation boundary rather than around either blocker individually.

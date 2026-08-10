@@ -36,6 +36,17 @@ composition root wires them (`DEPENDENCY_RULES.md` D3/D4).
 - **P1 — Observation is a wall.** `StrategyPort` accepts only an `Observation` built by
   `domain.observation`; there is no field on it that could carry opponent truth.
 - **P2 — No port returns key material.** `KeyedAuthPort` returns tags/verdicts only.
+- **P2b — Four acceptances stay distinct** *(Stage 4E-R10-R3, C-12)*. A received turn passes
+  through **delivery/parsing** (`PeerServerPort`), **authentication** (`KeyedAuthPort` where
+  applicable), **protocol phase/cursor/order** (`app.state_machine`) and finally **game legality**
+  (`GameRulesPort` → `domain.rules`). Appendix E #14's "rejection of a move by the opponent"
+  concerns **only the last**, and its peer-facing outcome is a transport/port **response**, not a
+  peer-message family. These must never collapse into one `accepted` flag — the reference FastMCP
+  `receive_move` returns `{"accepted": is_valid, …}` where `is_valid = verify_signature(...)`,
+  which is the *authentication* acceptance and is **not** a legality verdict. The exact response
+  shape is deferred with every other concrete signature to Stage 2B-2C and is tracked as
+  `MOVE-REJECTION-TRANSPORT-SHAPE` in `INTEROPERABILITY_BLOCKERS.md`. Transport never re-derives
+  legality, applies a move, mutates `LocalTruth`, computes scoring or chooses technical loss.
 - **P3 — Non-determinism is isolated.** Only `PeerTransportPort`, `PeerServerPort`,
   `ClockPort`, `ReportPort`, `LlmAdvisorPort` are non-deterministic; all are injected so
   tests can substitute deterministic fakes.

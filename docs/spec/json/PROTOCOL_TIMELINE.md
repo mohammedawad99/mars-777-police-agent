@@ -17,8 +17,8 @@ the wire yet.
 | 5 | **Commitment** | agent → opponent | state, move, intent, hint, step, role, sub_game, nonce | `H_commit` only | move, hint, nonce | log | **sealed payload → `H_commit`** (NDEC-001/002/003) | at reveal + final audit |
 | 6 | **Acknowledgement** | opponent → agent | received `H_commit` | ack of step + commit | — | log | — | — |
 | 7 | **Reveal** | agent → opponent | move, hint | move + hint | **nonce** (still) | log | — | recompute vs `H_commit` |
-| 8 | **Move validation** | opponent (enforces physics) | move legality, capture claim | **[RR]** accept/reject — *shape unfrozen, see below (4E-R6)* | — | log | — | at audit |
-| 9 | **Verdict (validation record)** | opponent/local | legality + capture-truth result | (result) | — | log (separate record) | — | — |
+| 8 | **Move validation** — *local legality decision + transport-level rejection outcome* | receiving peer decides **locally**; the outcome surfaces on the transport response | move legality, capture claim | **the accept/reject outcome of the operation that received the turn** — **not** a standalone semantic message (C-12); exact response shape not yet frozen | — | log (separate validation record, event 9) | — | at audit |
+| 9 | **Verdict (validation record)** | opponent/local | legality + capture-truth result | — *(local record; the peer-facing part is event 8's transport outcome)* | — | log (separate record) | — | — |
 | 10 | **State transition** | both (state machine) | new positions/barriers | phase transition | opponent true pos (always) | — | — | — |
 | 11 | **Final nonce reveal** | each → each | all nonces | **nonces** | (none) | log (final_reveal) | — | recompute all `H_commit` |
 | 12 | **Final audit** — *audit-material exchange + local mutual audit* | each → each (material); then **each side locally** | full logs + nonces | **the audit material / full log each side must disclose so the opponent can recompute independently** (Ch 5 §5.4) — **not** a verdict: no `FinalAuditVerdict`, `expected_digest`, `recomputed_digest` or reason is transmitted (C-11) | — | log (`audit.result`, `entries[].verified`, `audit.tampered_step`) | recompute SHA-256 per step **locally** | Verified OK / TAMPERED — **local** Replay-Viewer/log verdict |
@@ -56,15 +56,38 @@ hidden)* → *Final Reveal: all Nonces (end of game)*, captioned as the four sta
 no audit-verdict arrow.** Two consequences, both recorded rather than resolved by
 invention:
 
-- **Event 8 is real but its shape is not source-frozen.** App E #14 *does* require
-  the opponent to reject an illegal move (*"no diagonal moves — sanction: move
-  rejected by the opponent → loss"*), and Ch 6.5 requires the local algorithm to
-  reject any illegal move its own model proposes. So rejection exists. What no
-  source fixes is whether it travels as a **peer-visible message with a payload**
-  or is a local enforcement decision surfacing through the sanction path. The
-  `{"accepted": is_valid, …}` return in the minimal FastMCP server (p.28) is
-  **REFERENCE-EXAMPLE** about signature checking and was **not** promoted — the same
-  snippet Stage 4E-R3 already refused to promote for the acknowledgement.
+- **Event 8 is real, and Stage 4E-R10-R3 settled its mechanism.** App E #14 *does*
+  require the opponent to reject an illegal move (*"no diagonal moves — sanction:
+  **move rejected by the opponent** → loss"*), and Ch 6.4-6.5 reserve legality to
+  the **local algorithm**, which must reject any illegal move *its own model*
+  proposes — a different act that must not be conflated with the peer-facing one.
+  What no source fixes is the **mechanism**: whether the peer-facing rejection is a
+  standalone message, the response of the call that received the turn, or a local
+  refusal surfacing through the sanction path. Stage 4E-R10-R2 stopped rather than
+  guess; Stage 4E-R10-R3 resolved it by supervising decision (**C-12**):
+
+  > The rejection is **not** modelled as a standalone `app.peer_messages` family.
+  > The receiving peer validates legality **locally** with the already-owned
+  > `domain.rules` / `LocalTurnService` authority, and the peer-facing outcome is
+  > placed at the **transport / port response boundary** of the operation that
+  > received the turn. **PROJECT-CONTRACT** under source minimality — the source is
+  > **not** claimed to forbid a distinct message.
+
+  Consequently the derived peer-visible inventory is corrected **9 → 8**, and
+  `MoveValidation` is no longer a peer-message family. Four separations are
+  load-bearing and must never collapse into one "accepted" flag: **(i)** transport
+  delivery/parsing, **(ii)** authentication/signature/config acceptance, **(iii)**
+  protocol phase/cursor/order acceptance, and **(iv)** **game-legality**
+  acceptance. Appendix E #14 concerns only **(iv)**. The
+  `{"accepted": is_valid, …}` return in the minimal FastMCP server (p.28) computes
+  `is_valid = verify_signature(...)` — it is **(ii)**, not **(iv)** — so it remains
+  **REFERENCE-EXAMPLE** and was **not** promoted; treating it as legality law would
+  mislabel an authentication result as a game verdict. The exact response shape is
+  **not** frozen here: `API_BOUNDARIES.md` defers concrete operation signatures to
+  Stage 2B-2C and both peer ports are **async**, so the shape is recorded as
+  `MOVE-REJECTION-TRANSPORT-SHAPE: BLOCKED-BY-TRANSPORT-SHAPE`. Events 8 and 9 both
+  survive: a timeline event is not automatically a peer-message family, and a log
+  validation record is not automatically a wire message.
 - **Event 12's computation is local — and Stage 4E-R10-R1 settled the rest.** Ch 5
   §5.4 (p.55) has each side rebuild the opponent's record from *State, Move,
   Intent, Nonce* and compare against the declared commitment, and Ch 2.2.1 makes
@@ -83,7 +106,7 @@ invention:
   | **Persisted** | `entries[].verified`, `audit.result`, `audit.tampered_step` and the preserved digest evidence (PRD06-FR-104), already **LOCAL-ONLY** per `LOG_CONTRACT.md` §E |
 
   There is therefore **no peer-visible `FinalAudit` family**, and the derived
-  peer-visible inventory is corrected **10 → 9**. What survives untouched:
+  peer-visible inventory is corrected **10 → 9** (further corrected to **8** at Stage 4E-R10-R3, C-12). What survives untouched:
   `ProtocolPhase.FINAL_AUDIT` (a workflow phase is not a message family),
   `FinalAuditVerdict` (local audit/log/replay vocabulary), and the TAMPERED
   consequence with its frozen sanction. The exact **interchange shape** of the

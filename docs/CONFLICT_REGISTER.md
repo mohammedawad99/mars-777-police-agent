@@ -55,6 +55,8 @@ remain NOT CONFIRMED.
 
 | **C-11** | **Peer-family inventory overreach — a transmitted `FinalAudit` verdict** (Stage 4E-R10 / R10-R1; **post-lock, reconciliation-discovered**) | **Derived project inventory:** our peer-visible message inventory counted a **Final audit** family, and `PROTOCOL_TIMELINE.md` event 12 carried `**[RR]** audit verdicts` as a transmitted item. | **Book:** Ch 5 §5.4 (p.55) has each side **submit its full log including every nonce reveal** and then **independently recompute** the opponent's commitments locally; Ch 7 §7.5 + Figure 10 place `Verified OK`/`TAMPERED` in the **Replay Viewer** over the persisted log; **Figure 6 (p.52) draws no audit-verdict arrow**; App E requires a comprehensive **mutual log audit** as a precondition to agreeing the shared result. | No | Non-numeric; App F silent. Source minimality: a family is peer-visible only where the source requires transmission. | **RESOLVED (Stage 4E-R10-R1).** There is **no peer-visible `FinalAudit` verdict family**; the derived inventory is corrected **10 → 9**. `FinalAuditVerdict` survives unchanged as the **local audit / log / replay** vocabulary, `ProtocolPhase.FINAL_AUDIT` survives as a workflow phase, and the **source-required end-of-game audit-material / full-log disclosure** survives as a separate artifact/transport obligation whose interchange shape is newly recorded as `AUDIT-EXCHANGE-PAYLOAD: BLOCKED-BY-INTEROPERABILITY-SHAPE`. **The source does not forbid a verdict message; it simply does not require one, and the project declines to invent it.** | High — three independent source lines converge, and Stage 4E-R10 stopped rather than change the inventory unilaterally. | Peer-visible families **9**; matrix **4 implemented / 0 ready / 5 blocked**. No Python changes: `FinalAuditVerdict`, `FINAL_AUDIT` and `FinalNonceReveal` are untouched, and no `FinalAudit` class ever existed. Timeline events stay **15**; no requirement, JDEC, NDEC, INV or Appendix count changes. | **Stage 4E-R10-R1 — supervising-authorized; awaiting CLOSE review** |
 
+| **C-12** | **Peer-family inventory overreach — a standalone `MoveValidation` message** (Stage 4E-R10-R2 / R10-R3; **post-lock, reconciliation-discovered**) | **Derived project inventory:** our peer-visible inventory counted a **Move validation** family, and `PROTOCOL_TIMELINE.md` event 8 carried `**[RR]** accept/reject` as a transmitted item with an unfrozen shape. | **Book:** App E #14 gives the *sanction* — *"no diagonal moves; sanction: **rejection of the move by the opponent** and loss"* — but no passage describes a transmitted validation payload, cadence, vocabulary or association; **Figure 6 (p.52) draws no move-validation arrow**; Ch 6 §6.4-6.5 reserve legality to the **local algorithm**, whose "reject" is of *its own model's* proposal; and the only response-shaped artifact, the FastMCP `receive_move` return `{"accepted": is_valid, …}`, computes `is_valid = verify_signature(...)` — **signature authentication, not game legality**. | No | Non-numeric; App F silent. The source requires the *outcome*; the mechanism is source-unspecified, so it is a project choice under source minimality. | **RESOLVED (Stage 4E-R10-R3, supervising architecture decision).** The rejection is **not** modelled as a standalone `app.peer_messages` family; the peer-facing legality outcome is placed at the **transport / port response boundary** of the operation that receives the turn. The derived inventory is corrected **9 → 8**. `domain.rules` + `LocalTurnService` remain the sole game-legality authority (already contracted as `GameRulesPort`, which *"never raises for legality — returns a verdict"*), and `E-PROTO-ILLEGAL-MOVE` already owns the rejection outcome. **PROJECT-CONTRACT: the source is not claimed to forbid a distinct message.** The exact response shape is **not** frozen here — see `MOVE-REJECTION-TRANSPORT-SHAPE` in `INTEROPERABILITY_BLOCKERS.md`. | High — Stage 4E-R10-R2 stopped `BLOCKED-BY-EXISTENCE-EVIDENCE` rather than decide unilaterally, and the mechanism was chosen by supervising review, not inferred. | Peer-visible families **8**; matrix **4 implemented / 0 ready / 4 blocked**. No Python changes and no `MoveValidation` class ever existed. Timeline events stay **15**; events 8 and 9 survive, reconciled rather than deleted. No requirement, JDEC, NDEC, INV or Appendix count changes. | **Stage 4E-R10-R3 — supervising-authorized; awaiting CLOSE review** |
+
 **Stage 1D.1 correction (this pass):** added **C-09** (reporting-failure sanction:
 Ch 9 per-side non-credit vs App E #35 game-void/0-both). The Stage-1A high-risk-class
 line that called reporting sanctions "consistent / NOT CONFIRMED" is **corrected** —
@@ -119,10 +121,37 @@ resolve `MoveValidation`, which stays `BLOCKED-BY-PAYLOAD-SHAPE` · resolve
 transport of a verdict · claim `FinalNonceReveal` is the complete audit material ·
 add a requirement, JDEC, NDEC, INV or Appendix-F row.
 
-**Identifier note.** Conflict-Register **C-10** and **C-11** are distinct from the
-unrelated review-local finding labels "C-10" and "C-11" used inside
-`docs/prd/PRD_05_07_REVIEW.md`, which number that document's own Stage-2C
-red-team findings (its "C-11" is a *profile-downgrade* risk row, resolved there,
-and has no relation to the peer-family inventory). Those are **not**
+## C-12 — scope and non-effects (Stage 4E-R10-R3)
+
+**Rationale.** (1) App E #14 states a **sanction** — who bears the loss when a
+move is illegal — not a message contract; sanction columns describe consequences
+throughout that appendix. (2) The rejection Ch 6 §6.5 *does* specify is the
+**local algorithm rejecting its own model's** illegal proposal, which is a
+different act from a peer-facing one and must not be conflated with it. (3)
+**Figure 6 (p.52)** draws four arrows and no move-validation arrow. (4) The only
+response-shaped artifact in the source validates a **signature**, not legality,
+and is the return of the *same* call that submits the move. (5) The mechanism is
+therefore source-unspecified, and the project chooses the minimal one — a
+transport/port response — rather than inventing a peer-message family.
+
+**C-12 does NOT:** claim the source *forbids* a distinct validation message (the
+classification is **NOT SOURCE-REQUIRED**) · weaken App E #14's required
+rejection or its loss consequence · move any legality logic out of `domain.rules`
+/ `LocalTurnService` · let transport become a second rules engine · repurpose the
+cryptographic `Acknowledgement` as a legality signal · promote the FastMCP
+signature-validation example to game-legality law · add a positive "move was
+legal" message for symmetry · delete timeline event 8 or 9, or change the
+**15**-event count · freeze the transport response shape, which remains
+`MOVE-REJECTION-TRANSPORT-SHAPE: BLOCKED-BY-TRANSPORT-SHAPE` · resolve
+`ResultAgreement`, `AUDIT-EXCHANGE-PAYLOAD`, Step-0 or the config families · add
+a requirement, JDEC, NDEC, INV or Appendix-F row · supersede **C-11**, whose own
+non-effects list correctly records that *C-11* did not resolve `MoveValidation`.
+
+**Identifier note.** Conflict-Register **C-10**, **C-11** and **C-12** are
+distinct from the unrelated review-local finding labels "C-10", "C-11" and
+"C-12" used inside `docs/prd/PRD_05_07_REVIEW.md`, which number that document's
+own Stage-2C red-team findings — its "C-11" is a *profile-downgrade* risk row and
+its "C-12" a *result-hash self-reference* row, both resolved there, and neither
+has any relation to the peer-family inventory. Those are **not**
 Conflict-Register entries, and that historical review is left unchanged. The
-Conflict Register is the single authority for `C-01…C-11`.
+Conflict Register is the single authority for `C-01…C-12`.

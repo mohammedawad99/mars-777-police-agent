@@ -667,3 +667,41 @@ JDEC-016, NDEC-008, INV-16 or C-12 was created.** Requirements remain **91**
 **20**; error IDs **20**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result fields
 **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events **15**;
 `num_games` **6 FIXED**. **Stage 4E as a whole is NOT COMPLETE.**
+
+**Stage 4E-R10-R2 (MoveValidation existence + payload).** Attempted and
+**stopped `BLOCKED-BY-EXISTENCE-EVIDENCE` at the existence gate; 0 files
+changed**, with the stop accepted by supervising review. Opponent rejection of an
+illegal move is SOURCE-ENTAILED (App E #14) but the mechanism is
+SOURCE-UNSPECIFIED. No requirement was added, removed, reclassified or re-owned.
+
+**Stage 4E-R10-R3 (move-rejection inventory + transport-response
+reconciliation).** Documentation / architecture only; **CLOSED / COMMITTED /
+CI-GREEN** at Stage 4E-R10-R3-CLOSE with **0 Python and 0 tests** — and
+**PARTIAL**: the inventory correction is complete while the transport response
+shape remains blocked. By supervising **PROJECT-CONTRACT** decision the
+peer-facing rejection required by **App E #14** is placed at the transport/port
+response boundary rather than modelled as a standalone `app.peer_messages`
+family; the source is not claimed to forbid such a message. Game legality remains
+owned by `domain.rules` / `LocalTurnService` through the existing
+**`GameRulesPort`** (**PRD01-FR-003/004/005**, GAME-003), and the rejection
+outcome by the existing **`E-PROTO-ILLEGAL-MOVE`**, so **no new port, semantic
+concept or error ID** was created. Four acceptances are now explicitly distinct —
+delivery/parsing, authentication (**PRD06** keyed-auth path), protocol
+phase/cursor/order, and **game legality** — and the FastMCP `receive_move`
+example's `accepted` is the second, not the fourth (**PRD02-FR-034/035**,
+REFERENCE-COMPATIBILITY, not book-mandated). Timeline events 8 and 9 survive with
+the count still **15**. The derived peer-visible family inventory is corrected
+**9 → 8** — **4 implemented, 0 ready, 4 blocked** — and the official Conflict
+Register grows **11 → 12** with **C-12**, distinct from the unrelated
+review-local label in `docs/prd/PRD_05_07_REVIEW.md`, which was not edited. The
+exact response shape remains **`MOVE-REJECTION-TRANSPORT-SHAPE:
+BLOCKED-BY-TRANSPORT-SHAPE`**, since `API_BOUNDARIES.md` and **PRD02-FR-035**
+defer concrete operation signatures to Stage 2B-2C and both peer ports are async;
+`AUDIT-EXCHANGE-PAYLOAD` remains blocked in its own right. **No requirement was
+added, removed, reclassified or re-owned; no JDEC-016, NDEC-008, INV-16 or C-13
+was created.** Requirements remain **91** (76/9/4/2); Appendix E **55**; Appendix
+F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**; INV
+**15**; **C-01…C-12**; ports **20**; error IDs **20**; `ProtocolPhase` **1**;
+PRD-02 IDs **87**; result fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**;
+timeline events **15**; `num_games` **6 FIXED**. **Stage 4E as a whole is NOT
+COMPLETE.**

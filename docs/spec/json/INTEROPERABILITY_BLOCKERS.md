@@ -24,7 +24,7 @@ verification, result agreement, or mandatory reporting.
 
 ## Blocking items
 
-**One, opened at Stage 4E-R10-R1.**
+**Two: one opened at Stage 4E-R10-R1, one at Stage 4E-R10-R3.**
 
 | Item | Status | Class | Basis |
 |---|---|---|---|
@@ -36,6 +36,30 @@ the exchange is an artifact/transport obligation and is **not** counted as an
 **not** satisfied by `FinalNonceReveal`, which carries the nonce batch only — see
 the note below. And it does **not** re-open the sealed-record, canonicalization or
 commitment contracts, which are frozen and implemented.
+
+| **`MOVE-REJECTION-TRANSPORT-SHAPE` — the response shape carrying the peer-facing game-legality outcome** | **Unresolved.** App E #14 requires the opponent to reject an illegal move, and Stage 4E-R10-R3 placed that outcome at the **transport / port response boundary** rather than in a peer-message family (**C-12**). What is *not* fixed is the response itself. Two committed contracts block it mechanically: `API_BOUNDARIES.md` states **"No Python signatures are fixed here… concrete FastMCP tool signatures are not locked at this stage; they are negotiated/derived in Stage 2B-2C"**, and **PRD02-FR-035** repeats that signatures are settled in **Stage 2C** with the negotiated profile. Both peer ports are **async** — `PeerServerPort` returns a generic *"protocol response"* and `PeerTransportPort` *"peer response or typed transport error"* — so there is no frozen request/response contract on which to hang a legality result. | **BLOCKING** (transport/port integration) | App E #14; `API_BOUNDARIES.md` (`PeerServerPort`, `PeerTransportPort`, `GameRulesPort`); PRD02-FR-034/035; **C-12** |
+
+**The preferred shape, evaluated and deliberately not frozen.** A single exact
+`bool` — `True` = the locally validated revealed `PhysicalAction` is game-legal
+and accepted for application at the currently expected turn, `False` = it is
+game-illegal and rejected — is the minimal candidate and duplicates no `action`,
+`hint`, `nonce`, `digest` or `state`. It is **not** adopted yet for one reason:
+with an async port whose declared return is a generic *"protocol response"*, a
+bare `bool` cannot preserve the four-way separation the same contract requires —
+**delivery/parsing**, **authentication**, **protocol phase/cursor/order** and
+**game legality** — and would collapse into exactly the conflated `accepted` flag
+that the FastMCP example's signature-only `is_valid` shows is easy to reach for.
+Freezing it before the Stage 2B-2C operation contract exists would decide the
+separation by accident.
+
+**What is already settled and is not blocked.** Legality itself is owned by
+`domain.rules` via **`GameRulesPort`**, which *"never raises for legality —
+returns a verdict"*; the rejection outcome is already owned by
+**`E-PROTO-ILLEGAL-MOVE`** ("opponent sent an illegal move", protocol-visible,
+evidence "received message + validator verdict"); and no reason text crosses the
+boundary — rejection diagnostics stay local/log, never a Python exception string.
+**No new port, semantic concept or error ID was created**, and this blocker is
+**not** a peer-message-family blocker: the family inventory is settled at **8**.
 
 **Why it was invisible until now.** The obligation was hidden behind the assumption
 that a `FinalAudit` message would carry it. Once Stage 4E-R10-R1 established there is

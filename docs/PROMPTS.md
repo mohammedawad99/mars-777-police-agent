@@ -92,6 +92,9 @@
 | 4E-R10 | Final audit + move validation readiness reconciliation | Referenced |
 | 4E-R10-R1 | Final-audit inventory + audit-material exchange reconciliation | Referenced |
 | 4E-R10-R1-CLOSE | Final-audit inventory final audit, tracking, commit, push, CI | Referenced |
+| 4E-R10-R2 | MoveValidation existence + payload reconciliation | Referenced |
+| 4E-R10-R3 | Move-rejection inventory + transport-response reconciliation | Referenced |
+| 4E-R10-R3-CLOSE | Move-rejection reconciliation tracking, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.
