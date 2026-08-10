@@ -119,5 +119,8 @@
 | 4E-R14-R2 | Pregame peer semantic types - full implementation | Referenced |
 | 4E-R14-CLOSE | Pregame semantic types tracking, commit, push, exact-SHA CI | Referenced |
 
+| 4E-R15 | ResultAgreement semantic types implementation | Referenced |
+| 4E-R15-CLOSE | ResultAgreement values tracking, commit, push, exact-SHA CI | Referenced |
+
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

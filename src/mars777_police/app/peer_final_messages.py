@@ -1,29 +1,24 @@
-"""The end-of-sub-game peer-visible semantic message families.
+"""The end-of-sub-game and end-of-series peer-visible message families.
 
-The frozen module boundary for finalization, established at Stage 4E-R7 ahead of
-the families that will live here, so the next slice adds a family rather than an
-architecture. Stage 4E-R6 froze that content as `NonceRevealEntry` and
-`FinalNonceReveal` - one batched reveal per peer per sub-game, carrying the
-`NonceValue` that `app.protocol_values` will own - and R6-FIX1/FIX2 froze their
-exact contracts, and Stage 4E-R8 implements them here.
+``FinalNonceReveal`` closes the commit-reveal cycle for one sub-game;
+``ResultAgreement`` closes the series. Both are immutable semantic values: they
+open no socket, compute no digest and read no clock.
 
-The batch is **one message per peer per sub-game** covering that side's own
-steps (Ch 5 §5.4 p.55; Figure 6 p.52), and association is `TurnCursor` alone -
-it already carries ``(sub_game, step)``. No ``role`` travels: a side reveals
-only its own nonces and the receiver knows the direction, the Stage 4E-R3
-`by_role` result. Nothing already exchanged is repeated either - the digest came
-at event 5 and the action and hint at event 7.
-
-Validation is structural. Completeness against the steps actually played,
-uniqueness, ordering, same-sub-game agreement, sender, phase, deadlines and any
-comparison against outstanding commitments are all **LIVE**: a value that had to
-query game state to be constructed would not be a value.
+``ResultAgreement`` deliberately carries **no** ``result_sha256``. The common
+digest cannot exist until a peer holds the opponent's contribution, so it is the
+operation's *response* - the already-existing ``Sha256Digest`` - and never a
+member of the request (`RESULT_CONTRACT.md` §R13-R2-2/-5).
 """
 
 from dataclasses import dataclass
 
+from .artifact_values import UtcTimestamp
 from .protocol_values import NonceValue
+from .result_values import InvalidResultValueError, ResultContribution
 from .turn_cursor import TurnCursor
+
+DECLARATION_FILENAME = "declaration_{game_id}.json"
+"""The official Table-20 declaration filename the result joins against."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,3 +64,53 @@ class FinalNonceReveal:
                 raise ValueError(
                     f"every entry must be a NonceRevealEntry, got {type(entry).__name__}",
                 )
+
+
+@dataclass(frozen=True, slots=True)
+class ResultAgreement:
+    """Timeline event 14: one peer's half of the mutual result agreement.
+
+    Identity first, the shared agreement ``timestamp`` next, the sender's own
+    contribution last. The timestamp is stored, never chosen here: which peer
+    proposes it and how the two requests are ordered is application protocol.
+
+    ``declaration_ref`` is checked against ``game_id`` because both live inside
+    this one immutable value and the Table-20 join is already frozen - a
+    reference naming another game is self-contradictory before any artifact is
+    opened. Whether that declaration exists, and whether the contributed commit
+    matches it, are LIVE duties.
+    """
+
+    game_id: str
+    game_uid: str
+    declaration_ref: str
+    timestamp: UtcTimestamp
+    contribution: ResultContribution
+
+    def __post_init__(self) -> None:
+        for name, text in (
+            ("game_id", self.game_id),
+            ("game_uid", self.game_uid),
+            ("declaration_ref", self.declaration_ref),
+        ):
+            if type(text) is not str:
+                raise InvalidResultValueError(
+                    f"{name} must be a str, got {type(text).__name__}",
+                )
+            if not text:
+                raise InvalidResultValueError(f"{name} must be non-empty")
+        expected = DECLARATION_FILENAME.format(game_id=self.game_id)
+        if self.declaration_ref != expected:
+            raise InvalidResultValueError(
+                f"declaration_ref must be {expected!r}, got {self.declaration_ref!r};"
+                " it is never trimmed, path-qualified or renamed",
+            )
+        if type(self.timestamp) is not UtcTimestamp:
+            raise InvalidResultValueError(
+                f"timestamp must be a UtcTimestamp, got {type(self.timestamp).__name__}",
+            )
+        if type(self.contribution) is not ResultContribution:
+            raise InvalidResultValueError(
+                "contribution must be a ResultContribution, got"
+                f" {type(self.contribution).__name__}",
+            )

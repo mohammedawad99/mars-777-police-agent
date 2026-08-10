@@ -10,6 +10,7 @@ values stay in their defining modules rather than leaking through here.
 """
 
 from .peer_final_messages import FinalNonceReveal as FinalNonceReveal
+from .peer_final_messages import ResultAgreement as ResultAgreement
 from .peer_pregame_messages import ConfigLockContext as ConfigLockContext
 from .peer_pregame_messages import ConfigLockEvidence as ConfigLockEvidence
 from .peer_pregame_messages import ConfigProposal as ConfigProposal
@@ -26,6 +27,7 @@ __all__ = [
     "ConfigLockEvidence",
     "ConfigProposal",
     "FinalNonceReveal",
+    "ResultAgreement",
     "Reveal",
     "Step0DeclarationExchange",
     "TurnCursor",

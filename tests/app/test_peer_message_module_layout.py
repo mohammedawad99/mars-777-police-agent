@@ -73,19 +73,20 @@ def test_the_facade_defines_no_class_of_its_own() -> None:
     assert _classes_defined_in(peer_messages) == set()
 
 
-def test_the_finalization_module_owns_exactly_the_final_reveal_pair() -> None:
-    """R7 left this boundary empty; Stage 4E-R8 filled it with exactly two values."""
-    assert _classes_defined_in(peer_final_messages) == {"NonceRevealEntry", "FinalNonceReveal"}
-    assert "NonceValue" not in _classes_defined_in(peer_final_messages)
-    assert "InvalidNonceError" not in _classes_defined_in(peer_final_messages)
+def test_the_finalization_module_owns_exactly_the_end_of_series_values() -> None:
+    """R7 left this boundary empty; R8 filled it, and R15 added the series close.
 
-
-@pytest.mark.parametrize(
-    "family",
-    ["MoveValidation", "FinalAudit", "Declaration", "ResultAgreement"],
-)
-def test_the_facade_still_names_no_blocked_family(family: str) -> None:
-    assert not hasattr(peer_messages, family)
+    ``ResultAgreement`` belongs here because it *is* the end-of-series peer
+    family. Its supporting values stay in ``app.result_values`` - the boundary
+    owns families, never their parts.
+    """
+    assert _classes_defined_in(peer_final_messages) == {
+        "NonceRevealEntry",
+        "FinalNonceReveal",
+        "ResultAgreement",
+    }
+    for support in ("NonceValue", "InvalidNonceError", "ResultContribution", "GitCommitSha"):
+        assert support not in _classes_defined_in(peer_final_messages)
 
 
 def test_the_public_import_paths_still_work_unchanged() -> None:
@@ -122,7 +123,12 @@ def test_the_defining_modules_do_not_import_the_facade() -> None:
     assert "peer_messages" not in _sibling_imports(peer_final_messages)
     assert _sibling_imports(turn_cursor) == set()
     assert _sibling_imports(peer_turn_messages) == {"protocol_values", "turn_cursor"}
-    assert _sibling_imports(peer_final_messages) == {"protocol_values", "turn_cursor"}
+    assert _sibling_imports(peer_final_messages) == {
+        "artifact_values",
+        "protocol_values",
+        "result_values",
+        "turn_cursor",
+    }
 
 
 def test_every_peer_message_module_stays_within_the_line_budget() -> None:
@@ -132,8 +138,3 @@ def test_every_peer_message_module_stays_within_the_line_budget() -> None:
         assert lines <= 150, f"{name}.py is {lines} LOC"
     facade = len((APP_DIR / "peer_messages.py").read_text(encoding="utf-8").splitlines())
     assert facade <= 60
-
-
-def test_the_facade_carries_no_serialization_or_crypto_surface() -> None:
-    for forbidden in ("hashlib", "sha256", "hexdigest", "compute", "json", "enum", "dataclass"):
-        assert not hasattr(peer_messages, forbidden)

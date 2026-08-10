@@ -929,3 +929,34 @@
   have been the single most damaging sentence available, because every later reader would price the
   remaining work wrongly. Step-0, config negotiation and config lock stay READY, and the tracking
   says exactly which nouns are absent.
+
+- **Stage 4E-R15** was the first single-pass implementation stage in this sequence, and the
+  reason is worth recording: the contract had already survived R13, R13-R1 and R13-R2. Three
+  reconciliation stages of argument bought one clean implementation pass. The frozen contract was
+  read once, implemented, and it fit.
+- **Invariants belong where the evidence is.** Each of the three constructor checks passed one
+  test - is everything being compared already present inside this immutable object? The six-entry
+  sequence, the equal commits and the `declaration_ref`/`game_id` join all are. Whether the
+  contributed commit matches the real `Declaration`, and whether the sender may speak for that
+  `group_id`, are not - they need a peer, an artifact or an authenticated channel, so they stayed
+  LIVE. That single question resolved every "should this be structural?" call without debate.
+- **Never repair a malformed input in a constructor.** The entry sequence check refuses to sort or
+  deduplicate. Sorting would turn a peer's genuinely broken contribution into a silently accepted
+  one, and the whole point of exchanging contributions is that the other side can detect exactly
+  that.
+- **Architecture guards are supposed to fail when the architecture changes.** Four Stage-4E-R7
+  tests broke the moment `ResultAgreement` appeared on the façade. That is the design working:
+  they encoded "this family is blocked" as an executable fact, and the fact changed. The care is
+  in the update - assert the new truth, do not delete the assertion. The not-a-family list kept
+  `MoveValidation`, `FinalAudit` and `Declaration`, and a *positive* guard was added so the façade
+  must now expose the family and hide its support values. A guard rewritten into vacuity is worse
+  than no guard.
+- **A test edit can breach a production rule.** Adding the guard pushed the layout file to 162
+  LOC. The 150-line rule is not production-only in practice, and the fix was the same one it
+  always is: split by semantic ownership - where values are *defined* in one file, what the façade
+  *exposes* in another - rather than compressing until it fit.
+- **Say "value layer", not "implemented".** `ResultAgreement` now has a Python type, and none of
+  the proposer ordering, two-request cadence, approval-core assembly or digest comparison exists.
+  The tracking says which nouns are absent, by name. The family stays READY. Every reader who
+  prices the remaining work off this record depends on that distinction being made explicitly
+  rather than inferred.

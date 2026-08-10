@@ -1003,3 +1003,60 @@ FIELD_MATRIX **74 = 15/39/9/11** — every type added here is a Python value, no
 an artifact row. **`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`
 is carried forward untouched, and Stage 4 must not be called complete merely
 because the peer-family semantic values now exist. Stage 4E is NOT COMPLETE.**
+
+**Stage 4E-R15 (ResultAgreement semantic types).** **CLOSED / COMMITTED /
+CI-GREEN** at Stage 4E-R15-CLOSE over **18 paths per repo** — a single-pass
+implementation stage, the contract having been frozen by R13/R13-R1/R13-R2.
+
+**Implemented — the semantic VALUE layer.** `app.result_values` gains
+`ParticipantGitCommits` and `ParticipantTokenUsage` (the frozen two-participant
+shapes the shared core holds wherever a semantic is participant-owned),
+`ResultContributionEntry` (`sub_game` / `github_commit` / `tokens`) and
+`ResultContribution` (`group_id` + exactly six entries).
+`app.peer_final_messages` gains **`ResultAgreement`**`(game_id, game_uid,
+declaration_ref, timestamp, contribution)` beside the unchanged
+`NonceRevealEntry` and `FinalNonceReveal`, and `app.peer_messages` re-exports it
+identity-equal. `GitCommitSha`, `UtcTimestamp` and `Sha256Digest` were reused
+from their existing defining modules, never redefined. **96 new tests per repo**;
+totals **1667 / 1662** at **100.00% statement and branch coverage**; every
+production file ≤150 LOC; the three production files **byte-identical** across
+repos and all nine touched test files identical modulo the package root.
+
+**Three structural invariants are enforced at construction**, each because every
+value it compares already sits inside the same immutable object: the six entries
+must cover **1…6 exactly once in ascending order** — never sorted, deduplicated
+or repaired; all six `github_commit` values must be **equal**, since a
+participant's played commit is fixed for the game; and `declaration_ref` must
+equal `f"declaration_{game_id}.json"`, the frozen Table-20 join, with no path
+prefix, alternate extension or trimming.
+
+**Not implemented, and deliberately so.** No `ResultAgreement` operation runtime,
+no deterministic timestamp proposer, no two-request cadence, no
+`RESULT_APPROVAL_CORE` construction, no `result_sha256` computation, no
+`Sha256Digest` response handling or comparison, no `mutual_agreement` transition,
+no FastMCP, transport, reporting, Gmail or token-accounting crypto evidence.
+**`ResultAgreement` therefore remains operationally READY, not IMPLEMENTED** —
+its semantic value exists, its protocol does not. The peer-family matrix is
+unchanged at **8 = 4 implemented / 4 ready / 0 blocked**.
+
+**Four Stage-4E-R7 architecture guards failed on the first run and were right to.**
+They asserted that `ResultAgreement` is absent from the façade, that the
+finalization module owns exactly two classes, and an exact sibling-import set —
+all true only while the family was blocked. The assertions were updated to the
+new truth **without being loosened**: the not-a-family list keeps
+`MoveValidation`, `FinalAudit` and `Declaration`, the ownership set names the
+three families it genuinely owns while still asserting support values stay out,
+the import set is stated explicitly, and a new positive guard requires the façade
+to expose `ResultAgreement` *and hide* its support values. That edit pushed the
+layout file to 162 LOC, so it was split by semantic ownership into module-layout
+and façade-surface files.
+
+**No requirement, port, error ID, peer family, Appendix-E/F row, timeline event
+or FIELD_MATRIX row was added, removed or reclassified; no C-13, JDEC-016,
+NDEC-008 or INV-16 was created.** Requirements remain **91** (76/9/4/2);
+Appendix E **55**; Appendix F **32 = 14/9/9**; JDEC **15**; NDEC **7**; INV
+**15**; **C-01…C-12**; ports **20**; error IDs **20**; timeline events **15**;
+FIELD_MATRIX **74 = 15/39/9/11**. **`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE:
+BLOCKED-BY-CONSTRUCTION` is carried forward untouched** — contribution token
+counts are what a peer *reports*, never independently verified provider
+consumption. **Stage 4E is NOT COMPLETE.**
