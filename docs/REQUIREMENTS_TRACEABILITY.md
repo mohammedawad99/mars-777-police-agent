@@ -1130,3 +1130,79 @@ ninth family, no new requirement, no new conflict.
 **`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`** is carried
 forward untouched — R16 aggregates and agrees *reported* token numbers and
 proves nothing about provider usage. **Stage 4E is NOT COMPLETE.**
+
+**Stage 4E-R17-R1 (FastMCP transport prerequisites).** **CLOSED / COMMITTED /
+CI-GREEN** at Stage 4E-R17-R1-CLOSE over **16 paths per repo** — 2 dependency,
+2 current-live contracts, 6 test/probes and 6 tracking. **0 production files.**
+
+**The sequence, recorded as it happened.** Stage 4E-R17 was authorized as a broad
+transport-implementation stage and **stopped BLOCKED-BEFORE-CODE with 0 files
+changed**. Both blockers were real and both were accepted by supervising review.
+**`FASTMCP-DEPENDENCY: BLOCKED-BY-MISSING-DECLARED-DEPENDENCY`** — `fastmcp` and
+`mcp` were absent from `pyproject.toml`, absent from `uv.lock`, unimportable in
+the locked environment and not vendored; the project had **no runtime dependency
+at all**. **`TRANSPORT-OPERATION-DISCRIMINATOR: BLOCKED-BY-UNFROZEN-WIRE-SHAPE`**
+— three semantic variants share `negotiate`, three share `receive_turn` and two
+share `submit_audit`, while `PRD02-FR-035` and `API_BOUNDARIES.md` **O7**
+deliberately deferred every signature and JSON schema, so the only way to
+dispatch would have been guessing which payload keys happened to be present.
+
+**R17-R1 resolved the prerequisites.** `fastmcp==3.4.6` was provisioned with
+`uv add` in both repos (resolving `mcp==1.29.0`, `pydantic==2.13.4`,
+`pydantic-core==2.46.4`), the installed 3.4.6 API was audited mechanically rather
+than from memory, and the wire contract was frozen in `API_BOUNDARIES.md`: one
+tool argument `request` carrying **exactly** `{kind, payload}`, both required, a
+**closed nine-token `kind` vocabulary** across the four tools, no heartbeat, no
+alias, and `E-PROTO-MALFORMED` for an unknown token **or a valid token sent to
+the wrong tool**.
+
+**The Decimal finding is the one that mattered.** Probed against a real
+Streamable HTTP server, a `Decimal`-annotated parameter handed the JSON **number**
+`0.10` arrives as **`Decimal('0.1')`** — a silent lexical loss that changes
+`config_sha256` and would make two honest peers refuse each other. Handed the
+JSON **string** `"0.10"` it arrives as `Decimal('0.10')`. The project wire rule is
+therefore **canonical decimal TEXT**, reconstructed with `Decimal(text)` directly
+and never through a float; JSON floats and integers, scientific notation,
+whitespace, a leading `+` and locale separators are all refused. Proved end to
+end with the real project code across a real FastMCP call: **canonical config
+bytes and `config_sha256` are identical before and after**
+(`b9bdf822ecc143a4a283bbf3ae6cd3bcdba9da80b7c470a73dce404f9ce44bd8`). The
+semantic type stays `Decimal`, the canonical bytes stay a bare JSON number, and
+`FIELD_MATRIX.md` is untouched — **only the transport DTO uses text**.
+
+**Error identity survives exactly.** A `ToolError("E-PROTO-STALE")` is observed
+client-side with `str(exception) == "E-PROTO-STALE"`, with no prefix or suffix,
+recoverable by three independent routes. Known failures therefore cross carrying
+their **existing** identity and **never as `False`** — that value belongs to
+`reveal` legality alone. Ordinary completion returns **no semantic value**
+(`None`), never `accepted=true`; `result_agreement` returns `Sha256Digest` as 64
+lowercase hex.
+
+**R17-R1-FIX promoted Pydantic to direct ownership**, and the justification is
+measured rather than stylistic: only a Pydantic model emits
+`additionalProperties: false` and refuses an extra envelope member — a
+`dataclass` and a `TypedDict` both **accept** one — so the frozen envelope is
+unenforceable without it. Direct runtime dependencies are now exactly
+**`fastmcp==3.4.6`** and **`pydantic==2.13.4`**; `mcp`, `pydantic-core` and
+`pydantic-settings` stay transitive, and adding the direct pin moved **no**
+resolved version (82 packages identical before and after; one line of
+`uv.lock` changed).
+
+**44 permanent transport probes** run against the real framework. Totals **2003 /
+1998** at **100.00% statement and branch coverage**.
+
+**No transport was implemented.** No FastMCP server or client adapter, no
+`PeerTransportPort`, no production wire DTOs, no tool registration, no
+timeout/watchdog wiring, no two-process harness and no network runtime — a test
+asserts no `src` module imports `fastmcp` or `pydantic`. **Transport:
+prerequisites CLOSED, implementation NOT STARTED.**
+
+**No register moved.** Requirements **91**; Appendix E **55**; Appendix F **32 =
+14/9/9**; JDEC **15**; NDEC **7**; INV **15**; **C-01…C-12**; ports **20**; error
+IDs **20**; timeline events **15**; FIELD_MATRIX **74 = 15/39/9/11**. Peer
+families remain **8** — the envelope is transport, not semantics, and no
+`Step0Ack`, `ConfigAck`, `ConfigLockAck`, `ResultAck` or `AuditAck` exists. The
+application-runtime matrix remains **8 IMPLEMENTED / 0 READY / 0 BLOCKED / 8**,
+which describes **local application behaviour and not transport**.
+**`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`** is carried
+forward untouched. **Stage 4E is NOT COMPLETE.**

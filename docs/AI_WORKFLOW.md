@@ -998,3 +998,38 @@
   are separated by FastMCP, a tunnel, transport, reporting and the token-crypto slice. The
   tracking names every one of them, because the matrix reading 8/0/0/8 is exactly the sentence a
   future reader is most likely to over-interpret.
+
+- **Stage 4E-R17 is the clearest example so far of a stop being the deliverable.** The stage was
+  authorized to build a transport adapter; it changed zero files and reported two blockers. Both
+  were accepted. Had it "made progress" instead - vendoring a library, or dispatching on whichever
+  payload keys happened to be present - the result would have been an adapter that no independent
+  implementation could interoperate with, and the defect would have surfaced against a real
+  opponent rather than in review.
+- **Report the second blocker even when the first already stops you.** The missing dependency
+  alone was enough to halt R17. Auditing on anyway surfaced the unfrozen wire shape, which would
+  have blocked the stage a second time immediately after the dependency was provisioned. One
+  review cycle resolved both.
+- **Probe the framework; never recall it.** Every claim about FastMCP 3.4.6 here came from the
+  installed package over a real Streamable HTTP server - signatures by `inspect.signature`,
+  schemas from `list_tools`, error text from an actual round trip. The `strict_input_validation`
+  argument, the exact `ToolError` text and the `structuredContent` wrapper are all things a
+  remembered API would have gotten subtly wrong.
+- **The measurement that changed the design.** A `Decimal` parameter given the JSON number `0.10`
+  comes back as `Decimal('0.1')`. Nothing raises, nothing warns, and `config_sha256` silently
+  differs. This is exactly the class of bug that is invisible until two independent peers compare
+  digests and each concludes the other is faulty. Canonical text on the wire, `Decimal(text)` on
+  arrival, and a test that asserts the digest - not the value - is what closes it, because
+  `Decimal("0.10") == Decimal("0.1")` is True and an equality check would have passed happily.
+- **Test the alternative before declaring a dependency necessary.** "Pydantic is required" was not
+  asserted; it was measured. A `dataclass` and a `TypedDict` were both put through the real tool
+  boundary and both **accepted** an extra envelope member, while the Pydantic model refused it.
+  That single experiment turned a stylistic preference into a dependency-ownership fact worth
+  recording.
+- **A prerequisite stage must leave the prohibition intact.** R17-R1 provisioned the library and
+  froze the contract while writing **no** production code, and a test asserts no `src` module
+  imports `fastmcp` or `pydantic`. The prohibition is executable rather than remembered, so the
+  next stage cannot drift into transport work by accident.
+- **Amend a deferral; do not delete it.** `PRD02-FR-035` and `PRD02-FR-037` were both marked
+  discharged/superseded in place, with the reason each became false. Deleting them would have
+  erased the evidence that the deferral was deliberate and that what replaced it is
+  PROJECT-CONTRACT rather than book-mandated.

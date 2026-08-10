@@ -126,5 +126,10 @@
 | 4E-R16-FIX | Conditional VRAM Step-0 projection + framing verification | Referenced |
 | 4E-R16-CLOSE | Runtime doc reconciliation, tracking, commit, push, exact-SHA CI | Referenced |
 
+| 4E-R17 | FastMCP + peer transport adapter integration *(stopped BLOCKED-BEFORE-CODE)* | Referenced |
+| 4E-R17-R1 | FastMCP dependency provisioning + transport wire contract freeze | Referenced |
+| 4E-R17-R1-FIX | Direct pydantic dependency ownership | Referenced |
+| 4E-R17-R1-CLOSE | Transport prerequisites tracking, commit, push, exact-SHA CI | Referenced |
+
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

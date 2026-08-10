@@ -6,7 +6,10 @@ readme = "README.md"
 requires-python = "==3.12.*"
 license = { text = "UNLICENSED" }
 authors = [{ name = "Mohamed Awad", email = "m7md.awad.1999@gmail.com" }]
-dependencies = []
+dependencies = [
+    "fastmcp==3.4.6",
+    "pydantic==2.13.4",
+]
 
 [build-system]
 requires = ["hatchling"]

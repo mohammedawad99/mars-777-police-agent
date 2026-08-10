@@ -197,6 +197,12 @@ Consequences, recorded so no later stage mistakes one for the other:
   non-deterministic ports named in **P3**.
 - **20 ports** are frozen here: the original 18 plus `SeriesLauncherPort` and
   `CompatibilityProfilePort`, both added at Stage 2A-R2.
+- **Superseded for the four peer tools at Stage 4E-R17-R1** *(see below)*. The
+  deferral above was correct while no transport existed; Stage 4E-R17 proved it
+  had become the blocker — three semantic variants share `negotiate`, three share
+  `receive_turn`, two share `submit_audit`, and nothing frozen told a receiver
+  which had arrived. The binding is now fixed. Everything else in this section
+  stands, including that the chosen names are **PROJECT-CONTRACT**.
 
 **O-note (Stage 4E-R12) — profile provisioning is not an operation.** No `O8` is
 created and **O1-O7 are unchanged**. Two clarifications to the existing text:
@@ -228,3 +234,113 @@ reach it. The **deterministic proposer/non-proposer ordering** of the two calls 
 **application-protocol semantics recorded in `RESULT_CONTRACT.md` §R13-R2** — it is
 not transport magic, not a retry policy and not a race resolution; the transport
 layer is unaware of it and merely delivers each request.
+
+## Stage 4E-R17-R1 — the frozen peer-tool wire binding
+
+`PRD02-FR-035` and **O7** deliberately deferred every concrete signature and JSON
+schema to Stage 2B-2C. Stage 4E-R17 stopped `BLOCKED-BEFORE-CODE` on exactly that
+gap: with the payload shape unfrozen, a conforming adapter could only have
+dispatched by guessing which keys happened to be present, and two independent
+implementations would have guessed differently. This section supplies the missing
+binding. It is **PROJECT-CONTRACT** throughout — the book names no tools, no
+envelope and no encoding — and it adds **no** requirement, error id, port, peer
+family or `FIELD_MATRIX` row.
+
+**Dependency.** The transport is **`fastmcp==3.4.6`** (exact pin, resolving
+`mcp==1.29.0` and `pydantic==2.13.4`), over **Streamable HTTP**. STDIO is
+permitted only for isolated framework probes and is never the counted-match
+transport; SSE is not used. `PRD02-FR-037`'s "no FastMCP dependency at this
+stage" described Stage 2; the dependency is authorized and pinned at Stage
+4E-R17-R1.
+
+### The request envelope
+
+Every one of the four public tools takes **exactly one argument named
+`request`**, whose JSON value is an object with **exactly two members**:
+
+```
+request = { "kind": <closed token>, "payload": { … } }
+```
+
+Both are **required**. No `type`, `message_type`, `msg_type`, `operation`, `op`,
+`version`, `accepted`, `request_id`, `timestamp`, `sender` or `role` exists at
+envelope level, and **no additional member is accepted** — the generated schema
+carries `additionalProperties: false` at both levels and `required: ["kind",
+"payload"]`, verified against the installed framework.
+
+### The closed `kind` vocabulary, per tool
+
+| Tool | `kind` | Decodes to |
+|---|---|---|
+| `negotiate` | `step0` | `Step0DeclarationExchange` |
+| `negotiate` | `config_proposal` | `ConfigProposal` |
+| `negotiate` | `config_lock` | `ConfigLockEvidence` |
+| `receive_turn` | `commitment` | `Commitment` |
+| `receive_turn` | `acknowledgement` | `Acknowledgement` |
+| `receive_turn` | `reveal` | `Reveal` |
+| `submit_audit` | `final_nonce_reveal` | `FinalNonceReveal` |
+| `submit_audit` | `audit_disclosure` | the frozen JSON-native audit-disclosure core |
+| `receive_control` | `result_agreement` | `ResultAgreement` |
+
+Tokens are **lowercase ASCII, compared exactly** — no alias, no case folding, no
+normalization, no whitespace trimming. An unknown token, a token sent to the
+**wrong** tool, a missing member, a wrong-typed member or an extra member is
+**`E-PROTO-MALFORMED`**; there is no cross-tool redispatch. **No heartbeat kind
+exists**: `receive_control` carries `result_agreement` only, and no speculative
+surface is added ahead of a requirement.
+
+**The envelope is transport, not semantics.** It creates no peer family — the
+inventory stays **8** — and `payload` carries the DTO of an already-frozen
+semantic value. No `Step0Ack`, `ConfigAck`, `ConfigLockAck`, `ResultAck`,
+`AuditAck`, `AuditBundle` or `MoveValidation` is introduced.
+
+### Decimal on the wire
+
+Every semantic `Decimal` crosses as **canonical decimal TEXT**: `Decimal("0.9")`
+→ `"0.9"`, `Decimal("0.10")` → `"0.10"`. The receiver requires a JSON string,
+validates it against the canonical decimal grammar, and constructs
+`Decimal(text)` **directly**. JSON floats and integers, scientific notation,
+whitespace, a leading `+` and locale separators are all **refused**, and there is
+no rounding and no `Decimal(str(float))` path.
+
+This is not caution about a hypothetical: measured against the installed stack, a
+`Decimal`-annotated parameter given the JSON **number** `0.10` arrives as
+`Decimal('0.1')` — a silent lexical loss that changes `config_sha256` and would
+make two honest peers refuse each other. The same parameter given the JSON
+**string** `"0.10"` arrives as `Decimal('0.10')`. Text is therefore the contract,
+and the direct-`Decimal` path is deliberately not relied upon.
+
+**The semantic and canonical layers are unchanged.** `CONFIG_CONTRACT.md` still
+types these members `Decimal`, the canonical config bytes still carry the bare
+JSON number `0.10`, and `FIELD_MATRIX.md` is untouched. Only the transport DTO
+uses text.
+
+### Success responses
+
+| Kinds | Successful result |
+|---|---|
+| `step0`, `config_proposal`, `config_lock`, `commitment`, `acknowledgement`, `final_nonce_reveal`, `audit_disclosure` | **ordinary completion, no semantic value** — Python `None` |
+| `reveal` | **`bool`** — game legality only (**O5**) |
+| `result_agreement` | **`Sha256Digest`**, as exactly 64 lowercase hex characters, reconstructed client-side as `Sha256Digest(text)` |
+
+Ordinary completion is **not** `accepted=true`, `ok=true`, `success=true` or an
+ack family. Where the framework wraps a primitive result in its own
+`structuredContent` object, that is a **framework envelope** and is never copied
+into project semantics.
+
+### Errors
+
+A known application failure crosses the framework error channel carrying
+**exactly its existing error identity** and nothing else — `E-PROTO-MALFORMED`,
+`E-PROTO-STALE`, `E-AUTH-FAILURE`, `E-CONFIG-MISMATCH`, `E-REPORT-DISAGREE`,
+`E-LOCAL-DEFECT`. **No Python exception text, no stack trace, no free-text
+reason and no secret**; `key_id` remains the only key-related value that may
+appear anywhere. The client adapter maps a known identity back to the local typed
+failure; an unknown or malformed remote identity is `E-PROTO-MALFORMED`;
+unreachable, HTTP failure and timeout stay with **`E-TRANSPORT`**. **No failure
+is ever encoded as `False`** — that value belongs to `reveal` legality alone.
+
+Verified against the installed framework: a `ToolError("E-PROTO-STALE")` is
+observed client-side with `str(exception) == "E-PROTO-STALE"` **exactly**, with
+no prefix or suffix, and the same identity is recoverable from the raw MCP error
+content. **No error id was added: the inventory stays 20.**
