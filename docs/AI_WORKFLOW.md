@@ -781,3 +781,33 @@
   One structural note for later. Naming a blocker precisely is what makes it solvable: "blocked by
   interoperability shape" invited a redesign, while "blocked by log artifact shape" invites one
   yes/no question. Vague blockers grow; named ones get closed.
+- **Stage 4E-R11-R1** closed the last integration blocker, and the part worth recording is a
+  contradiction I had to resolve to finish a proof the instruction demanded. The stage required a
+  mechanical demonstration that a receiver can rebuild every sealed record from what the sender
+  discloses. Working through it, `state` stopped the proof: `FIELD_MATRIX` lists the sealed record
+  as a Required per-turn log row, while `LOG_CONTRACT` §B says the hashed payload is "a distinct
+  object from the persistent entry" and the illustrative example omits `state` from a reveal
+  entry. Read the second way, `state` is never disclosed - and the receiver cannot derive
+  `state.self_pos` under partial observation, so independent verification would be impossible.
+  The resolution was to notice the two statements are about different things: the *bytes* are
+  derived and never stored; the *members* are persisted. That reading makes both contracts true
+  and adds no field. What I want to keep is the discipline of hitting the contradiction at all -
+  it only surfaced because the instruction demanded a mechanical proof rather than an assurance.
+  A prose claim that "the log carries what audit needs" would have sailed past it.
+- The **CLOSE-time payload-core guard** then caught something in my own work from the previous
+  stage. I had classified `by_role` as local artifact metadata and written that it "**may**
+  appear" - which, without saying *where*, reads as optional wire content. And my lifecycle
+  sentence excluded only local-*derived* annotations, saying nothing about local *metadata*. So
+  the payload boundary was not deterministic: two readers could disagree about whether `by_role`
+  and `schema_version` belong in a `submit_audit` message. That is exactly the class of ambiguity
+  that produces two implementations which each believe they are compliant.
+  The fix was small - state that both categories are outside the payload, and that existing local
+  metadata rules do not leak into wire semantics - but the lesson is about the word "may". In an
+  interoperability contract, optionality is a decision, not a hedge. Every "may" should either
+  name the context that makes it deterministic or become a "must"/"must not".
+  I also narrowed my own over-broad claim that "no semantic fact is represented twice". It is
+  false in a useful way: the revealed move and hint legitimately appear both as historical Reveal
+  evidence and as sealed-record audit input, with values expected to agree - and being able to
+  compare them is the point. The accurate statement is that no *field* is duplicated within a
+  single event. Tidy-sounding absolutes are worth re-reading; this one would have justified
+  deleting evidence a future auditor needs.

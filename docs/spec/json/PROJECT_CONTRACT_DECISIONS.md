@@ -33,7 +33,7 @@ simple, reversible representations are preferred.
 | JDEC-004 | KEEP | — |
 | JDEC-005 | **MODIFY** | `game_uid` **and** `game_id` are **SOURCE-EXPLICIT names** (Ch 9 p.95); only their **format** is project (D3) |
 | JDEC-006 | KEEP | declaration presentation keys; Step-0 hashed subset → NDEC-005 |
-| JDEC-007 | **MODIFY** | persistent log = **LOCAL-ONLY**; sealed commitment payload → **NDEC-001** |
+| JDEC-007 | **MODIFY** *(re-amended in place, Stage 4E-R11-R1)* | sealed commitment payload → **NDEC-001**. The Stage-1D shorthand "persistent log = **LOCAL-ONLY**" was **over-broad** and is narrowed rather than replaced: **internal logger mechanics, artifact metadata and the locally-derived verification annotations** (`entries[].verified`, `audit.result`, `audit.tampered_step`, `by_role`) stay **LOCAL**, while the finalized per-sub-game log's **audit-disclosure core** is **SHARED / INTEROPERABLE at final audit** — because Ch 5 §5.4 requires each side to disclose enough of its log for the opponent to recompute every commitment independently, which the earlier wording would have forbidden. Key spelling and the separate-event `entries[]` nesting remain **PROJECT-CONTRACT** (this decision's original choice, confirmed at 4E-R11-R1). **There is still exactly one log schema — no parallel audit schema — and the receiver derives its own verification result and never trusts an incoming one.** No new decision ID: JDEC count stays **15**. |
 | JDEC-008 | KEEP | result presentation; approval core → NDEC-006 |
 | JDEC-009 | KEEP | — |
 | JDEC-010 | **MODIFY** | `config_sha256` stored **outside** the hashed config (non-self-referential); Step-0/result hashes → NDEC-005/006 |

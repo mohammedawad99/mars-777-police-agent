@@ -740,3 +740,38 @@ Appendix E **55**; Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**;
 JDEC **15**; NDEC **7**; INV **15**; **C-01…C-12**; ports **20**; error IDs
 **20**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result fields **11**; PRD-06
 IDs **129**; PRD-07 IDs **140**; timeline events **15**; `num_games` **6 FIXED**.
+
+**Stage 4E-R11-R1 (log artifact interoperability + audit exchange
+reconciliation).** Documentation / contract only; **CLOSED / COMMITTED /
+CI-GREEN** at Stage 4E-R11-R1-CLOSE with **0 Python and 0 tests**. Resolves the
+last integration blocker by reconciling the **SOURCE-REQUIRED** full-log
+disclosure of Ch 5 §5.4 (**PRD06-FR-100/101**) with the historical LOCAL-ONLY log
+classification. **JDEC-007 is amended in place**: logger mechanics, artifact
+metadata and locally-derived verification annotations stay LOCAL, while the
+finalized per-sub-game log's audit-disclosure core is SHARED/INTEROPERABLE at
+final audit; key spelling and the separate-event `entries[]` nesting remain
+PROJECT-CONTRACT. Audit completeness is proved against the frozen Stage 4E-R9
+canonical mapping — the seven non-secret sealed members from the per-turn sealed
+record, `nonce` from `audit.final_reveal[]` (CRYPTO-002 secrecy preserved), and
+`H_commit` from `entries[].commit` — with **no tenth log field**, so
+`FIELD_MATRIX.md` is unchanged at **75 = 16/39/9/11** with **9** log rows. The
+remaining `LOG_CONTRACT.md` REVIEW-REQUIRED item (ack/reveal nesting) is
+**closed**. `submit_audit` carries the exact JSON-native audit-disclosure core;
+semantic equality is required and **whole-log byte identity is not**, with no
+log-level hash added (**PRD06-FR-104**: evidence preserved, not transmitted).
+Locally-derived verdicts — `entries[].verified`, `audit.result`,
+`audit.tampered_step`, `FinalAuditVerdict` — are neither transmitted nor trusted
+(**PRD-07 REPLAY-001/002** keep the verdict in the local replay path). A
+CLOSE-time payload-core guard made the payload boundary deterministic: both
+LOCAL-DERIVED-AUDIT and LOCAL-ARTIFACT-METADATA (`by_role`, `schema_version`) are
+outside the `submit_audit` payload and create no optional wire semantics. **No
+second audit schema** exists. Both integration blockers are now RESOLVED-PROJECT
+and `INTEROPERABILITY_BLOCKERS.md` reads **Blocking items: None**; this changed
+no family readiness. Peer-visible families remain **8** — **4 implemented, 0
+ready, 4 blocked** — and **Stage 4E as a whole is NOT COMPLETE.** **No
+requirement was added, removed, reclassified or re-owned; no JDEC-016, NDEC-008,
+INV-16 or C-13 was created.** Requirements remain **91** (76/9/4/2); Appendix E
+**55**; Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC
+**15**; NDEC **7**; INV **15**; **C-01…C-12**; ports **20**; error IDs **20**;
+`ProtocolPhase` **1**; PRD-02 IDs **87**; result fields **11**; PRD-06 IDs
+**129**; PRD-07 IDs **140**; timeline events **15**; `num_games` **6 FIXED**.

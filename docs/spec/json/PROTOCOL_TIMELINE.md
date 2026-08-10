@@ -111,8 +111,11 @@ invention:
   `FinalAuditVerdict` (local audit/log/replay vocabulary), and the TAMPERED
   consequence with its frozen sanction. The exact **interchange shape** of the
   audit material is a separate artifact/transport question, recorded as
-  `AUDIT-EXCHANGE-PAYLOAD: BLOCKED-BY-INTEROPERABILITY-SHAPE` in
-  `INTEROPERABILITY_BLOCKERS.md` — it is **not** a peer-message-family blocker.
+  `AUDIT-EXCHANGE-PAYLOAD`, **resolved at Stage 4E-R11-R1**: the `submit_audit`
+  operation carries the **JSON-native audit-disclosure core** of the finalized
+  per-sub-game log (one schema, no parallel audit bundle), while the verdict and the
+  other locally-derived annotations stay local. It was never a peer-message-family
+  blocker.
   Precise wording on the downstream link: a **completed mutual audit is a
   precondition to mutual result agreement** (App E; PRD06-FR-100). Result agreement
   is *downstream of* audit; it is **not** the transport of a verdict, and it stays

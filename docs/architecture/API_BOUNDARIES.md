@@ -130,9 +130,14 @@ digest, recomputed digest or TAMPERED reason is transmitted, and no audit
 verdict ACK is invented** — successful submission is represented by ordinary
 operation completion, failure by the owning typed failure, so the operation needs
 **no additional semantic result**. **No second audit schema** (`AuditEntry`,
-`AuditBundle`, `AuditEvidenceMessage`) is created. What remains open is only the
-payload *representation* — see `MOVE-REJECTION-TRANSPORT-SHAPE`'s resolved entry
-and `AUDIT-EXCHANGE-PAYLOAD`'s narrowed blocker in
+`AuditBundle`, `AuditEvidenceMessage`) is created. **The payload representation was
+frozen at Stage 4E-R11-R1**: the operation carries the exact **JSON-native
+audit-disclosure document** — dict/list/str/int/bool material as `LOG_CONTRACT.md`
+freezes it — and **never** a filesystem path, artifact URL, base64, pickle, raw
+bytes or Python object. Whole-log byte identity between peers is **not** required
+(semantic equality of the disclosure core is), and no log-level hash exists. The
+verdict and the other locally-derived annotations are **not** transmitted; the
+receiver recomputes them. Both former integration blockers are now resolved in
 `INTEROPERABILITY_BLOCKERS.md`.
 
 **O7 — Binding boundary.** An operation contract is not a FastMCP binding. R11

@@ -97,6 +97,8 @@
 | 4E-R10-R3-CLOSE | Move-rejection reconciliation tracking, commit, push, CI | Referenced |
 | 4E-R11 | Peer operation + transport contract reconciliation | Referenced |
 | 4E-R11-CLOSE | Peer operation contract tracking, commit, push, CI | Referenced |
+| 4E-R11-R1 | Log artifact interoperability + audit exchange reconciliation | Referenced |
+| 4E-R11-R1-CLOSE | Audit log interoperability final audit, payload-core guard, tracking, commit, push, CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

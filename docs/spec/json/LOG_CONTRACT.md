@@ -67,7 +67,10 @@ The **nonce is transmitted only at final audit** (Ch 5 p.51), never at commit/re
   the exact field set, key order, canonicalization, and `state` representation are
   **NEGOTIATED-PRE-MATCH** (NDEC-001/002/003) with the PROJECT-LOCKED defaults above
   — **not** "resolved later by the opponent". The persistent log *file* structure is
-  **LOCAL-ONLY**.
+  **LOCAL-ONLY** *(narrowed at Stage 4E-R11-R1: internal logger mechanics and the
+  locally-derived verification annotations remain local, while the finalized
+  document's **audit-disclosure core** is interoperable at final audit — see the
+  Stage 4E-R11-R1 section below and the amended JDEC-007)*.
 
 ## C. Acknowledgement record
 
@@ -225,6 +228,112 @@ recorded as `AUDIT-EXCHANGE-PAYLOAD: BLOCKED-BY-INTEROPERABILITY-SHAPE` in
 `FinalNonceReveal` is **unchanged and not expanded** by this note. The verdict
 produced from that recomputation stays local — see §E.
 
+### Stage 4E-R11-R1 — the audit-disclosure core, and what stays local
+
+Stage 4E-R11 left one integration blocker: the finalized per-sub-game log was
+classified **LOCAL-ONLY**, yet Ch 5 §5.4 requires each side to disclose enough of
+it for the opponent to recompute every commitment independently. This section
+reconciles the two **without a second schema**: there is still exactly one log
+model, and this is a *classification* of its existing fields, not a new document.
+
+**Field classification.** Every currently-frozen log field, classified exactly once:
+
+| Field | Class |
+|---|---|
+| `game_id`, `game_uid`, `sub_game` | **SHARED-AUDIT-INPUT** — artifact identity the receiver must match against the played series |
+| `config_sha256` | **SHARED-AUDIT-INPUT** — binds the log to the locked config; also `state.config_sha256` |
+| `entries[]` | **SHARED-AUDIT-INPUT** — the played history container |
+| `entries[].commit` (`H_commit`) | **SHARED-AUDIT-INPUT** — the value the recomputation is compared against |
+| per-turn sealed-record members (`state`, `move`, `intent`, `hint`, `step`, `role`, `sub_game`) | **SHARED-AUDIT-INPUT** — without these the receiver cannot rebuild the record |
+| `entries[].{ack_of_step, ack_commit}` | **SHARED-AUDIT-INPUT** — commit/ack interaction evidence |
+| `entries[].by_role` | **LOCAL-ARTIFACT-METADATA** — derived attribution (Stage 4E-R3). It may exist **in a local persisted artifact** and is **not part of the `submit_audit` payload**; the receiver derives it from authenticated direction + the `CONFIG_LOCKED` role mapping and never trusts an incoming value |
+| `audit.final_reveal[].nonce` | **SHARED-AUDIT-INPUT at final audit** — the eighth sealed member, withheld until then (CRYPTO-002) |
+| `entries[].verified`, `audit.result`, `audit.tampered_step` | **LOCAL-DERIVED-AUDIT** — computed by the receiver, **never** accepted as peer evidence |
+| `schema_version` | **LOCAL-ARTIFACT-METADATA** (optional, JDEC-003) |
+
+**The verdict is never transmitted.** `entries[].verified`, `audit.result` and
+`audit.tampered_step` are outputs of the receiver's *own* recomputation. A
+sender's claimed `"Verified OK"` or `"TAMPERED"` has no standing: it is not part
+of the `submit_audit` payload, and if a compatibility artifact happens to carry
+such annotations they are **ignored for verdict generation**. This preserves
+Stage 4E-R10-R1's ruling that `FinalAuditVerdict` is local audit/log/replay
+vocabulary and never a transmitted verdict.
+
+**Lifecycle, one schema and two states.** *DISCLOSURE-READY* — the document
+carries **all and only the SHARED-AUDIT-INPUT fields**; this is what
+`submit_audit` conveys. The boundary is deterministic, not a preference: both
+**LOCAL-DERIVED-AUDIT** (`entries[].verified`, `audit.result`,
+`audit.tampered_step`) and **LOCAL-ARTIFACT-METADATA** (`entries[].by_role`,
+`schema_version`) are **outside the payload**, and neither becomes optional wire
+content merely because it may exist in a local persisted artifact. `by_role`
+keeps its Stage 4E-R3 status as log attribution rather than transmitted content,
+and `schema_version` keeps its existing optional **local artifact** rule
+(JDEC-003) — no version field is added to, or implied by, the operation payload.
+*AUDITED-LOCAL* — after receipt
+and independent recomputation, the receiver's own persisted copy additionally
+carries `entries[].verified`, `audit.result` and `audit.tampered_step`. These are
+**documentation lifecycle labels, not types**: no `DisclosureLog`, `AuditedLog`
+or `AuditBundle` exists. Stated without optionality: the local-derived fields are
+**absent before local audit and present only in the final local artifact after
+it**.
+
+**The sealed record is persisted per turn.** `FIELD_MATRIX.md`'s log row
+`{state, move, intent, hint, step, role, sub_game, nonce}` is **Required, one per
+turn**, and is authoritative on this point. §B above says the hashed payload is
+*"a distinct object from the persistent entry"* — that refers to the **canonical
+byte serialization**, which is never stored, **not** to the members, which are.
+The illustrative example omits `state` from a *reveal* entry for the same reason
+and is illustrative only. This matters because the receiver cannot derive
+`state.self_pos` on its own under partial observation: if it were not disclosed,
+independent verification would be impossible. The `nonce` member is the sole
+exception — withheld at commit time and completed at final audit from
+`audit.final_reveal[]`.
+
+**Completeness.** For every audited commitment the receiver obtains `state`,
+`move`, `intent`, `hint`, `step`, `role`, `sub_game` from the per-turn sealed
+record, `nonce` from `audit.final_reveal[]`, and `H_commit` from
+`entries[].commit` — the eight members plus the comparison value. Each is
+represented by the **already-frozen Stage 4E-R9 canonical mapping**
+(`CANONICALIZATION_CONTRACT.md`); no second representation of `PhysicalAction`,
+`SealedState`, `Intent`, `ActorRole`, `NonceValue` or `Sha256Digest` is created.
+
+**Nesting — the REVIEW-REQUIRED question is closed.** The **separate-event**
+form already chosen by **JDEC-007** stands: `entries[]` is an event list whose
+records carry `phase ∈ {commit, ack, reveal}`. It is preserved rather than
+changed, because it already maps the Commit→Ack→Reveal→Audit flow and nesting
+would duplicate the turn identity into a container. Frozen with it: every entry
+carries `(sub_game, step)` plus its `phase`, which is its **only** association;
+replay order is the **chronological protocol order** in which events occurred and
+is never re-sorted lexicographically (`sub_game`, then `step`, then commit → ack
+→ reveal); commit records own `commit` and the sealed-record members, ack records
+own `ack_of_step` and `ack_commit`, reveal records own the revealed `move` and
+`hint`; the final nonce is associated **not** in `entries[]` but by
+`audit.final_reveal[]`'s `(step, role)`; local-derived verification attaches to
+the entry it verifies and to `audit`; and **no field is duplicated within a single
+event**. That is deliberately narrower than "no semantic fact appears twice",
+because two evidentiary roles legitimately carry the same *value*: the revealed
+`move`/`hint` recorded as **historical Reveal evidence**, and the same members
+disclosed as **sealed-record audit input** for recomputation. They are distinct
+records with distinct purposes and are expected to agree — comparing them is
+meaningful, so the contract keeps both rather than collapsing them, and no second
+schema is introduced to hold either. No new peer-message field was created to solve a log question.
+
+**Byte identity and hashing.** Semantic equality of the shared audit-input
+document is required; **whole-log file byte identity between peers is not an
+interoperability requirement** — the cryptographic byte-identity requirement
+applies to the sealed commitment record and the other explicitly canonical
+objects, which are unchanged. The receiver's `ArtifactStore` owns deterministic
+local persistence. **No `log_sha256`, `audit_sha256` or `artifact_sha256`** is
+added: the audit verifies individual commitments against `H_commit`, and no
+log-level cryptographic commitment exists.
+
+**Top-level shape and identity unchanged.** `game_id`, `game_uid`, `sub_game`,
+`config_sha256`, `entries`, `audit` (+ optional `schema_version`); filename still
+`log_<game_id>_g<NN>.json`. Nothing was added because transport now consumes it —
+no `declaration`, `result`, `github_commit`, `peer_url`, filesystem path or
+transport metadata. The log field count stays **9** and `FIELD_MATRIX.md` is
+unchanged.
+
 ## E. Verification result
 
 Post-mortem audit: recompute each step's hash from the revealed data and compare
@@ -256,7 +365,7 @@ Source-backed requirements (details + provenance in `CANONICALIZATION_CONTRACT.m
 - SOURCE-SEMANTIC: the full field set (state, move, intent, hint, step, role, sub_game, nonce, ack, reveal, verification).
 - PROJECT-CONTRACT: entry nesting & key spellings (JDEC-007), canonical params (JDEC-002), NN width (JDEC-004).
 - EXAMPLE-ONLY (NOT adopted): the 4-field `{state,move,intent,nonce}` core and the `nonce|move` verifier payload.
-- REVIEW-REQUIRED: whether ack/reveal are separate `entries[]` events or sub-objects of a turn entry. *(The `move` action representation was REVIEW-REQUIRED at Stage 4E-R3 and is **frozen at Stage 4E-R4** — see below. The exact **`state`** representation was listed here too; that text was **stale** — `state` has been PROJECT-LOCKED since JDEC-012 / NDEC-002 and §B above, and Stage 4E-R9-R1 removed the contradiction. The `role` and `intent` value vocabularies were likewise pinned at Stage 4E-R9-R1.)*
+- REVIEW-REQUIRED: **none remaining.** *(The `move` action representation was frozen at Stage 4E-R4; the `state` representation lock was reconciled at Stage 4E-R9-R1; and the ack/reveal **separate-`entries[]`-events vs nested sub-objects** question was closed at Stage 4E-R11-R1 in favour of the separate-event form JDEC-007 had already chosen.)* *(The `move` action representation was REVIEW-REQUIRED at Stage 4E-R3 and is **frozen at Stage 4E-R4** — see below. The exact **`state`** representation was listed here too; that text was **stale** — `state` has been PROJECT-LOCKED since JDEC-012 / NDEC-002 and §B above, and Stage 4E-R9-R1 removed the contradiction. The `role` and `intent` value vocabularies were likewise pinned at Stage 4E-R9-R1.)*
 
 ## Illustrative example (Markdown only; not a real file)
 
