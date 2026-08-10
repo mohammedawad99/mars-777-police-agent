@@ -756,3 +756,28 @@
   now both waiting on the *same* missing thing: the peer operation contract. That is not a
   coincidence to note in passing, it is the shape of the next stage, and it is why R11 is scoped
   around the operation boundary rather than around either blocker individually.
+- **Stage 4E-R11** finally cleared a blocker that three earlier stages had circled, and the
+  thing that unlocked it was noticing a conflation I had been making myself. R10-R3 left the
+  move-rejection shape blocked because "both peer ports are **async**", and I had treated that as
+  meaning there is no request/response contract to hang a result on. That is a category error:
+  `async` describes how the I/O is executed, not whether a call has a reply. The committed
+  `CONCURRENCY_MODEL.md` had already said so in plain words - outgoing peer calls are *"per
+  request, async, bounded… never fire-and-forget for state-changing calls"* - and I had read that
+  document before without connecting it. The blocker was partly mine.
+  Once request/response was stated explicitly, the `bool` became safe for a reason worth keeping:
+  it is not safe because a bool is simple, it is safe because **every other failure already has an
+  owner**. `E-TRANSPORT`, `E-PROTO-MALFORMED`, `E-AUTH-FAILURE`, `E-PROTO-STALE` each raise at
+  their own layer, so nothing else can arrive dressed as `False`. The danger a bare bool poses is
+  proportional to how many failure modes can collapse into it, and that number was already zero -
+  I just had not written it down. The FastMCP example remains the cautionary case: its `accepted`
+  is `verify_signature(...)`, an authentication result wearing the word everyone reads as legality.
+  The audit blocker did not close, and the useful outcome there was making it *smaller* rather
+  than pretending. It went from "we do not know the interchange representation" to one reviewable
+  question: the finalized log document is classified **LOCAL-ONLY**, and its ack/reveal nesting is
+  still REVIEW-REQUIRED, so promoting it to a shared payload is a decision someone has to take on
+  the record. I deliberately did not take it, and deliberately did not edit `LOG_CONTRACT.md` to
+  make my own life easier - reclassifying a locked document as a side effect of unblocking myself
+  is precisely the move this whole sequence of stages exists to prevent.
+  One structural note for later. Naming a blocker precisely is what makes it solvable: "blocked by
+  interoperability shape" invited a redesign, while "blocked by log artifact shape" invites one
+  yes/no question. Vague blockers grow; named ones get closed.

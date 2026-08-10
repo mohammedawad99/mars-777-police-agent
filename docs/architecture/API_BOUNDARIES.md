@@ -36,6 +36,110 @@ composition root wires them (`DEPENDENCY_RULES.md` D3/D4).
 - **P1 — Observation is a wall.** `StrategyPort` accepts only an `Observation` built by
   `domain.observation`; there is no field on it that could carry opponent truth.
 - **P2 — No port returns key material.** `KeyedAuthPort` returns tags/verdicts only.
+## Peer operation contract (Stage 4E-R11)
+
+Two integration blockers — the move-rejection response and the audit-material
+exchange — were both waiting on the same missing thing: a peer **operation**
+contract. This section freezes that layer. It defines *logical operations and
+their result/error separation*; it does **not** define FastMCP decorators,
+signatures or JSON schema, which stay deferred to Stage 2B-2C.
+
+**O1 — Peer operations are logically request → response.** `async` is an I/O
+implementation property, **not** a message-shape property, and the two were being
+conflated. `CONCURRENCY_MODEL.md` already settles it: outgoing peer calls are
+*"**per request**, `async`, bounded … **never fire-and-forget for state-changing
+calls**"*, inbound *"**requests** do not mutate directly"*, and *"two concurrent
+peer **requests** must never mutate the same turn state"*. So: **each peer
+operation is one request whose caller awaits exactly one operation-specific
+result, or a typed transport/protocol failure.** No independent asynchronous
+response message exists merely because the implementation is `async`, and an
+operation result is **never** a peer-message semantic family. **PROJECT-CONTRACT**,
+consistent with the committed concurrency model; the book specifies no transport.
+
+**O2 — An operation's success result is not a failure channel.** A successful
+operation-specific result is semantically distinct from transport failure,
+parse/schema failure, authentication failure and protocol phase/order/cursor
+failure. Each failure is raised by the layer that owns it and keeps its existing
+error identity — `E-TRANSPORT`, `E-PROTO-MALFORMED`, `E-AUTH-FAILURE`,
+`E-PROTO-STALE` — reinforced by the Gatekeeper rule that retries cover
+*"transport-class errors only; never integrity errors"*. **No generic `accepted`
+flag spanning layers may be introduced**, and a lower-layer failure must never be
+encoded as a semantic `False` (nor semantic rejection as a transport failure).
+
+**O3 — Logical operations, with the reference names as compatibility aliases.**
+`PRD02-FR-033` already enumerates the semantic operations the runtime needs;
+`PRD02-FR-034` marks the four reference tool names **REFERENCE-COMPATIBILITY
+DEFAULT — NOT BOOK-MANDATED**. R11 keeps exactly that split and adds only the
+routing:
+
+| Logical operation (PRD02-FR-033) | Carries | Compatibility alias (PRD02-FR-034) |
+|---|---|---|
+| (a) Step-0 declaration + auth envelope | Step-0 family *(payload blocked)* | `negotiate` |
+| (b) exchange / lock config | Config negotiation, Config lock *(payloads blocked)* | `negotiate` |
+| (c)(d)(e) commitment · acknowledgement · reveal | `Commitment`, `Acknowledgement`, `Reveal` | `receive_turn` |
+| (f) exchange final-audit material | `FinalNonceReveal`, then the audit material *(representation blocked)* | `submit_audit` |
+| (g) exchange result approval | `ResultAgreement` *(payload blocked)* | `receive_control` |
+| (h) optional control / heartbeat | — | `receive_control` |
+
+The **internal** semantic architecture depends on the logical operation identity,
+never on a tool-name string. Routing a family to an operation does **not** define
+that family's payload, and the four blocked families stay blocked. **No fifth
+validation operation exists** — the move-rejection outcome is a *result* of
+(c)(d)(e), not an operation of its own.
+
+**O4 — Stable ingress, local role routing.** One stable group-level ingress
+endpoint per team for the series (declaration rule, NET-001), carrying no secret.
+Behind it, `SeriesLauncher` may dispatch to the role-specific local backend for
+the current sub-game. `SeriesLauncher` remains **operational routing only** —
+never a referee, never shared truth, never shared game state (PRD02-FR-010,
+PRD02-AC-018). **No separate public Police/Thief URLs** for alternating roles, and
+the declaration is never silently mutated when the local role backend changes.
+
+**O5 — Game-legality result of the turn operation** *(closes
+`MOVE-REJECTION-TRANSPORT-SHAPE`)*. The operation carrying a **Reveal** returns
+exactly one **`bool`** game-legality result:
+
+- `True` — the already-authenticated, protocol-valid revealed `PhysicalAction`
+  was locally validated as **game-legal** for the currently expected turn and
+  accepted for the local application path.
+- `False` — the same, validated as **game-illegal** and rejected (App E #14).
+
+It **never** means network delivered, JSON parsed, signature valid, sender valid,
+phase valid, cursor valid, commitment valid or reveal-hash valid — those failures
+are raised by O2's owning layers and **never reach this result**. Exactly one
+result per invocation that reaches the legality layer; if authentication or
+protocol validation fails first, **no game-legality result exists at all**.
+Correlation is the awaited invocation itself, so **no `TurnCursor` echo** and no
+duplication of `action`, `hint`, `nonce`, `digest` or `state`. **No free-text
+reason crosses the boundary** — `GameRulesPort`'s reason stays a local diagnostic
+and log evidence, and no Python exception string is ever transported. Legality is
+decided only by `domain.rules` / `LocalTurnService` via `GameRulesPort`;
+`PeerServerPort` exposes the already-computed outcome and `PeerTransportPort`
+returns it to the caller. `False` is a result, not a sanction: interpretation
+belongs to the protocol runtime and `E-PROTO-ILLEGAL-MOVE`. This is
+**PROJECT-CONTRACT** (C-12); the source requires the rejection, not this shape.
+
+**O6 — Audit-material submission operation.** Operation (f), alias `submit_audit`
+— **PROJECT-CONTRACT / REFERENCE-COMPATIBILITY, not book-mandated**. Cadence is
+**one submission per completed sub-game**, following the existing per-sub-game log
+artifact ownership (`log_<game_id>_g<NN>.json`); whole-series batching is *not*
+assumed. Producer `infra.logger` (finalized material), storage `infra.artifacts`,
+transport `PeerTransportPort`/`PeerServerPort`, consumer the replay/audit
+verifier which persists what it receives. **No `FinalAuditVerdict`, expected
+digest, recomputed digest or TAMPERED reason is transmitted, and no audit
+verdict ACK is invented** — successful submission is represented by ordinary
+operation completion, failure by the owning typed failure, so the operation needs
+**no additional semantic result**. **No second audit schema** (`AuditEntry`,
+`AuditBundle`, `AuditEvidenceMessage`) is created. What remains open is only the
+payload *representation* — see `MOVE-REJECTION-TRANSPORT-SHAPE`'s resolved entry
+and `AUDIT-EXCHANGE-PAYLOAD`'s narrowed blocker in
+`INTEROPERABILITY_BLOCKERS.md`.
+
+**O7 — Binding boundary.** An operation contract is not a FastMCP binding. R11
+defines logical operations and their semantic request/result contracts; a later
+implementation stage maps them to FastMCP tools. No decorator, signature or JSON
+schema is defined here, and `PRD02-FR-035` still governs concrete signatures.
+
 - **P2b — Four acceptances stay distinct** *(Stage 4E-R10-R3, C-12)*. A received turn passes
   through **delivery/parsing** (`PeerServerPort`), **authentication** (`KeyedAuthPort` where
   applicable), **protocol phase/cursor/order** (`app.state_machine`) and finally **game legality**

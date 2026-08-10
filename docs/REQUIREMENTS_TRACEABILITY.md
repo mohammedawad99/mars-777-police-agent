@@ -705,3 +705,38 @@ F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**; IN
 PRD-02 IDs **87**; result fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**;
 timeline events **15**; `num_games` **6 FIXED**. **Stage 4E as a whole is NOT
 COMPLETE.**
+
+**Stage 4E-R11 (peer operation + transport contract reconciliation).**
+Documentation / architecture only; **CLOSED / COMMITTED / CI-GREEN** at Stage
+4E-R11-CLOSE with **0 Python and 0 tests** — and **PARTIAL**: the operation
+contract is complete, one integration blocker resolved and the other narrowed.
+Freezes `API_BOUNDARIES.md` **O1-O7** over the already-committed port set
+(**PRD02-FR-032**), the semantic operation inventory (**PRD02-FR-033**), the
+reference tool names as compatibility aliases (**PRD02-FR-034**, not
+book-mandated) and the deferral of concrete signatures (**PRD02-FR-035**).
+**O1** resolves the async/message-shape conflation using the committed
+`CONCURRENCY_MODEL.md` rule that peer calls are *"per request… never
+fire-and-forget for state-changing calls"*. **O2** separates a success result
+from transport, parse, authentication and protocol failures, each retaining its
+`ERROR_MODEL.md` identity. **O5** closes
+**`MOVE-REJECTION-TRANSPORT-SHAPE` as RESOLVED-PROJECT / READY-TO-IMPLEMENT**: an
+exact `bool` game-legality result on the turn operation, satisfying **App E #14**
+and **PRD01-FR-003/004/005** while legality stays with `domain.rules` /
+`LocalTurnService` through `GameRulesPort`, and `E-PROTO-ILLEGAL-MOVE` keeps
+ownership of the rejection outcome. **O6** fixes the audit submission operation
+(f) with per-sub-game cadence matching the `log_<game_id>_g<NN>.json` artifact
+(**PRD06-FR-100/101**), transmits no verdict or digest (**PRD06-FR-104**), and
+forbids a second audit schema. **`AUDIT-EXCHANGE-PAYLOAD`** is narrowed to
+**`BLOCKED-BY-LOG-ARTIFACT-SHAPE`**: the finalized log document is classified
+**LOCAL-ONLY** (D4/JDEC-007) and `LOG_CONTRACT.md` retains a REVIEW-REQUIRED item
+on ack/reveal nesting, so promoting it to an interoperability payload is a
+reviewed decision — `LOG_CONTRACT.md` was deliberately **not** edited. No
+peer-message family, port or error ID was created; operation results and audit
+material are **not** families. Peer-visible families remain **8** — **4
+implemented, 0 ready, 4 blocked** — and **Stage 4E as a whole is NOT COMPLETE.**
+**No requirement was added, removed, reclassified or re-owned; no JDEC-016,
+NDEC-008, INV-16 or C-13 was created.** Requirements remain **91** (76/9/4/2);
+Appendix E **55**; Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**;
+JDEC **15**; NDEC **7**; INV **15**; **C-01…C-12**; ports **20**; error IDs
+**20**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result fields **11**; PRD-06
+IDs **129**; PRD-07 IDs **140**; timeline events **15**; `num_games` **6 FIXED**.
