@@ -78,7 +78,7 @@ routing:
 | (b) exchange / lock config | Config negotiation, Config lock *(payloads blocked)* | `negotiate` |
 | (c)(d)(e) commitment · acknowledgement · reveal | `Commitment`, `Acknowledgement`, `Reveal` | `receive_turn` |
 | (f) exchange final-audit material | `FinalNonceReveal`, then the audit material *(representation blocked)* | `submit_audit` |
-| (g) exchange result approval | `ResultAgreement` *(payload blocked)* | `receive_control` |
+| (g) exchange result approval | `ResultAgreement` *(payload frozen 4E-R13/R13-R1; carries the sender's `ResultContribution`, returns the receiver's `Sha256Digest`)* | `receive_control` |
 | (h) optional control / heartbeat | — | `receive_control` |
 
 The **internal** semantic architecture depends on the logical operation identity,
@@ -213,3 +213,18 @@ alias; R12 freezes what those operations *carry* — the Step-0 authenticated co
 and envelope for (a), a complete `NegotiatedConfig` core plus the echo set and
 then the four config-lock layers for (b) — without defining any FastMCP
 signature, which stays deferred to Stage 2B-2C (**PRD02-FR-035**).
+
+**O-note (Stage 4E-R13-R2) — the result-agreement operation.** **O1-O7 are
+unchanged and no `O8` is created.** Operation **(g)** is one request → one awaited
+response, exactly as O1 requires: the request is the **`ResultAgreement` semantic
+value** (`game_id`, `game_uid`, `declaration_ref`, `timestamp`, `contribution`),
+and the operation-specific successful response is a single **`Sha256Digest`** —
+the receiver's locally computed `result_sha256`. Per **O1** an operation result is
+never a peer-message semantic family, so the digest response is **not** a family
+and **no ninth family exists**; per **O2** it is not a failure channel, and
+transport, parse, authentication and protocol failures keep their own identities
+(`E-TRANSPORT`, `E-PROTO-MALFORMED`, `E-AUTH-FAILURE`, `E-PROTO-STALE`) and never
+reach it. The **deterministic proposer/non-proposer ordering** of the two calls is
+**application-protocol semantics recorded in `RESULT_CONTRACT.md` §R13-R2** — it is
+not transport magic, not a retry policy and not a race resolution; the transport
+layer is unaware of it and merely delivers each request.

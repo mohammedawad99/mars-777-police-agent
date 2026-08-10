@@ -23,7 +23,7 @@ the wire yet.
 | 11 | **Final nonce reveal** | each → each | all nonces | **nonces** | (none) | log (final_reveal) | — | recompute all `H_commit` |
 | 12 | **Final audit** — *audit-material exchange + local mutual audit* | each → each (material); then **each side locally** | full logs + nonces | **the audit material / full log each side must disclose so the opponent can recompute independently** (Ch 5 §5.4) — **not** a verdict: no `FinalAuditVerdict`, `expected_digest`, `recomputed_digest` or reason is transmitted (C-11) | — | log (`audit.result`, `entries[].verified`, `audit.tampered_step`) | recompute SHA-256 per step **locally** | Verified OK / TAMPERED — **local** Replay-Viewer/log verdict |
 | 13 | **Result construction** | each team | per-sub-game scores, commit, tokens, four links | — | — | result | result-approval core (NDEC-006) | dual-report compare |
-| 14 | **Mutual result agreement** | both → both | agreed result core | `result_sha256` + agreement | — | result | `result_sha256` | both reports equal hash |
+| 14 | **Mutual result agreement** | both → both | own contribution + all jointly known core values | **each peer's own `ResultContribution`** (six per-sub-game commit + token values); the operation's successful response is the receiver's locally computed `Sha256Digest` *(4E-R13-R1; the digest is **not** in the request — it does not exist jointly until the peer contribution arrives)* | — | result | `result_sha256` over the participant-scoped core | both directions complete with an equal digest |
 | 15 | **Gmail reporting** | each team → lecturer | full **self-contained** result JSON (identities, four links, **FastMCP endpoints**, **signed hardware declarations + `hardware_auth`**, scores, commits, tokens; K3) | result JSON attachment | **key material** | (sent) | — | grader parse/attribution; **missing-from-either-side or contradictory ⇒ 0 to both (E-35, C-09)** |
 
 ## Key chronology conclusions
@@ -180,3 +180,26 @@ complete proposed core for **equality only**; event 3 binds it again through
 `config_sha256`. The cap's **Appendix-F status is unchanged — NEGOTIABLE** (App F
 Table 18 #4); what R12-R3 fixes is its **project lifecycle**, not its source
 provenance. No event was added, renumbered or re-scoped; the count is still **15**.
+
+**Stage 4E-R13-R2 — event 14 deterministic ordering (event count still 15).**
+Event 14 comprises **two operation calls, one per peer, in a fixed order** — it is
+**not** a new event and no sixteenth event is needed:
+
+1. the **timestamp proposer** — the participant whose `group_id` is **byte-wise
+   lower**, which is a value comparison and **not** the `group_a`/`group_b` slot —
+   sends its single `ResultAgreement` request carrying the proposed `timestamp`
+   and its own `ResultContribution`;
+2. the **non-proposer** adopts that timestamp **verbatim**, builds its local
+   `RESULT_APPROVAL_CORE` (it now holds both contributions, the common timestamp
+   and every other joint member) and returns its `Sha256Digest` as that
+   operation's successful response;
+3. the non-proposer then sends its **own single** request, echoing the identical
+   timestamp and carrying its own `ResultContribution`;
+4. the proposer verifies the echoed timestamp equals the one it proposed, builds
+   the identical core, and returns its `Sha256Digest`;
+5. each side sets `mutual_agreement` only after the frozen two-direction gate.
+
+**No simultaneous timestamp race and no first-arrival winner** — the ordering is
+application-protocol semantics, not a transport race. Transport retries re-send
+the **same immutable** semantic request and are **not** additional semantic
+requests.

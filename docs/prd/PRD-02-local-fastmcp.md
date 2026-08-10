@@ -179,7 +179,7 @@ evidence / idempotence / forbidden):
 | SUBGAME_COMPLETE | terminal detected | — | seal log, record score | READY, SERIES_COMPLETE | — | sealed log + score | yes | change sealed score |
 | SERIES_COMPLETE | all sub-games played | — | compute cumulative | FINAL_AUDIT | — | cumulative | yes | report before audit |
 | FINAL_AUDIT | series complete | peer nonces | release nonces, recompute all | REPORT_READY, TAMPERED | audit window | audit result | yes | selective disclosure |
-| REPORT_READY | audit verified | peer result hash | build + send result | (terminal) | reporting window | result artifact | yes | mutate game state |
+| REPORT_READY | audit verified | **peer `ResultAgreement` request** (identity + agreed `timestamp` + peer `ResultContribution`); the peer's returned `Sha256Digest` for our own request *(4E-R13-R2; this cell read "peer result hash", which named the operation **response** rather than the inbound request)* | own single `ResultAgreement` request, then the local `Sha256Digest` response; build + send result | (terminal) | reporting window | result artifact | yes (transport retry re-sends the **same immutable** semantic request) | mutate game state; regenerate the timestamp; send a second semantic request |
 | FAILED / TAMPERED / TECHNICAL_LOSS | fault / mismatch / protocol condition | — | halt, preserve evidence | (terminal) | — | fault record | n/a | continuing counted play |
 
 ### 13.4 FastMCP surface

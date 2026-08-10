@@ -85,9 +85,9 @@ misplaced runtime datum (App E #54 / Ch 9 §9.3.3 place actual consumed tokens i
 | R | teams | `teams.<g>.*` | SRC-SEMANTIC + PC | Req | object | 2 | identities | SUB-003 | Ch9 p.94 | — | — | — | Y | PROJECT-DECISION |
 | R | four links | `github_links` (4) | SRC-SEMANTIC + PC | Req | object/arr | 4 | four links | SUB-004 | Ch9 p.96; E-49 | — | — | — | Y | PROJECT-DECISION (JDEC-009) |
 | R | declaration reference | `declaration_ref` (via `game_id`/`game_uid`; `group_id` per team) | SRC-SEMANTIC (four artifacts share `game_uid`; declaration owns static data — Ch 9 p.78 four-file list, App F Tbl 20) + PC key | Req | object/string | 1 | joins result → declaration; **static metadata is NOT duplicated** (INV-10 corrected) | JSON-003 | Ch9 p.78; App F Tbl 20 | — | — | Y | Y | LOCKED-PROJECT (join key; JDEC-014) |
-| R | per-sub-game | `sub_games[].{sub_game,cop_score,thief_score,outcome,github_commit,tokens}` | SRC-SEMANTIC (+ SRC-EXPLICIT `github_commit`) | Req | array[obj] | ≥1 | scores per App F; outcome incl technical_loss | GAME-006,GIT-003,PERF-001 | Ch9 p.95; E-48/54 | C-07 | Y | Y | Y | PROJECT-DECISION (JDEC-008); commit LOCKED |
+| R | per-sub-game | `sub_games[].{sub_game,cop_score,thief_score,outcome,github_commit,tokens}` | SRC-SEMANTIC (+ SRC-EXPLICIT `github_commit`) | Req | array[obj] | **6** | scores per App F; outcome incl technical_loss; **`github_commit` and `tokens` are participant-scoped `{group_a, group_b}` objects (4E-R13-R1) — shape refinement, no new row** | GAME-006,GIT-003,PERF-001 | Ch9 p.95; E-48/54 | C-07 | Y | Y | Y | PROJECT-DECISION (JDEC-008); commit LOCKED |
 | R | cumulative | `cumulative.{cop_total,thief_total,series_outcome}` | SRC-SEMANTIC + PC | Req | object | 1 | tie rule | LEAGUE-006 | Ch9 p.95,87 | — | — | — | Y | PROJECT-DECISION (JDEC-008) |
-| R | total tokens | `total_tokens` | SRC-SEMANTIC | Req | int | 1 | series tokens | PERF-001 | E-54 | — | Y | — | Y | PROJECT-DECISION |
+| R | total tokens | `total_tokens` | SRC-SEMANTIC | Req | **object `{group_a,group_b}`** | 1 | series tokens **per participant, derived from the six sub-game values (4E-R13-R1) — shape refinement, no new row** | PERF-001 | E-54 | — | Y | — | Y | PROJECT-DECISION |
 | R | timestamp | `timestamp` | SRC-SEMANTIC + PC | Req | string(ISO) | 1 | ISO-8601 UTC | — | Ch9 p.94 | — | — | — | Y | PROJECT-DECISION (JDEC-011) |
 | R | mutual agreement | `mutual_agreement` | SRC-SEMANTIC + PC | Req | bool | 1 | both agree | LEAGUE-002 | Ch9 p.94; E-35 | — | — | — | Y | PROJECT-DECISION |
 | R | approval hash | `result_sha256` | SRC-SEMANTIC; over agreed result core; stored outside core | Req | string(hex) | 1 | SHA-256-backed approval; both reports equal; non-self-ref | LEAGUE-002 | Ch9 p.94; E-35/36 | **C-09** | Y | — | Y | NEGOTIATED-PRE-MATCH (NDEC-006) |
@@ -176,14 +176,19 @@ surface), **EX** example-only value, **BU** blocking-unresolved.
   `config_sha256` copy, `entries[]`, `ack`, `reveal`, `verification`); NPM (3) = the
   cryptographic interop surface the opponent recomputes (`H_commit`, `sealed_record`,
   `nonce`).
-- **result (13):** SE = `game/uid` identity **and** `sub_games[]` (which carries the
-  SOURCE-EXPLICIT `github_commit`) = 2. SS = the other 11. Status LS = `game/uid` (1);
-  the `sub_games[]` container's status is NPM (approval core) even though its
-  `github_commit` sub-field is source-locked. LP (2) =
-  own-report keys `mutual_agreement`, `reported_by`; NPM (10) = the mutually-agreed,
-  byte-identical approval core + crypto (`teams`, `github_links`, `mcp_endpoint`,
-  `hardware`, `hardware_auth`, `sub_games[]`, `cumulative`, `total_tokens`, `timestamp`,
-  `result_sha256`).
+- **result (11):** SE = `game/uid` identity **and** `sub_games[]` (which carries the
+  SOURCE-EXPLICIT `github_commit`) = 2. SS = the other 9. Status LS = `game/uid` (1),
+  the source-named identity. LP (3) = `declaration_ref` (a project-locked join key
+  derived from `game_id`, JDEC-014) plus the own-report keys `mutual_agreement` and
+  `reported_by`. NPM (7) = the mutually-agreed, byte-identical approval-core rows
+  (`teams` group ids, `github_links`, `sub_games[]`, `cumulative`, `total_tokens`,
+  `timestamp`) plus the approval digest `result_sha256`. The `sub_games[]` container's
+  status is NPM even though its `github_commit` sub-field is source-locked.
+  *(Stage 4E-R13 repair: this bullet was a pre-Stage-2A-R2 fossil. It still counted the
+  three K3 rows — `mcp_endpoint`, `hardware`, `hardware_auth` — that Stage 2A-R2 moved to
+  the **declaration** as declaration-owned, and it therefore read 13 where the row table,
+  the eleven `| R |` rows and every invariant read **11**. No result field was added or
+  removed to make the prose fit, and the total is unchanged at **74 = 15/39/9/11**.)*
 
 **Invariants (all hold):** provenance total = status total = row total for every
 artifact; 15+39+9+11 = **74**; SE+SS+PC+EX = 40+34+0+0 = **74**;

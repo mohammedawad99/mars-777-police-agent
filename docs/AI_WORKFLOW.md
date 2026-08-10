@@ -861,3 +861,38 @@
   stage-stamped historical records that were correct when written. Rewriting those would have
   destroyed evidence; leaving them ambiguous would have been worse. One explicit current-baseline
   block plus untouched history was the right shape.
+
+- **The Stage 4E-R13 family** closed the last blocked peer family in three passes, and each pass
+  was wrong about a different layer rather than wrong about the facts.
+- **A shape can be exact and still rest on nothing.** R13 answered every question the blocker
+  label asked - message shape, identity, multiplicity, response, disagreement - and the family
+  still could not be implemented, because the *digest the shape carried* was uncomputable
+  consistently. The lesson is to test a contract by asking whether two independent
+  implementations can both satisfy it, not whether every field is specified. Here, following the
+  data one level down produced the finding: `PRD06-FR-145` says both peers compute the core
+  independently, so I asked what each peer actually holds at that moment - and three members
+  were values only one side could know.
+- **Stopping was the right answer, and the shape of the stop mattered.** Three readings were
+  available and all three were defensible; picking one would have silently decided what the
+  approval core contains. Naming the blocker precisely - and saying *why* each reading failed -
+  is what let the ruling arrive as a one-line decision instead of another investigation.
+- **Fixing a contradiction is where new contradictions come from.** Moving `timestamp` out of the
+  request was correct at R13-R1 given what that stage was solving, and it broke the timestamp
+  channel that R13 had frozen two stages earlier. Both were locally right. What catches this
+  class of error is re-deriving the *whole* invariant after each change - "can both peers still
+  build identical bytes?" - rather than checking only the thing just edited.
+- **Name the value, not the slot.** The natural phrasing for the deterministic proposer was
+  "`group_a` proposes". The project's own live example refutes it: `group_a` holds `"MaRs-777"`
+  and `group_b` holds `"GROUP-XY"`, and `"GROUP-XY"` is the byte-wise lower id. `group_a`/`group_b`
+  are positional slots, not an ordering, and a rule stated on a slot would have inverted itself
+  in the very example the contract prints. When a rule is a comparison, state it on the compared
+  value.
+- **Pin the lexical form of anything that gets hashed and echoed.** `timestamp` had a format
+  decision (ISO-8601 UTC `Z`) but no exact form, which is enough for a human reader and not
+  enough for byte-identical canonical output - `…T00:00:00Z` and `…T00:00:00.000Z` are the same
+  instant and different bytes. The same discipline already applied to the nonce and the auth
+  proofs; it had simply never been applied here.
+- **Derive rather than transmit when a value is a function of others.** `total_tokens` could have
+  been sent alongside the six per-sub-game counts. Deriving it means the two can never disagree,
+  and removes a whole class of "which one is authoritative?" question from a document two parties
+  must approve byte-for-byte.

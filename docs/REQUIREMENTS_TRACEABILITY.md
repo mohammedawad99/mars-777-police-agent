@@ -864,3 +864,74 @@ Two items are carried forward deliberately: the stale **result (13)** derivation
 **`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`**, which must receive its
 own design + implementation stage before Stage 4 can close. **Stage 4E as a whole is NOT
 COMPLETE.**
+
+**Stage 4E-R13 family (ResultAgreement payload + result artifact).**
+Documentation / semantic-contract only; **0 Python, 0 tests, 0 runtime**;
+**CLOSED / COMMITTED / CI-GREEN** at Stage 4E-R13-CLOSE over **14 paths per repo**.
+Four stages, recorded as they happened:
+
+- **Stage 4E-R13** resolved the external payload-shape questions — mutual-audit
+  precondition (`SERIES_COMPLETE → FINAL_AUDIT → REPORT_READY`, `FinalAuditVerdict`
+  staying LOCAL), game-final identity, disagreement behaviour, artifact lifecycle,
+  non-self-reference, four **named** GitHub link keys, the six-sub-game inventory,
+  a deterministic timestamp-proposer rule, and the authorized repair of the stale
+  `FIELD_MATRIX` **result (13)** prose to the authoritative **11** rows. **It then
+  stopped PARTIAL**, because underneath the shape it found a defect the shape sat
+  on: `PRD06-FR-145` requires both peers to compute the core independently, yet
+  `sub_games[].tokens`, `total_tokens` and `sub_games[].github_commit` were
+  **per-team** values that no frozen contract transmitted before the digest —
+  meaning `E-REPORT-DISAGREE ⇒ 0 to both` would have fired on **every conforming
+  match**. Recorded as `RESULT-APPROVAL-CORE-JOINT-DERIVABILITY:
+  BLOCKED-BY-CORE-COMPOSITION`; the stage deliberately did **not** guess among the
+  three possible readings.
+- **Stage 4E-R13-R1** applied the supervising ruling: wherever a semantic is
+  participant-owned the shared core carries **both** participants' values, so the
+  three members became **`{group_a, group_b}` objects**; a scalar whose meaning
+  depends on who emitted the report is forbidden inside the core. Per-group rather
+  than combined, because the token **cap** is per group. `total_tokens.<g>` is
+  **derived** as the sum of that participant's six sub-game values, so one semantic
+  fact has one representation. Introduced the supporting values
+  **`ResultContribution`** / **`ResultContributionEntry`** / `GitCommitSha`, replaced
+  the digest-only request with one carrying the sender's contribution, and made the
+  operation's successful response the receiver's locally computed **`Sha256Digest`**.
+  INV-05 was refined participant-explicitly after auditing that a participant's
+  played commit is **series-fixed** (Ch 5 permits change *between games*, and the
+  declaration is per-game).
+- **Stage 4E-R13-R2** closed a hole R13-R1 had itself opened: the new request
+  carried the contribution but **excluded `timestamp`**, leaving the non-proposer
+  with no channel to learn the exact string the hashed core requires. `timestamp`
+  now travels in the request — beside the identity, **not** inside
+  `ResultContribution`, because a jointly approved core value is not
+  participant-owned evidence — with the exact type **`UtcTimestamp`**
+  (`YYYY-MM-DDTHH:MM:SSZ`, 20 ASCII characters, second precision, echoed verbatim).
+  The two requests were given a **deterministic order**: proposer first, non-proposer
+  second. An audit correction was recorded with it — the proposer is the participant
+  whose **`group_id` value is byte-wise lower**, which is **not** the `group_a`
+  slot: the live example places `"MaRs-777"` in `group_a` and `"GROUP-XY"` in
+  `group_b`, and `"GROUP-XY"` is the lower value.
+
+**Final contracts.** `ResultAgreement(game_id, game_uid, declaration_ref,
+timestamp, contribution)` — one game-final peer family, no `result_sha256` in the
+request, no `accepted` flag. Exactly **two** semantic requests per series in fixed
+order; transport retries re-send the **same immutable** request and are not
+additional semantic requests. Both completion gates require **both directions**
+and **equal digests** before `mutual_agreement`. `result_sha256` remains an
+unkeyed, non-self-referential content-agreement digest stored outside the core.
+The approval core is canonically byte-identical across peers while the physical
+result files may differ only in explicitly excluded reporter-local metadata such
+as `reported_by`. **C-09** is unchanged, and no peer-visible audit verdict exists.
+
+**All eight peer-visible families are now IMPLEMENTED or READY — 4 implemented, 4
+ready, 0 blocked.** `ResultContribution`, `ResultContributionEntry`,
+`UtcTimestamp` and `GitCommitSha` are supporting values nested inside the family,
+and the `Sha256Digest` response is an operation result, so **no ninth family** and
+**no `FIELD_MATRIX` row** was created. **No requirement, port, error ID,
+Appendix-E/F row or timeline event was added, removed or reclassified; no C-13,
+JDEC-016, NDEC-008 or INV-16 was created.** Requirements remain **91** (76/9/4/2);
+Appendix E **55**; Appendix F **32 = 14/9/9**; JDEC **15**; NDEC **7**; INV **15**;
+**C-01…C-12**; ports **20**; error IDs **20**; timeline events **15**;
+FIELD_MATRIX **74 = 15/39/9/11** with the repaired **result (11)** prose.
+**`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION` is carried forward
+untouched** — participant token values in the result are what the peers agree was
+**reported**, never proof that every actual LLM call was metered. **Stage 4E is NOT
+COMPLETE.**
