@@ -152,7 +152,8 @@ chronology, not a preference.
 Serialization is **Layer 1** canonical JSON (`sort_keys`, `(",",":")`, UTF-8,
 NFC, LF, no trailing newline) over the core object; the framing of
 `context ‖ core` is the fixed pre-match framing of `CANONICALIZATION_CONTRACT.md`
-Layer 4. **Absent optional members are omitted, never emitted as `null`**
+Layer 4, **frozen byte-exactly there as `b"step0" + canonical_json_bytes(core)`
+with no separator** *(Stage 4E-R16-CLOSE)*. **Absent optional members are omitted, never emitted as `null`**
 (`PRD06-FR-008`); both peers must therefore agree presence, not just value.
 
 ### Cadence
@@ -257,7 +258,22 @@ subtree, exactly as the live field inventory above names it:
 | 18 | `teams.<g>.github_commit` | played commit hash |
 | 19 | `token_budget_per_series` | agreed token cap *(added Stage 4E-R12-R1)* |
 
-`Σ` = **19 exact members, none blocked** *(Stage 4E-R12-R1)*. `mcp_endpoint` (#9) is **inside** so
+`Σ` = **a 19-member semantic inventory, none blocked** *(Stage 4E-R12-R1; count
+wording clarified Stage 4E-R16-CLOSE)*. **The inventory is not a promise that 19
+keys are always physically present.** Member **#15**, `hardware.vram_gb`, is the
+**sole conditional member** (see its row above): it is present exactly when
+`hardware.gpu` is not `false`, and is **omitted — never emitted as `null`** —
+otherwise. Mechanically, therefore:
+
+| Producer | `hardware.gpu` | `vram_gb` | **present leaf values in the serialized core** |
+|---|---|---|---|
+| CPU-only | exactly `false` | `None`, key **omitted** | **18** |
+| GPU | a model string | strict positive `int`, key present | **19** |
+
+No other member is optional, the inventory itself is unchanged at 19, and
+`FIELD_MATRIX.md` is untouched. Emitting `null` here would not merely be untidy:
+the canonical layer refuses `None` outright, so it would make a lawful CPU-only
+declaration impossible to authenticate at all. `mcp_endpoint` (#9) is **inside** so
 `PRD05-FR-013`'s pre-play endpoint verification authenticates something;
 `github_commit` (#18) is inside as source identity evidence, and **`PRD06-FR-030`
 still applies — being inside an authenticated core does not make a Git hash
@@ -267,7 +283,9 @@ authentication**; the six hardware members (#10–#15) and `llm_model`/`code_ver
 **Canonical construction.** `AuthProof.value = KEYED_AUTH_key("step0" ‖
 canonical(step0_core))`, where `canonical` is Layer 1 of
 `CANONICALIZATION_CONTRACT.md` (sorted keys, `(",",":")`, UTF-8, NFC, LF, no
-trailing newline) and `‖` is the fixed pre-match Layer-4 framing. Absent
+trailing newline) and `‖` is the fixed pre-match Layer-4 framing — **direct
+concatenation, prefix `b"step0{"`, no separator byte** *(frozen Stage
+4E-R16-CLOSE in `CANONICALIZATION_CONTRACT.md`)*. Absent
 conditional members are **omitted, never `null`** (`PRD06-FR-008`). The core is a
 nested object mirroring the declaration paths above; it is **not** flattened and
 **not** a second copy of the declaration.

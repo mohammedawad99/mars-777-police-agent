@@ -122,5 +122,9 @@
 | 4E-R15 | ResultAgreement semantic types implementation | Referenced |
 | 4E-R15-CLOSE | ResultAgreement values tracking, commit, push, exact-SHA CI | Referenced |
 
+| 4E-R16 | Peer application protocol runtime implementation | Referenced |
+| 4E-R16-FIX | Conditional VRAM Step-0 projection + framing verification | Referenced |
+| 4E-R16-CLOSE | Runtime doc reconciliation, tracking, commit, push, exact-SHA CI | Referenced |
+
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

@@ -1060,3 +1060,73 @@ FIELD_MATRIX **74 = 15/39/9/11**. **`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE:
 BLOCKED-BY-CONSTRUCTION` is carried forward untouched** — contribution token
 counts are what a peer *reports*, never independently verified provider
 consumption. **Stage 4E is NOT COMPLETE.**
+
+**Stage 4E-R16 (peer application protocol runtime).** **CLOSED / COMMITTED /
+CI-GREEN** at Stage 4E-R16-CLOSE over **52 paths per repo** — 16 production, 27
+tests, 3 contract reconciliations and 6 tracking. It took **three** stages, and
+the middle one is the point: R16 implemented broadly and passed, supervising
+review then found that the conditional-VRAM branch was under-proved and one
+count assertion was phrased unconditionally, and **R16-FIX proved the production
+code had been right all along** while repairing the proof and the wording. The
+record says so rather than presenting R16 as a clean first pass.
+
+**What now executes.** The four remaining READY families became local
+application behaviour. **Step-0** projects its **19-member semantic inventory**,
+constructs and verifies the keyed proof, validates participant ownership and the
+equality-only token cap, merges into a **new** immutable `Declaration` and gates
+completion on both directions. **Config negotiation** selects the deterministic
+initial proposer — the byte-wise lower `group_id` **value**, which in the live
+fixture sits in the `group_b` slot — runs the bounded cadence, validates
+proposals LIVE and converges on one agreed `NegotiatedConfig` +
+`InteropProfileSet`. **Config lock** projects the exact **35 members**, computes
+`config_sha256`, builds and verifies authenticated `ConfigLockEvidence`, and
+gates `CONFIG_LOCKED` on all four conditions by delegating to the one
+authoritative transition graph. **ResultAgreement** assembles the approval core
+identically on both sides, merges contributions by declared slot, derives
+`total_tokens`, computes `result_sha256`, runs the deterministic
+timestamp-proposer and two-request cadence, returns `Sha256Digest` responses and
+decides both asymmetric completion gates. **Auth** is concrete stdlib
+HMAC-SHA256 with an injected `ED25519` provider path, **no fallback**, and no
+persisted or rendered key material.
+
+**The architecture that made it testable.** `MODULE_BOUNDARIES.md` forbids `app`
+from importing `protocol`, so every byte, digest and proof arrives through an
+`app.ports` Protocol implemented by a `protocol` adapter. The runtimes are
+therefore synchronous, deterministic, free of canonicalization and key material,
+and exercised with plain fakes — and a guard asserts the rule per module from
+the AST.
+
+**The one conditional member, stated exactly.** `hardware.vram_gb` is present
+exactly when `gpu` is not `false`. A **CPU-only** core serializes **18** present
+leaves and a **GPU** core **19**; the inventory stays 19 either way. The key is
+**omitted, never `null`** — and could not be `null`, since the canonical layer
+refuses `None`, so emitting one would make a lawful CPU-only declaration
+impossible to authenticate.
+
+**The framing gap R16 found and CLOSE froze.** Every live statement wrote the
+keyed construction as `context ‖ canonical(core)` and deferred the framing to
+"a fixed, unambiguous framing agreed pre-match" that **no document then fixed**.
+`CANONICALIZATION_CONTRACT.md` Layer 4 now freezes it byte-exactly as
+`b"step0" + canonical_json_bytes(core)` and
+`b"config" + canonical_json_bytes(context)` — direct concatenation, prefixes
+`b"step0{"` / `b"config{"`, **no separator and no length prefix** — recorded as
+**PROJECT-CONTRACT completing JDEC-013**, never as lecturer-mandated.
+
+**Counts.** 293 R16 targeted tests; totals **1959 / 1954** at **100.00%
+statement and branch coverage**; every production file ≤150 LOC; all 16
+production files **byte-identical** across repos.
+
+**Not implemented, deliberately.** No FastMCP, network transport, public
+endpoint or tunnel, wire adapter, Gmail, report delivery, GUI, artifact
+persistence or token-accounting crypto evidence. **At the application-runtime
+level the peer-family matrix is 8 IMPLEMENTED / 0 READY / 0 BLOCKED / 8**;
+**transport integration is OUTSTANDING**, and nothing here is network-,
+league- or counted-match-ready.
+
+**No register moved.** Requirements **91**; Appendix E **55**; Appendix F **32 =
+14/9/9**; JDEC **15**; NDEC **7**; INV **15**; **C-01…C-12**; ports **20**;
+error IDs **20**; timeline events **15**; FIELD_MATRIX **74 = 15/39/9/11**. No
+ninth family, no new requirement, no new conflict.
+**`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`** is carried
+forward untouched — R16 aggregates and agrees *reported* token numbers and
+proves nothing about provider usage. **Stage 4E is NOT COMPLETE.**

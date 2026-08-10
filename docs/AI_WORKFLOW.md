@@ -960,3 +960,41 @@
   The tracking says which nouns are absent, by name. The family stays READY. Every reader who
   prices the remaining work off this record depends on that distinction being made explicitly
   rather than inferred.
+
+- **Stage 4E-R16** was the largest implementation stage so far, and the thing worth recording is
+  what the layer rule bought. `app` may not import `protocol`, so every byte, digest and keyed
+  proof had to cross an injected port. That constraint looked like friction at design time and
+  paid for itself immediately: the four runtimes ended up synchronous, deterministic, free of
+  canonicalization and key handling, and testable with a five-line fake. A rule that forces the
+  dependency inversion is worth more than the discipline to remember to do it.
+- **Write the guard against code, not against prose.** The first architecture guards grepped raw
+  source and failed on their own docstrings - a module explaining *why* it never opens a socket
+  contains the word `socket`. Rewriting them to strip string literals and comments, read imports
+  from the AST, and match **exact tokens** fixed three false positives at once: `config_sha256`
+  is not the `sha256` function and `opening` is not the `open` builtin. A guard that cannot tell
+  those apart fires on correct code and gets weakened by the next person to hit it.
+- **A stage can discover its own code was already right - and still owe the proof.** R16-FIX
+  found the conditional-VRAM projection correct and changed **zero** production files. The gap
+  was real anyway: the branch was under-tested and one count assertion read "exactly 19 members"
+  unconditionally, which would have failed on the first lawful CPU-only declaration. Proof and
+  wording are deliverables, not commentary.
+- **Two counts that look like one.** A 19-member *inventory* and 19 *present serialized keys* are
+  different claims, and conflating them is how an optional member becomes an outage. The
+  distinction is now in the type name, the test names and the contract table - CPU-only 18, GPU
+  19, inventory 19 always.
+- **"Agreed pre-match" is not a specification.** Roughly thirty live statements wrote the keyed
+  input as `context ‖ canonical(core)` and every one deferred the framing to a rule that no
+  document ever defined. Implementation had to pick something; R16 picked the literal reading and
+  said so loudly in its report instead of quietly shipping it, which is what let review approve
+  the exact bytes and CLOSE freeze them. **Flag the gap you had to fill - never let an unstated
+  choice reach a byte-level interop contract silently.**
+- **Delete a check the type system already makes.** Two guards turned out unreachable: the
+  runtime's `declaration_ref` comparison (the constructor invariant plus the `game_id` equality
+  already imply it) and the canonical layer's pre-refusal of the placeholder mark. Both were
+  removed and replaced by tests proving the redundancy *sound*. Unreachable defensive code cannot
+  be covered, and reaching for `# pragma: no cover` to hide that is how coverage stops meaning
+  anything.
+- **Say what was not built, by name.** "Application runtime complete" and "ready to play a match"
+  are separated by FastMCP, a tunnel, transport, reporting and the token-crypto slice. The
+  tracking names every one of them, because the matrix reading 8/0/0/8 is exactly the sentence a
+  future reader is most likely to over-interpret.

@@ -250,7 +250,8 @@ the producer holds the pre-supplied key (K1/K2) — it is **not** a bare hash an
 - **Domain separation:** `context ∈ {"step0","config"}` is authenticated **together
   with** the payload, so a valid `"step0"` tag cannot be replayed as a `"config"` tag
   (and vice-versa). The concatenation `‖` uses a fixed, unambiguous framing agreed
-  pre-match (NDEC-003/005/007) so `context` and `core` cannot be confused.
+  pre-match (NDEC-003/005/007) so `context` and `core` cannot be confused. **That
+  framing is frozen byte-exactly below** *(Stage 4E-R16-CLOSE)*.
 - **Self-reference exclusion:** the envelope `{auth_alg, key_id, auth_tag}` is
   **never** part of the bytes it authenticates — the tag is computed over
   `context ‖ core` only (mirrors the non-self-referential rule for `config_sha256`
@@ -309,3 +310,48 @@ than hoping both sides serialize identically.
 - SOURCE-SEMANTIC/EXPLICIT: canonical JSON, sorted keys, fixed separators, UTF-8, SHA-256, fresh nonce, byte-identical; **the `truth`/`lie` intent vocabulary** (Ch 5 p.51).
 - PROJECT-CONTRACT (JDEC-002): exact separators `(",",":")`, **`ensure_ascii=False`**, LF, no trailing newline in hashed payload, float formatting, cross-OS determinism; **the `police`/`thief` sealed-role vocabulary** (NDEC-001, 4E-R9-R1).
 - **`ensure_ascii=False` is a PROJECT contract, not a lecturer requirement.** The book is silent; the value is fixed here because non-ASCII hints make it byte-decisive, and it must be echoed pre-match (NDEC-003). Fixing it is not the same as claiming the source demanded it.
+
+### Layer 4 exact authenticated bytes (frozen Stage 4E-R16-CLOSE)
+
+Until this stage every statement of the keyed construction wrote it as
+`context ‖ canonical(core)` and deferred the framing to "a fixed, unambiguous
+framing agreed pre-match" — which no document then fixed. Two conforming peers
+could therefore have computed different bytes from the same core. This section
+is that missing definition, and it is the **single authoritative location**: the
+other auth, config and declaration contracts reference `‖` and resolve to it
+rather than restating a second definition.
+
+**The framing is direct concatenation. No byte is inserted.**
+
+```
+STEP0_AUTH_INPUT       = b"step0"  + canonical_json_bytes(step0_core)
+CONFIG_LOCK_AUTH_INPUT = b"config" + canonical_json_bytes(config_lock_context)
+```
+
+The literal ASCII context bytes are followed **immediately** by the Layer-1
+canonical JSON object bytes. There is **no separator of any kind** — no NUL, no
+colon, no pipe, no space, no newline, no tab, no hyphen, and **no length
+prefix** — and no trailing framing byte. Because a canonical object always
+begins with `{`, the exact prefixes are:
+
+```
+b"step0{"    b"config{"
+```
+
+**Why this is unambiguous without a separator.** The two context labels are the
+closed pair `"step0"` and `"config"`; **neither is a prefix of the other** (they
+differ at the first byte), and the payload is a canonical JSON object, which is
+self-delimiting from its opening `{`. A reader therefore never needs a marker to
+find the boundary. Domain separation is unaffected: a `"step0"` proof still
+cannot verify as a `"config"` proof, because the context bytes are inside the
+authenticated material.
+
+**Provenance, stated exactly.** The *requirement* — keyed authentication over
+pre-match material, with fixed domain-separated framing — is **SOURCE-REQUIRED**
+(Ch 5 p.55–56; App B p.128). The *byte-level completion* above is
+**PROJECT-CONTRACT** under the existing JDEC-013 keyed-auth decision: the book
+prescribes no concatenation encoding, and **nothing here may be described as
+lecturer-mandated**. This adds no JDEC, no NDEC, no requirement and no field; it
+completes JDEC-013's `context ‖ canonical_payload` with the one detail that was
+left open, and matches the implementation Stage 4E-R16/R16-FIX tested byte for
+byte.

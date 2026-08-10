@@ -2,15 +2,17 @@
 
 `protocol.canonical` owns bytes, not meaning. It never sees a `SealedState`, a
 `PhysicalAction` or a digest - only JSON-native material a caller already mapped
-explicitly - which is why its runtime domain is deliberately narrow: `str`,
-`int`, `list`, `dict` and nothing else.
+explicitly - which is why its runtime domain is deliberately narrow.
 
-The exclusions are the point. Sealed commitment records contain no `float`, no
-`null` and no `bool`, so this first canonical implementation refuses them rather
-than guessing at rules the wider contract only freezes for other artifacts. And
-a non-NFC string arriving here means a producer skipped `canonical_text`; that
-is a defect worth surfacing, not one worth silently repairing one step before
-hashing.
+The exclusions are the point, and they are still exact. `float` and `null` are
+refused: `0.10` has no `float` spelling, so binary rounding could perturb hashed
+bytes, and a hashed payload omits an absent member rather than emitting `null`.
+`bool` and `Decimal` were refused with them until Stage 4E-R16, when the Step-0
+and config cores first needed the two forms `CANONICALIZATION_CONTRACT.md` had
+already frozen; `test_canonical_decimals.py` asserts those, and this file keeps
+fixing everything the sealed-record path depends on. A non-NFC string arriving
+here still means a producer skipped `canonical_text` - a defect worth surfacing,
+not one worth silently repairing one step before hashing.
 """
 
 import json
@@ -71,8 +73,6 @@ def test_non_ascii_is_emitted_as_literal_utf8_not_escaped() -> None:
     "value",
     [
         None,
-        True,
-        False,
         1.0,
         0.5,
         b"bytes",
@@ -85,14 +85,31 @@ def test_non_ascii_is_emitted_as_literal_utf8_not_escaped() -> None:
         range(2),
     ],
 )
-def test_a_value_outside_the_sealed_record_domain_is_refused(value: object) -> None:
-    """`float`/`null`/`bool` never occur in a sealed record, so v1 refuses them."""
+def test_a_value_outside_the_canonical_domain_is_refused(value: object) -> None:
+    """`float` and `null` are still refused, at every depth."""
     with pytest.raises(ValueError):
         canonical_json_bytes(value)
     with pytest.raises(ValueError):
         canonical_json_bytes({"k": value})
     with pytest.raises(ValueError):
         canonical_json_bytes([value])
+
+
+def test_no_sealed_record_member_may_be_a_bool_or_a_decimal() -> None:
+    """The domain grew; the sealed record did not.
+
+    Stage 4E-R16 admitted `bool` and `Decimal` for the Step-0 and config cores.
+    None of the eight sealed members is either one - `step` and `sub_game` are
+    integers, the rest are strings or the mapped `state`/`move` objects - so
+    this record stays exactly what it was, and its bytes with it.
+    """
+    for value in RECORD.values():
+        assert type(value) is not bool
+        assert type(value).__name__ != "Decimal"
+    assert (
+        canonical_json_bytes(RECORD)
+        == json.dumps(RECORD, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+    )
 
 
 @pytest.mark.parametrize("key", [1, None, True, ("a",), 2.0])

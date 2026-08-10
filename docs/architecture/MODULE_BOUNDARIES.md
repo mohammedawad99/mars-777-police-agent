@@ -340,3 +340,65 @@ entering only at `app.peer_pregame_messages`.
 **Not a junk drawer.** `app.artifact_values` exists because two artifacts share
 exactly two primitives; it is cohesive by that definition and must not accumulate
 unrelated types. There is no `values.py` or `types.py`.
+
+## Stage 4E-R16 — implemented application runtime and protocol adapters
+
+The rows below describe the architecture Stage 4E-R16 **actually implemented and
+tested**, replacing the position where several of these modules had no row at
+all. Nothing here changes a layer rule: it records where the implementation
+landed, and the dependency directions were read from the committed imports
+rather than from prose.
+
+**The layering rule that shaped all of it.** `app` may not import `protocol`
+(cross-cutting rules, above). Every byte, digest and keyed proof the runtime
+needs therefore arrives through a `app.ports` Protocol implemented by a
+`protocol` adapter and wired by the composition root (D3). That is why the four
+runtimes are synchronous, deterministic and testable with plain fakes, and why
+no canonicalization or key material ever reaches `app`.
+
+### Application layer — contracts and runtime
+
+| Module | Owns | Depends on | Must not import |
+|---|---|---|---|
+| `app.ports` | the five R16 port Protocols — `Step0AuthPort`, `ConfigDigestPort`, `ConfigLockAuthPort`, `ResultDigestPort`, `TimestampPort` | `app` semantic values, `domain.negotiated_config` (type references) | `protocol`, `infra`, transport, `bytes`/key material in any signature |
+| `app.protocol_errors` | raisable classes for the **existing** `ERROR_MODEL.md` identities (`E-PROTO-MALFORMED`, `E-PROTO-STALE`, `E-AUTH-FAILURE`, `E-CONFIG-MISMATCH`, `E-NET-CONVENTION-MISMATCH`, `E-REPORT-DISAGREE`, `E-LOCAL-DEFECT`) | stdlib `typing` only | everything else; **owns no new identity** and never carries key material |
+| `app.result_identity_values` | `ResultParticipants`, `GithubLinks`, and the two shared result validators | `app.result_values` | `domain`, `protocol`, `infra` |
+| `app.result_core_values` | `SubGameResult`, `CumulativeResult`, `ResultApprovalCore` | `app.artifact_values`, `app.result_identity_values`, `app.result_values`, `domain.config_model`, `domain.terminal` | `protocol`, `infra`; **not a peer family and not a `FIELD_MATRIX` row** |
+| `app.step0_runtime` | outbound exchange, inbound validation, immutable merge, `Step0Completion` | `app.declaration_values`, `app.peer_pregame_messages`, `app.ports`, `app.protocol_errors`, `app.team_declaration_values` | `protocol`, `infra`; owns no sanction |
+| `app.config_negotiation_runtime` | deterministic initial proposer, bounded cadence, LIVE proposal validation, convergence | `app.interop_profiles`, `app.peer_pregame_messages`, `app.protocol_errors`, `domain.config_model`, `domain.negotiated_config` | `protocol`, `infra`; never re-implements Appendix-F status checks the sections already own |
+| `app.config_lock_runtime` | lock evidence construction/verification and the `CONFIG_LOCKED` gate | `app.interop_profiles`, `app.peer_pregame_messages`, `app.ports`, `app.protocol_errors`, `app.protocol_values`, `app.state_machine`, `domain.negotiated_config` | `protocol`, `infra`; **never duplicates the transition graph** — it delegates to `app.state_machine` |
+| `app.result_core_runtime` | approval-core assembly, contribution merge by declared slot, derived `total_tokens` | `app.artifact_values`, `app.declaration_values`, `app.protocol_errors`, `app.result_core_values`, `app.result_identity_values`, `app.result_values`, `domain.terminal` | `protocol`, `infra` |
+| `app.result_agreement_runtime` | the deterministic timestamp proposer and the two-request cadence | `app.artifact_values`, `app.peer_final_messages`, `app.ports`, `app.protocol_errors`, `app.protocol_values`, `app.result_identity_values`, `app.result_values` | `protocol`, `infra`; reads **no clock** — the instant arrives through `TimestampPort` |
+| `app.result_agreement_gates` | `MutualAgreementGate`, the asymmetric local completion verdict | `app.protocol_values` | everything else; `mutual_agreement` is **local state, never a peer field** |
+
+### Protocol layer — adapters
+
+| Module | Owns | Depends on | Must not import |
+|---|---|---|---|
+| `protocol.canonical` *(row above; scope amended 4E-R16)* | canonical text and canonical JSON bytes. The v1 domain `str`/`int`/`list`/`dict` **gained `bool` and `Decimal`** when the Step-0 and config cores first needed them; `float` and `None` remain refused | stdlib | domain mutation; **no second canonical policy anywhere** |
+| `protocol.keyed_auth` *(row above; deps amended 4E-R16)* | `auth_input`, the `AuthProvider` Protocol, `HmacSha256Provider`, `KeyedAuthenticator` | `protocol.canonical`, `app.auth_values`, `app.protocol_errors` *(runtime use of the value contracts it produces and consumes)* | transport; **never logs, stores, serializes or `repr`s key bytes** |
+| `protocol.declaration` *(row above; deps amended 4E-R16)* | the 19-member Step-0 core projection and the `Step0AuthPort` adapter | `protocol.keyed_auth`, `app.auth_values`, `app.declaration_values`, `app.protocol_errors`, `app.team_declaration_values` | transport; maps every member **explicitly** — no reflection, no generic encoder |
+| `protocol.config_projection` | the 35-member binding config core and the eleven-profile projection | `app.interop_profiles`, `domain.board`, `domain.negotiated_config` | `protocol.canonical` and hashing — it is **mapping only** |
+| `protocol.config_lock` *(row above; deps amended 4E-R16)* | `config_sha256`, the lock-context projection, the `ConfigDigestPort`/`ConfigLockAuthPort` adapter | `protocol.canonical`, `protocol.config_projection`, `protocol.keyed_auth`, `app.auth_values`, `app.peer_pregame_messages`, `app.protocol_values`, `domain.negotiated_config` | strategy, transport |
+| `protocol.result_core` | the result approval-core projection, the explicit outcome vocabulary table, and `result_sha256` | `protocol.canonical`, `app.protocol_errors`, `app.protocol_values`, `app.result_core_values`, `app.result_identity_values`, `app.result_values`, `domain.terminal` | transport; introduces **no keyed proof** — result approval is a mutual acknowledgement, not producer authentication |
+
+### Implemented import DAG (read from the committed imports)
+
+```
+domain.*  ─┐
+app semantic values ─→ app.ports ─→ app.<family>_runtime
+                                        (application layer ends here)
+protocol.canonical ─→ protocol.keyed_auth ─→ protocol.declaration
+                   ├─→ protocol.config_projection ─→ protocol.config_lock
+                   └─→ protocol.result_core
+protocol adapters ─→ app semantic values + app.protocol_errors   (inward only)
+```
+
+Acyclic, and asserted per module from the AST by
+`tests/app/test_runtime_layering.py`: **no `app` module imports `protocol`**, and
+no runtime performs I/O, reads a clock or computes a digest itself.
+
+**Transport is deliberately absent.** No FastMCP adapter, socket, HTTP client or
+server, tunnel, Gmail or GUI module exists. `infra.mcp_server`, `infra.mcp_client`
+and the rest of the infrastructure table remain **specified and not implemented**;
+their rows describe intended boundaries, not shipped code.
