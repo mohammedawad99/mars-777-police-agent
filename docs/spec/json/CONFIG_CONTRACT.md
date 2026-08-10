@@ -175,3 +175,470 @@ Fields marked **[PC]** are PROJECT-CONTRACT; all others are SOURCE-EXPLICIT keys
 
 All example values conform to Appendix F (no FIXED value altered; MINIMUMs at
 floor; `num_games` at the binding 6). No comments inside JSON. No secrets.
+
+## Stage 4E-R12 — negotiation semantics, `NegotiatedConfig`, and the four-layer lock
+
+### R12-E — the four layers (the lock is a layer, not a step)
+
+The Stage-1D.1 section above lists **three** layers and then treats the lock as a
+line in a flow. `PRD06-FR-041` already names **four** distinct artefacts that must
+never be conflated, so the lock is raised to a layer of its own:
+
+| # | Layer | Kind | Proves | Lives |
+|---|---|---|---|---|
+| 1 | **CONFIG CORE** | canonical bytes | the agreed physics | `config_<game_id>_g<NN>.json` |
+| 2 | **`config_sha256`** | **unkeyed** content digest | *content equality* — never authorship | **outside** the core (declaration/sidecar) |
+| 3 | **`config_auth` `AuthProof`** | **keyed** MAC/signature over `"config" ‖ core` | a key-holder produced this core | sidecar; key never stored |
+| 4 | **CONFIG LOCK** | a **local state transition**, not bytes | that this peer will not accept another core for this sub-game | `CONFIG_LOCKED` state + evidence |
+
+Layer 4 has **no serialized representation of its own** and must never acquire
+one: it is not a digest, not a tag, and not a field. It is the point after which
+`PRD06-FR-048`'s set becomes immutable and `PRD06-FR-049` turns any change into
+`E-LOCAL-DEFECT` or a rejected message. **Layer 2 is not layer 3** — restating
+`PRD06-FR-044`, equal digests alone never authorise counted play. **Layer 3 is not
+layer 4** — a verified tag proves authorship, not that either side has committed.
+
+**Verification order before counted play, fixed:** parse → `auth_alg`/`key_id`
+compared against the provisioned expectation (R12-A) → **verify the `AuthProof`**
+→ **compare `config_sha256` for equality** → lock. The tag is verified **before**
+the digest comparison so that an unauthenticated core is never even compared;
+either failure refuses counted play (`INV-15`).
+
+### R12-F — `NegotiatedConfig` (design contract; no Python, no schema)
+
+The typed model of what negotiation converges on, derived **only** from the live
+rows above and `FIELD_MATRIX.md`. It **adds nothing**: 39 config rows = **35**
+core members + **4** outside members, unchanged.
+
+**Core (35 members, all inside the hashed bytes):** `schema_version` ·
+`agreed_between` · the **33 Appendix-B value keys** across `board_and_agents` (6),
+`world` (2), `movement_and_barriers` (4), `scoring` (6), `pheromones` (3),
+`network_and_league` (7), `rate_limiter_gatekeeper` (5).
+
+**Outside the core (4):** `config_sha256` · `config_auth.{auth_alg, key_id,
+auth_tag}`.
+
+Every core member carries exactly one Appendix-F **status**, and the status — not
+the member's type — determines what negotiation may do to it:
+
+| Status | Count | Admissible proposal | Inadmissible ⇒ |
+|---|---|---|---|
+| **FIXED** | **15** | only the Appendix-F value | any other value, **above or below** ⇒ refuse counted play (GAME-002) |
+| **MINIMUM** | — | the floor or **higher** ("harder direction") | any value below the floor ⇒ refuse |
+| **NEGOTIABLE** | — | any mutually agreed value | unilateral value ⇒ not agreed, no lock |
+| **NEGOTIABLE, but PRE-STEP0-FROZEN** — `token_budget_per_series` only | 1 (of the 9 above) | **equality only.** It was agreed **before `BOOT`** and authenticated in the Step-0 core at event 1 (`DECLARATION_CONTRACT.md` §R12-R3), so a counted-series proposal may only **restate** it | any value differing from the authenticated declaration cap ⇒ **`E-CONFIG-MISMATCH`**, refuse counted play; **never** silently renegotiated *(Stage 4E-R12-R3)* |
+| — (`schema_version` value) | 1 | the agreed string, default `"mars777-1"` | differing values ⇒ bytes differ ⇒ no lock |
+
+FIXED + MINIMUM/NEGOTIABLE = **15 + 18 = 33** value keys, matching
+`FIELD_MATRIX.md`. `scoring.technical_loss` is FIXED-valued with Ch 3 / App E #48
+provenance rather than an Appendix-F row (**C-07**) and is negotiated by nobody.
+Status validation happens **before** lock (`PRD06-FR-046`); an inadmissible
+proposal is refused at negotiation and never reaches layer 2.
+
+**A `NegotiatedConfig` is always a complete core, never a delta.** A delta would
+require both sides to share prior state whose equality is exactly what has not yet
+been established, and byte-identity (`PRD06-FR-040`) is a property of a whole
+document. Proposals and counter-proposals each carry a full core.
+
+### R12-G — what the negotiation exchange carries, and how it converges
+
+`PRD02-FR-022` already fixes the shape: **`CONFIG_NEGOTIATION`** is entered only
+after "Step-0 verified both ways", takes **proposed values** inbound, emits
+**counter-proposals** outbound, is bounded by the local **negotiation window**,
+is idempotent, and forbids lowering a MINIMUM or changing a FIXED value. R12 adds
+only what that state's messages must carry beyond the core, and how the exchange
+ends:
+
+- **Alongside the proposed core, each side echoes the pre-match agreement set**:
+  the NDEC-001 sealed-record composition and action encoding, the NDEC-001 nonce
+  profile `[0-9a-f]{32}`, the NDEC-002 `state` representation, the NDEC-003
+  canonicalization parameters, the `CommitmentCodec`, the `ResultProfile`, the
+  tool-name profile, and the **series convention** (`FIXED_ROLE` or
+  `REFERENCE_ODD_EVEN_ALTERNATION`). `AuthProfile` and `KeyId` are **not** in this
+  set — they were provisioned out of band (R12-A) and are compared, not echoed
+  into effect.
+- **These echoes are negotiation evidence, never artifact fields.**
+  `PRD02-FR-082`, `PRD05-FR-034a` and `PRD06-FR-122` already place them in the
+  negotiation record and **forbid** representing them as fields of any official
+  artifact. The negotiation record is not one of the four Table-20 artifacts, so
+  it contributes **no `FIELD_MATRIX.md` row** and the total stays at its current
+  baseline **74** *(updated Stage 4E-R12-R2; this read 75 before Stage 4E-R12-R1
+  removed the declaration `token_usage_locked` row)*.
+- **Mismatch never resolves by preference.** A differing echo blocks counted play
+  with the owning error — `E-NET-CONVENTION-MISMATCH` for the series convention
+  (`PRD05-FR-033`), a refusal before `CONFIG_LOCKED` for the nonce profile
+  (NDEC-001), `E-AUTH-FAILURE` for an `auth_alg`/`key_id` difference — and neither
+  side's value silently wins.
+- **Convergence is demonstrated at the lock, not announced in negotiation.**
+  There is **no separate "accept" message**: `PRD02-FR-022` gives `CONFIG_LOCKED`
+  the inbound **lock ack**, and agreement is proved by both independently computed
+  `config_sha256` values being equal with both `AuthProof`s verified. Negotiation
+  ends by transition, or by window expiry ⇒ refuse counted play.
+- **Negotiation messages are not individually authenticated, and need not be.**
+  Integrity is enforced *at the lock*: a proposal altered in flight yields
+  differing cores, unequal digests and no lock (`PRD06-FR-044`). No per-message
+  tag is introduced for `CONFIG_NEGOTIATION`.
+- **Cadence: once per sub-game**, matching `config_<game_id>_g<NN>.json` and App F
+  §2.3–2.4's different-name-per-game rule — deliberately unlike Step-0's
+  once-per-series cadence.
+
+## Stage 4E-R12-FIX — exact config readiness proof
+
+### R12-FIX-D — the binding core, enumerated (35 members, mechanically confirmed)
+
+Two top-level members plus the **33** Appendix-B value keys, by exact section and
+exact field name, in **CONFIG_CONTRACT section order**:
+
+| # | Section | Field | Status | Semantic type |
+|---|---|---|---|---|
+| 1 | — | `schema_version` | value NEGOTIATED (NDEC-004) | `str` |
+| 2 | — | `agreed_between` | structural | `tuple[str, str]` — exactly 2 group ids |
+| 3 | `board_and_agents` | `grid_size` | **MINIMUM** ≥ 7 | `int` |
+| 4 | `board_and_agents` | `num_agents` | **FIXED** 2 | `int` |
+| 5 | `board_and_agents` | `thief_start` | NEGOTIABLE | `tuple[int, int]` |
+| 6 | `board_and_agents` | `cop_start` | NEGOTIABLE | `tuple[int, int]` |
+| 7 | `board_and_agents` | `axis_origin_corner` | NEGOTIABLE | `str` — vocabulary **not** closed by the source |
+| 8 | `board_and_agents` | `axis_start_index` | NEGOTIABLE | `int` |
+| 9 | `world` | `map_area` | NEGOTIABLE | `str` — `""` means generic |
+| 10 | `world` | `hint_max_words` | NEGOTIABLE | `int` |
+| 11 | `movement_and_barriers` | `move_set` | **FIXED** | `tuple[str, ...]` — exactly `("N","S","E","W","STAY")` |
+| 12 | `movement_and_barriers` | `max_barriers` | **MINIMUM** ≥ 14 | `int` |
+| 13 | `movement_and_barriers` | `max_moves` | **MINIMUM** ≥ 35 | `int` |
+| 14 | `movement_and_barriers` | `survival_threshold` | **MINIMUM** ≥ 35 | `int` |
+| 15 | `scoring` | `capture_cop` | **FIXED** 20 | `int` |
+| 16 | `scoring` | `capture_thief` | **FIXED** 5 | `int` |
+| 17 | `scoring` | `survival_cop` | **FIXED** 5 | `int` |
+| 18 | `scoring` | `survival_thief` | **FIXED** 10 | `int` |
+| 19 | `scoring` | `tie_score` | **FIXED** 2 | `int` |
+| 20 | `scoring` | `technical_loss` | **FIXED** 0 — **C-07**, not an App F row | `int` |
+| 21 | `pheromones` | `pheromone_center_intensity` | **FIXED** 0.9 | **`Decimal`** |
+| 22 | `pheromones` | `pheromone_decay` | **FIXED** 0.10 | **`Decimal`** |
+| 23 | `pheromones` | `pheromone_grid_size` | **FIXED** 5 | `int` |
+| 24 | `network_and_league` | `response_timeout_sec` | NEGOTIABLE | `int` |
+| 25 | `network_and_league` | `watchdog_timeout_sec` | NEGOTIABLE | `int` |
+| 26 | `network_and_league` | `num_games` | **FIXED** 6 | `int` |
+| 27 | `network_and_league` | `diversity_reward` | **FIXED** 10 | `int` |
+| 28 | `network_and_league` | `min_games_to_pass` | **FIXED** 2 | `int` |
+| 29 | `network_and_league` | `max_games_per_team` | **FIXED** 10 | `int` |
+| 30 | `network_and_league` | `token_budget_per_series` | NEGOTIABLE | `int` |
+| 31 | `rate_limiter_gatekeeper` | `requests_per_minute` | **MINIMUM** ≥ 30 | `int` |
+| 32 | `rate_limiter_gatekeeper` | `concurrent_requests` | **MINIMUM** ≥ 2 | `int` |
+| 33 | `rate_limiter_gatekeeper` | `retry_backoff_sec` | **MINIMUM** ≥ 5 | `int` |
+| 34 | `rate_limiter_gatekeeper` | `max_retries` | **MINIMUM** ≥ 3 | `int` |
+| 35 | `rate_limiter_gatekeeper` | `queue_depth` | **MINIMUM** ≥ 100 | `int` |
+
+Section arithmetic: 6 + 2 + 4 + 6 + 3 + 7 + 5 = **33**; + `schema_version` +
+`agreed_between` = **35**. Matches `FIELD_MATRIX.md`'s 39 config rows as 35 core
++ 4 non-core.
+
+**FIXED (15):** #4, #11, #15, #16, #17, #18, #19, #20, #21, #22, #23, #26, #27,
+#28, #29.
+**MINIMUM (9):** #3, #12, #13, #14, #31, #32, #33, #34, #35.
+**NEGOTIABLE (9):** #5, #6, #7, #8, #9, #10, #24, #25, #30.
+
+15 + 9 + 9 = **33**. **Independent cross-check:** the tracked Appendix-F total is
+**32 = 14 / 9 / 9**; our FIXED set is **15** because `technical_loss` is a
+FIXED-valued key whose provenance is Ch 3 Table 2 + App E #48 and **not** an
+Appendix-F row (**C-07**). 14 + 1 = 15, and the MINIMUM and NEGOTIABLE counts
+match Appendix F exactly. **`num_games` = 6 FIXED** is preserved (C-05).
+
+**Type policy.** Every numeric member is an exact `int` except #21 and #22, which
+are **`Decimal`** carrying the verbatim Appendix-F textual form (`"0.9"`,
+`"0.10"`) under the existing `domain.config_model.require_decimal` policy —
+**never `float`**, so no binary rounding can perturb canonical bytes. `bool` is
+**never** accepted where `int` is required (exact-type checks, as elsewhere in
+this repository). No member is `Any`, `dict[str, object]` or an untyped nested
+dict.
+
+### R12-FIX-E — cross-field invariants
+
+- **JDEC-015 (PROJECT-CONTRACT, not a new Appendix-F row):**
+  `survival_threshold <= max_moves`; a violating configuration is **refused
+  before `CONFIG_LOCKED`**. Both keep their independent MINIMUM-35 floors.
+- Structural, already owned by `domain`: `thief_start` and `cop_start` are
+  distinct and inside the `grid_size` board; `axis_start_index` is consistent
+  with the declared origin corner; `max_barriers` cannot exceed the placeable
+  cell count of the board.
+
+These are **structural/local** checks over one config value — they are not peer
+equality checks and do not belong to the LIVE layer.
+
+### R12-FIX-F — typed decomposition (no `Any`, no untyped dicts)
+
+One component per live Appendix-B section, reusing what `domain.config_model`
+already defines:
+
+| Section | Component | Reuses |
+|---|---|---|
+| `board_and_agents` | `BoardAndAgentsTerms` | existing `GridConfig` |
+| `world` | `WorldTerms` | — |
+| `movement_and_barriers` | `MovementAndBarrierTerms` | — |
+| `scoring` | `ScoringTerms` | — |
+| `pheromones` | `PheromoneTerms` | existing `ScentParams` (`Decimal` policy) |
+| `network_and_league` | `NetworkAndLeagueTerms` | existing `SeriesConfig` for `num_games` |
+| `rate_limiter_gatekeeper` | `RateLimiterTerms` | — |
+
+The composite is **`NegotiatedConfig(schema_version, agreed_between,
+board_and_agents, world, movement_and_barriers, scoring, pheromones,
+network_and_league, rate_limiter_gatekeeper)`**.
+
+**`SeriesConfig` remains the narrow `num_games` value and is *not* the full
+config** — unchanged from its committed definition.
+
+### R12-FIX-G — field order
+
+**Semantic/declaration order** is exactly the order of R12-FIX-D: `schema_version`,
+`agreed_between`, then the seven sections in CONFIG_CONTRACT order, and within
+each section the exact field order printed in the sub-key detail above.
+
+**Canonical byte order is independent of it**: `sort_keys=True` (NDEC-003,
+`PRD06-FR-002`) fixes serialization, so bytes never depend on declaration order.
+**Python dict insertion order is never relied on as a contract.** The commitment
+canonicalization contract is **not** re-opened.
+
+### R12-FIX-H — binding config core vs lock context
+
+The App-B core **must not absorb protocol metadata** merely to make locking
+easier (**D4 minimalism**: any extra key breaks byte-identity with the opponent).
+Everything below is frozen at `CONFIG_LOCKED` (`PRD06-FR-048`, `PRD02-FR-080/082`,
+`PRD05-FR-034/034a`) yet is **outside** the config core:
+
+| Lock-context value | Values | Scope |
+|---|---|---|
+| `series_convention` | `FIXED_ROLE` · `REFERENCE_ODD_EVEN_ALTERNATION` | **SERIES-WIDE** |
+| `auth_profile` | `HMAC_SHA256` · `ED25519` | **SERIES-WIDE** (out of band, pre-`BOOT`) |
+| `key_id` | a `KeyId` | **SERIES-WIDE** (out of band, pre-`BOOT`) |
+| `commitment_codec` | `STRICT_PROJECT_COMMITMENT` · `LECTURER_REFERENCE_COMMITMENT` | **SERIES-WIDE** (`PRD06-FR-087`) |
+| `result_profile` | `STRICT_PROJECT_RESULT` · `LECTURER_ATTACHMENT_COMPATIBILITY` | **SERIES-WIDE** |
+| `compatibility_profile` | `STRICT_COUNTED_MATCH` · the two compatibility profiles | **SERIES-WIDE** |
+| tool-name profile | reference aliases or not | **SERIES-WIDE** (`PRD02-FR-034`) |
+| canonicalization profile | NDEC-003 parameters incl. `ensure_ascii=False` | **SERIES-WIDE** |
+| sealed-record composition + action encoding | NDEC-001 | **SERIES-WIDE** |
+| `state` representation | NDEC-002 | **SERIES-WIDE** |
+| nonce representation | NDEC-001 `[0-9a-f]{32}` | **SERIES-WIDE** |
+| the binding config core + `config_sha256` | — | **SUB-GAME** |
+| `sub_game` association | `int >= 1` | **SUB-GAME** |
+
+**Every profile value above is SERIES-WIDE; only the config core, its digest and
+the sub-game association are SUB-GAME.** None of them is an official artifact
+field (`PRD05-FR-034a`), so `FIELD_MATRIX.md` gains **no row** and stays at its
+current baseline **74 = 15/39/9/11** *(updated Stage 4E-R12-R2; this line read 75 = 16/39/9/11 before Stage 4E-R12-R1 removed the declaration `token_usage_locked` row)*. **No invisible local defaults**: each of these is explicitly
+exchanged and compared — a value that must be equal between peers is never
+assumed.
+
+Collectively they form **`InteropProfileSet`** (the eleven SERIES-WIDE rows).
+
+### R12-FIX-I — config negotiation: exact shape, cadence, convergence
+
+```
+ConfigProposal(
+    sub_game: int,
+    config: NegotiatedConfig,
+    profiles: InteropProfileSet,
+)
+```
+
+Field order exactly `(sub_game, config, profiles)`. `sub_game` is an exact `int`
+`>= 1` (`FIRST_SUB_GAME`) — **not** a `TurnCursor`, and there is **no `step`,
+no `phase`, no digest and no proof** in a proposal. `profiles` is **always
+present, never optional**: a receiver must be able to detect a convention or codec
+mismatch *before* the lock exchange (`PRD05-FR-033`), and in an interoperability
+contract optionality is a decision, not a hedge. It is not duplicated *within* a
+message, and being SERIES-WIDE it must be **identical in every sub-game's
+proposal** of the series.
+
+**Cadence — deterministic, bounded:**
+
+- **Initial proposal:** the peer whose `group_id` sorts **first** under exact
+  byte-wise ascending comparison of the two ids in `agreed_between` sends it. A
+  deterministic rule, never "first sender wins" and never a race.
+- **Counter-proposals:** **both** peers may counter (`PRD02-FR-022` outbound is
+  "counter-proposal"), each carrying a **complete** core — never a delta.
+  **A counter-proposal may change only those members whose lifecycle still permits
+  event-2 negotiation** *(Stage 4E-R12-R3)*. That is every MINIMUM member (upward)
+  and **eight** of the nine NEGOTIABLE members. It is **not**
+  `token_budget_per_series`: that member was agreed before `BOOT` and is already
+  authenticated inside both peers' Step-0 cores, so changing it at event 2 would
+  silently contradict a signed value. It stays in every proposal — the proposal
+  remains **complete**, and no delta protocol is introduced — but purely for
+  **equality checking**. A differing value is `E-CONFIG-MISMATCH` and refuses
+  counted play; it is never treated as an offer.
+- **Termination:** bounded solely by the **negotiation window** already owned by
+  the state (`PRD02-FR-022` timeout source), so the dialogue is never unbounded
+  and no new bound is invented.
+- **Echo:** a peer's message is an echo when its `config` is member-for-member
+  equal to the last received proposal and its `profiles` is equal.
+- **Convergence:** both peers hold **member-for-member equal** cores and equal
+  `profiles`. It is **not announced** — there is no accept message — it is
+  **proved at the lock** by equal `config_sha256` with both proofs verified.
+- **Operation completion:** ordinary completion of the negotiation operation
+  means the proposal was delivered and structurally accepted, **not** that terms
+  were agreed.
+- **Mismatch:** never resolved by preference and never silently normalised or
+  repaired — an inadmissible FIXED/MINIMUM value or a differing profile blocks
+  counted play with the owning error.
+- **Timeout / no agreement:** **refuse counted play.** **No technical-loss score
+  is invented for a pre-game failure to agree** (technical loss is a
+  counted-play sanction; C-07/App E #48 are untouched).
+
+**Structural vs LIVE.** Structural: exact types, all 35 members present, the
+R12-FIX-E local invariants, `sub_game >= 1`. LIVE: expected `sub_game`; opponent
+equality; FIXED/MINIMUM/NEGOTIABLE admissibility (`PRD06-FR-046`); profile and
+convention equality; echo/convergence; the negotiation window; duplicate/stale
+detection; lock readiness.
+
+**Error ownership — existing IDs only:** malformed proposal ⇒
+**`E-PROTO-MALFORMED`**; core inequality or an inadmissible Appendix-F status ⇒
+**`E-CONFIG-MISMATCH`**; series-convention mismatch ⇒
+**`E-NET-CONVENTION-MISMATCH`** (`PRD05-FR-033`); wrong phase or stale sub-game ⇒
+**`E-PROTO-STALE`**; window expiry ⇒ **`E-TIMEOUT-STEP`**; delivery ⇒
+**`E-TRANSPORT`**/**`E-RETRY-EXHAUSTED`**.
+
+**Module:** `ConfigProposal` and `InteropProfileSet` in
+**`app.peer_pregame_messages`**, re-exported identity-equal through the
+**`app.peer_messages`** façade (**D32**); the typed config components in
+`domain.config_model` and its measured-LOC siblings; canonical bytes and the
+digest in `protocol.canonical` / `protocol.config_lock`.
+
+### R12-FIX-J — config lock: the four layers, and the peer/local reconciliation
+
+Layer 4 was described as "a local state transition with no serialized
+representation", while Config lock is also one of the eight peer-visible
+families. Both are true, of **different objects**, and R12-FIX separates them:
+
+- **A — PEER LOCK EVIDENCE** (the family): an exact semantic value, exchanged,
+  authenticated, with a frozen shape. This is what the family is.
+- **B — LOCAL `CONFIG_LOCKED` TRANSITION** (the consequence): a state-machine
+  event with **no serialized artifact field, ever**. This is what layer 4 is.
+
+B is permitted **only** after A has been produced by this peer, received from the
+opponent, and verified in both directions. The evidence is **not** hidden inside
+"successful operation completion" — it is an explicit semantic value; ordinary
+completion covers only the **return** path. **No ninth family and no
+`ConfigLockAck` is created.**
+
+### R12-FIX-K — the exact authenticated core for `config_auth`
+
+`PRD06-FR-043` and NDEC-007 authenticate `"config" ‖ canonical(config_core)`.
+That construction cannot carry the lock, for a reason that only became visible
+once the lock context was enumerated: **the App-B core is byte-identical across
+every sub-game of a series**, so a tag over it alone binds **no sub-game, no game
+identity, and none of the `PRD06-FR-048` values frozen at the lock** — one tag
+would be equally valid evidence for every sub-game, and the series convention and
+profile set would be exchanged unauthenticated.
+
+**Decision (PROJECT-CONTRACT).** The authenticated core is **`config_sha256`
+plus an explicit lock context** — the third of the constructions this stage was
+asked to choose between:
+
+```
+ConfigLockContext(
+    game_id: str,
+    game_uid: str,
+    sub_game: int,
+    config_sha256: Sha256Digest,
+    profiles: InteropProfileSet,
+)
+
+AuthProof.value = KEYED_AUTH_key( "config" ‖ canonical(ConfigLockContext) )
+```
+
+Every field, and why it is there:
+
+| Field | Binds |
+|---|---|
+| `game_id`, `game_uid` | game identity — a tag cannot replay into another game |
+| `sub_game` | the **sub-game association** — the member that makes per-sub-game locking meaningful |
+| `config_sha256` | **all 35 binding core members**, transitively and exactly, via the layer-2 digest — hash-then-authenticate, so the core is canonicalized once |
+| `profiles` | the eleven SERIES-WIDE values whose unilateral post-lock change must be detectable: series convention, auth profile, `key_id`, commitment codec, result profile, compatibility profile, tool-name profile, canonicalization, sealed-record composition, `state` representation, nonce representation |
+
+**Excluded, deliberately:** `config_auth` itself — the envelope is **never** inside
+its own authenticated bytes (non-self-reference, `PRD06-FR-025`); **all key
+material** — only `key_id` appears, and inside `profiles` as a non-secret label;
+and any App-B core member **individually** — they enter only through
+`config_sha256`, so the binding config core is never polluted with protocol
+metadata (**D4**).
+
+**`auth_alg` / `key_id` substitution is impossible in effect**: the envelope
+values are **compared** against the locally provisioned expectation (R12-FIX-C),
+and the `auth_profile`/`key_id` inside `profiles` are additionally **bound
+cryptographically**, so an altered envelope either fails equality or contradicts
+the authenticated context.
+
+This **amends `PRD06-FR-043` and NDEC-007 in place**. `context = "config"` is
+unchanged, domain separation from `"step0"` is unchanged, `config_sha256` remains
+an unkeyed content digest computed exactly as before, and **no requirement, NDEC
+or field was added**.
+
+### R12-FIX-L — the four layers, stated separately
+
+1. **Canonical binding config bytes** — Layer 1 canonicalization of the 35 core
+   members. Content only.
+2. **`config_sha256`** — an **unkeyed** SHA-256 over those bytes. **Content
+   identity only**; it authenticates nobody and proves no authorship.
+3. **`config_auth` `AuthProof`** — a **keyed** MAC (`HMAC_SHA256`) or **digital
+   signature** (`ED25519`) over `"config" ‖ canonical(ConfigLockContext)`.
+   **Producer/key-holder authentication**, binding identity, sub-game, content
+   digest and profiles.
+4. **Local `CONFIG_LOCKED` transition** — a **state-machine consequence** after
+   mutual verified evidence. No bytes, no field, no digest.
+
+2 is not 3 (`PRD06-FR-044`: equal digests alone never authorise counted play); 3
+is not 4 (a verified proof shows authorship, not commitment). **None of these is
+called "the signature" generically** — layer 2 is a digest, layer 3 is an
+`AuthProof` whose primitive category depends on its profile, layer 4 is a
+transition.
+
+### R12-FIX-M — config lock: exact peer semantic shape
+
+```
+ConfigLockEvidence(
+    context: ConfigLockContext,
+    auth: AuthProof,
+)
+```
+
+Field order exactly `(context, auth)`. `sub_game`, `config_sha256` and the
+profiles live **inside `context`** and are therefore **not duplicated** alongside
+it — the same no-duplication discipline O5 applied to the turn operation.
+**Deliberately absent:** `accepted`, `ok`, `timestamp`, `phase`, `TurnCursor`,
+`step`, score and technical loss.
+
+**Return path:** ordinary **successful operation completion** — stated separately
+from the request value above, and carrying no semantic result of its own (O2/O6).
+
+**Structural vs LIVE.** Structural: exact types; `sub_game >= 1`; `config_sha256`
+a well-formed `Sha256Digest`; `AuthProof` well-formed for its declared profile;
+`profiles` complete. LIVE: `auth_alg`/`key_id` equal to the provisioned
+expectation; **proof verification**; **digest equality with the locally computed
+`config_sha256`**; `sub_game` equal to the expected sub-game; profile and
+convention equality; phase correctness; replay/staleness.
+
+**Error ownership — existing IDs only:** malformed ⇒ **`E-PROTO-MALFORMED`**;
+proof or profile/`key_id` failure ⇒ **`E-AUTH-FAILURE`**; digest inequality ⇒
+**`E-CONFIG-MISMATCH`**; wrong sub-game or phase ⇒ **`E-PROTO-STALE`**; own-side
+fault ⇒ **`E-LOCAL-DEFECT`**. Any of them **refuses counted play** (`INV-15`);
+**none produces a technical-loss score before counted play.**
+
+**Module:** `ConfigLockContext` and `ConfigLockEvidence` in
+**`app.peer_pregame_messages`**, identity-equal through the **`app.peer_messages`**
+façade; keyed computation in `protocol.keyed_auth`; the lock itself in
+`protocol.config_lock`; `Sha256Digest` reused unchanged from
+`app.protocol_values`; `AuthProfile`/`KeyId`/`AuthProof` from `app.auth_values`.
+
+### R12-FIX-N — lock cadence and symmetry
+
+Per sub-game, both peers independently and symmetrically:
+
+1. derive the same binding config core from the converged negotiation;
+2. compute `config_sha256` locally — never accept the opponent's digest as the
+   value of their own core;
+3. build `ConfigLockContext` and produce their own `AuthProof`;
+4. exchange `ConfigLockEvidence`;
+5. verify the peer's profile/`key_id` equality, then the peer's proof, then
+   digest equality, then `sub_game` and profile equality;
+6. **only then** transition locally to `CONFIG_LOCKED`.
+
+**No unilateral first-sender winner** — neither side's evidence alone permits the
+transition. **No silent repair** at any step. **No technical loss before counted
+play** for failing to agree or lock; the outcome is refusal.

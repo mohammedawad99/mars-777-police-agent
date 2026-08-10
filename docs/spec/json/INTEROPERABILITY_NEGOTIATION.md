@@ -41,3 +41,54 @@ usually just confirmation.
   whether disagreement is signalled by `false` or by absence plus the `E-REPORT-DISAGREE`
   / C-09 path. Those remain unfrozen, so the peer-visible **Mutual result agreement**
   family stays `BLOCKED-BY-PAYLOAD-SHAPE`. A record shape is not a message shape.
+
+## Stage 4E-R12 amendment to NDEC-005 and NDEC-007 (in place; NDEC count still 7)
+
+Both rows above say the keyed primitive may be an "asymmetric signature if both
+agree", which read as though the `AuthProfile` were settled by an in-band
+pre-match exchange like the other NDEC rows. For every other NDEC that is correct;
+for these two it is **circular**, because the Step-0 exchange is what establishes
+in-band trust in the first place (`SIGNATURE_AND_HASH_PROVENANCE.md` R12-A).
+
+**Amended reading — no new NDEC, no row removed, no default changed:**
+
+- **`AuthProfile` and `KeyId` are agreed out of band, with the key, before `BOOT`.**
+  "If both agree" still holds — the agreement is simply not carried by any
+  protocol message. `HMAC_SHA256` remains the project-locked default and
+  `ED25519` the alternative.
+- **`auth_alg` and `key_id` on the wire are compared against the provisioned
+  expectation, never used to select a verifier.** A difference refuses counted
+  play (`E-AUTH-FAILURE`); it is never normalised or accommodated.
+- **Serialized spellings are exactly `"HMAC_SHA256"` / `"ED25519"`**, and
+  `auth_tag` is fixed-width lowercase hex (64 / 128 characters) — R12-C.
+- **NDEC-005** authenticates the **STEP-0 AUTHENTICATED CORE** now frozen in
+  `DECLARATION_CONTRACT.md` (own subtree + game identity + `game_start` +
+  `token_budget_per_series`, excluding the envelope, the opponent's subtree and
+  `game_end`), **once per series**. *(Corrected Stage 4E-R12-R3: this line still
+  listed `token_budget_per_series` among the exclusions after Stage 4E-R12-R1 had
+  moved it into the core. The cap is **agreed before `BOOT`** — see
+  `DECLARATION_CONTRACT.md` §R12-R3 — so authenticating it at event 1 is
+  chronologically sound.)*
+- **NDEC-007** authenticates the **config core** (35 members) **once per
+  sub-game**, and `PRD06-FR-047`'s same-or-distinct key question is unchanged and
+  still agreed out of band.
+
+The exchange, ack, lock, identity-reference and refusal columns of both rows are
+otherwise unchanged, and no NDEC default was weakened.
+
+### Stage 4E-R12-FIX amendment to NDEC-007 (in place; NDEC count still 7)
+
+NDEC-007's default reads "**HMAC-SHA256** over `"config" ‖ canonical(config core)`".
+The **context authenticated is amended** to
+**`ConfigLockContext` = `{game_id, game_uid, sub_game, config_sha256, profiles}`**
+(`CONFIG_CONTRACT.md` R12-FIX-K). The App-B config core is byte-identical across
+every sub-game of a series, so a proof over it alone binds no sub-game, no game
+identity and none of the values `PRD06-FR-048` freezes at the lock; the digest
+binds all 35 core members transitively, so nothing is lost and the binding core
+stays free of protocol metadata (**D4**).
+
+Unchanged: the `"config"` context string and its domain separation from
+`"step0"`; non-self-reference (the envelope is never inside its own authenticated
+bytes); the unkeyed `config_sha256` and its equality check; the out-of-band key
+and `key_id`-only serialization; `PRD06-FR-047`'s same-or-distinct key question;
+the refuse-counted-play outcome. **No NDEC was added, removed or weakened.**

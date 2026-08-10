@@ -167,7 +167,7 @@ evidence / idempotence / forbidden):
 |---|---|---|---|---|---|---|---|---|
 | BOOT | process start, secrets present | — | start server | STEP0_NEGOTIATION, FAILED | local start-up budget | boot record | n/a | any game action |
 | STEP0_NEGOTIATION | server ready | peer Step-0 + auth envelope | own Step-0 + auth envelope | CONFIG_NEGOTIATION, FAILED | negotiation window (local) | declaration | yes (re-send tolerated) | counted turns |
-| CONFIG_NEGOTIATION | Step-0 verified both ways | proposed values | counter-proposal | CONFIG_LOCKED, FAILED | negotiation window | negotiation record | yes | lowering MINIMUM, changing FIXED |
+| CONFIG_NEGOTIATION | Step-0 verified both ways | proposed values | counter-proposal | CONFIG_LOCKED, FAILED | negotiation window | negotiation record | yes | lowering MINIMUM, changing FIXED, **changing the pre-Step-0 `token_budget_per_series`** *(4E-R12-R3)* |
 | CONFIG_LOCKED | hash equal **and** auth tag valid | lock ack | freeze + publish handle | READY, FAILED | — | config + hash/tag | yes | any config write |
 | READY | sub-game initialised | start turn | — | TURN_DECISION, SUBGAME_COMPLETE | — | sub-game start | yes | reveal/commit |
 | TURN_DECISION | our turn | — | strategy call → validate → commit build | COMMIT_SENT, FAILED | `response_timeout_sec` (config) | decision metrics | n/a | send before validate |
@@ -243,7 +243,7 @@ evidence / idempotence / forbidden):
 
 | ID | Requirement | Traces to |
 |---|---|---|
-| **PRD02-FR-080** | The active profile set (`AuthProfile`, `CommitmentCodec`, `ResultProfile`, tool-name profile) is selected **before** counted play and **frozen at `CONFIG_LOCKED`**; it is read-only thereafter and cannot be switched mid-series. | `API_BOUNDARIES.md` P8 |
+| **PRD02-FR-080** | The active profile set (`AuthProfile`, `CommitmentCodec`, `ResultProfile`, tool-name profile) is selected **before** counted play and **frozen at `CONFIG_LOCKED`**; it is read-only thereafter and cannot be switched mid-series. **[Amended Stage 4E-R12]** `CommitmentCodec`, `ResultProfile` and the tool-name profile are consumed **after** `CONFIG_LOCKED`, so the lock is their selection deadline. **`AuthProfile` and its `KeyId` are different**: they are consumed two states earlier, in `STEP0_NEGOTIATION`, so they are **provisioned out of band together with the key material before `BOOT`** and are never selected by an in-band message; `auth_alg`/`key_id` on the wire are **compared** against that provisioned expectation and a difference refuses counted play. They are still frozen for the series — earlier than the lock, not later. | `API_BOUNDARIES.md` P8; `SIGNATURE_AND_HASH_PROVENANCE.md` R12-A |
 | **PRD02-FR-081** | A profile may **add** accepted encodings; it may **never weaken** a binding requirement in `STRICT_COUNTED_MATCH`. A weakening request ⇒ refuse counted play. | `COMPATIBILITY_PROFILES.md` |
 | **PRD02-FR-082** | The active profile **and the agreed series convention** are recorded as **negotiation/profile evidence** (not as official artifact schema fields) so replay and reporting reproduce the exact interpretation used. | REPLAY-001/002; PRD-05 FR-034/034a |
 

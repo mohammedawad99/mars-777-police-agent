@@ -130,10 +130,21 @@ Cross-artifact invariants: `json/CROSS_ARTIFACT_INVARIANTS.md` (INV-01…INV-15)
 Project decisions: `json/PROJECT_CONTRACT_DECISIONS.md` (**JDEC-001…JDEC-015**;
 JDEC-015 added in Stage 3B-FIX1 — terminal threshold admissibility).
 
-**Current baseline (after Stage 2A-R2):** field matrix **75** rows — declaration 16,
+**Baseline after Stage 2A-R2** *(superseded — see the note below)***:** field matrix **75** rows — declaration 16,
 config 39, log 9, **result 11**. *(Stage 1 originally locked at 77 rows with result 13;
 Stage-2A-R2 **JDEC-014** superseded the project-defined duplication of declaration-owned
 static metadata in the result, so the current matrix is 75.)* Requirements remain **91**.
+
+> **Current FIELD_MATRIX baseline (Stage 4E-R12-R1):** **74 = 15 / 39 / 9 / 11.**
+> Stage 4E-R12-R1 removed the declaration `token_usage_locked` row — Appendix E #54
+> and Ch 9 §9.3.3 place **actual** consumed tokens in the **result**, while the
+> declaration's source-defined role is "everything that does not change during the
+> game". Declaration 16 → 15; grand total 75 → 74; provenance SS 13 → 12; status
+> LP 9 → 8. **Every "75 = 16/39/9/11" below is a per-stage historical record and is
+> correct as of the stage it describes** — those lines are deliberately left
+> unrewritten. The **91**-requirement, **55**-Appendix-E and **32 = 14/9/9**
+> Appendix-F inventories are **unchanged**: FIELD_MATRIX is a project-derived row
+> model, and 74 is not a source count.
 
 **Stage 1D (interoperability lock):** the contracts were independently audited and
 locked for interoperable implementation. `json/STAGE_1D_AUDIT.md` (D1–D5),
@@ -775,3 +786,81 @@ INV-16 or C-13 was created.** Requirements remain **91** (76/9/4/2); Appendix E
 **15**; NDEC **7**; INV **15**; **C-01…C-12**; ports **20**; error IDs **20**;
 `ProtocolPhase` **1**; PRD-02 IDs **87**; result fields **11**; PRD-06 IDs
 **129**; PRD-07 IDs **140**; timeline events **15**; `num_games` **6 FIXED**.
+
+**Stage 4E-R12 family (Step-0 + config negotiation + config lock readiness).**
+Documentation / semantic-contract only; **0 Python, 0 tests, 0 schema, 0 runtime**;
+**CLOSED / COMMITTED / CI-GREEN** at Stage 4E-R12-CLOSE over **20 paths per repo**.
+Six stages, recorded as they actually happened rather than as the final answer:
+
+- **Stage 4E-R12** froze the auth vocabulary (`AuthProfile` / `KeyId` / `AuthProof`),
+  resolved the **bootstrap profile paradox** (`PRD02-FR-022` verifies the Step-0
+  proof in `STEP0_NEGOTIATION`, two states before `PRD02-FR-080` froze
+  `AuthProfile` at `CONFIG_LOCKED`, while `PRD06-FR-122` required that profile to be
+  authenticated by evidence that did not yet exist), closed the live
+  `HMAC-SHA256`/`HMAC_SHA256` spelling divergence in favour of the serialized
+  identifiers, defined the previously undefined `step0_core`, and derived the
+  `NegotiatedConfig` model. **It also wrongly marked Step-0 READY before the proof
+  was complete, and edited four tracking documents it was not authorized to touch.**
+- **Stage 4E-R12-FIX** restored those four paths byte-exactly from HEAD, produced the
+  implementation-level readiness proof, amended `PRD06-FR-043`/NDEC-007 so the config
+  `AuthProof` covers a **`ConfigLockContext`** rather than the App-B core alone (that
+  core is byte-identical across every sub-game, so it bound no sub-game and none of
+  the `PRD06-FR-048` lock-frozen values), and **withdrew the Step-0 READY claim**:
+  `token_usage_locked` was simultaneously Optional and, per `PRD06-FR-029`, a
+  mandatory member of the authenticated core, with cardinality **1** at top level in
+  a two-team document.
+- **Stage 4E-R12-R1** returned to the book and proved the field was a **misplaced
+  runtime datum** (Outcome B). Ch 5 §5.5 joins the token duty to the Step-0 signing
+  with `במקביל` — *in parallel*, not contained; Ch 9 §9.3.3 gives the declaration the
+  role of fixing *"everything that does not change during the game"* and names only
+  the **agreed ceiling**; **App E #54** (MUST) and **App F Table 18 #4** place actual
+  consumption in the **final report**. The field was removed, its obligation already
+  carried by `sub_games[].tokens` + `total_tokens`, and **`FIELD_MATRIX.md` was
+  recomputed mechanically: declaration 16 → 15, grand total 75 → 74, SS 13 → 12,
+  LP 9 → 8.**
+- **Stage 4E-R12-R2** corrected an **overclaim in R12-R1's own reasoning**:
+  `result_sha256` gives the **finally reported** totals integrity and mutual
+  agreement, but proves nothing about whether every LLM call was metered or whether
+  the totals match runtime/provider-observed usage. The source's separate
+  requirement — actual consumption **monitored** and **cryptographically locked** —
+  therefore remains a **mandatory runtime obligation with a SOURCE-UNSPECIFIED,
+  not-yet-frozen construction**: **`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE:
+  BLOCKED-BY-CONSTRUCTION`**, owned by PRD-06. The stale `INTEROPERABILITY_BLOCKERS`
+  row was repaired, and the repository-wide **74** baseline was swept and reconciled.
+- **Stage 4E-R12-R3** closed a chronology contradiction R12-R1 had created: the cap
+  was authenticated at event 1 while R12's own text said it was agreed at event 2.
+  **MODEL A** was adopted — not for convenience, but because `PROTOCOL_TIMELINE.md`
+  event 1 had always listed the **token cap** under *Known before*, `DATA_FLOW.md`
+  had always placed it **inside** the Step-0 core, and event 2's *Known before* names
+  only board/scent/scoring. The sweep also caught **NDEC-005 still excluding
+  `token_budget_per_series` from the core** after R12-R1 had moved it in — two live
+  contracts disagreeing about core membership, now reconciled.
+
+**Final contracts.** Step-0 core = **19 members**; `Step0DeclarationExchange(declaration,
+auth)`; `AuthProfile ∈ {HMAC_SHA256, ED25519}` provisioned out of band before `BOOT`,
+with incoming `auth_alg`/`key_id` **compared, never used to select their own verifier**;
+plain unkeyed SHA-256 inadmissible. `ConfigProposal(sub_game, config, profiles)` with a
+**complete** 35-member core, never a delta. `ConfigLockEvidence(context, auth)` over
+`ConfigLockContext{game_id, game_uid, sub_game, config_sha256, profiles}`; the four config
+layers stay distinct and the local `CONFIG_LOCKED` transition never acquires a serialized
+field. **`token_budget_per_series` is source-NEGOTIABLE with the project lifecycle
+PRE-STEP0-AGREED / SERIES-WIDE / IMMUTABLE-AFTER-STEP0** — equality-only at event 2, never
+counter-proposable; the locked config's copy MUST equal the authenticated declaration cap
+(`E-CONFIG-MISMATCH` ⇒ refuse counted play). **Step-0 never authenticates a value agreed
+only later.**
+
+**Peer-visible families remain 8 — 4 implemented, 3 ready, 1 blocked** —
+`ResultAgreement` (`BLOCKED-BY-PAYLOAD-SHAPE`) being the sole blocked family.
+**No requirement, port, error ID, peer family, Appendix-E/F row or timeline event was
+added, removed or reclassified; no C-13, JDEC-016, NDEC-008 or INV-16 was created.**
+Requirements remain **91** (76/9/4/2); Appendix E **55**; Appendix F **32 = 14/9/9**;
+JDEC **15**; NDEC **7**; INV **15**; **C-01…C-12**; ports **20**; error IDs **20**;
+PRD-06 IDs **129**; timeline events **15**; `num_games` **6 FIXED**. **FIELD_MATRIX is
+now 74 = 15/39/9/11** (SE 40 / SS 34; LS 20 / LP 12 / NPM 36 / LO 6; EX 0, BU 0) — a
+**project-derived** row model, never a source inventory; every earlier "75 = 16/39/9/11"
+in this document is a stage-stamped historical record and is correct as of its stage.
+Two items are carried forward deliberately: the stale **result (13)** derivation prose
+(authoritative row table has **11**), deferred to the ResultAgreement stage, and
+**`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`**, which must receive its
+own design + implementation stage before Stage 4 can close. **Stage 4E as a whole is NOT
+COMPLETE.**

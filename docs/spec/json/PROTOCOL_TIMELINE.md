@@ -125,3 +125,58 @@ Event 11 needs no such caveat: *"Final Reveal: all Nonces"* is drawn in both
 directions, and p.55 says each agent submits its full log **including the nonce
 reveals of all its steps** — so it is **one batched message per side covering that
 side's own steps**, not one message per turn.
+
+## Stage 4E-R12 — events 1-3 refinement (event count unchanged: 15)
+
+No event added, removed, split or merged. Three clarifications to rows 1-3:
+
+- **Event 1** — "Hashed" now reads precisely: the `AuthProof` covers the frozen
+  **STEP-0 AUTHENTICATED CORE** (`DECLARATION_CONTRACT.md`, Stage 4E-R12), not the
+  whole declaration file. Cadence is **once per series**, and the profile/`key_id`
+  that verify it were provisioned **out of band before `BOOT`**, never learned
+  from this or any earlier message.
+- **Event 2** — "Transmitted" is a **complete proposed config core, never a
+  delta**, accompanied by the pre-match echo set (codec, result profile,
+  tool-name profile, series convention, NDEC-001/002/003 representations) as
+  **negotiation evidence, not artifact fields**. Still nothing is hashed here, and
+  the messages carry no individual `AuthProof`; integrity is enforced at event 3.
+- **Event 3** — the exchange verifies in a fixed order: `auth_alg`/`key_id`
+  compared against the provisioned expectation → `AuthProof` verified →
+  `config_sha256` equality → lock. The **lock itself is a local state transition
+  with no serialized representation** (`CONFIG_CONTRACT.md` R12-E layer 4).
+  Cadence is **once per sub-game**, unlike event 1.
+
+**Stage 4E-R12-FIX — event 3 correction.** The "Hashed" cell reads
+"keyed `auth_tag` over `"config"‖core`". The authenticated context is amended to
+**`ConfigLockContext` = `{game_id, game_uid, sub_game, config_sha256, profiles}`**
+(`CONFIG_CONTRACT.md` R12-FIX-K), because the App-B core is byte-identical across
+every sub-game and therefore binds no sub-game association. `config_sha256`
+itself is unchanged — still an unkeyed digest over the canonical config core —
+and it binds all 35 core members transitively. **Event 1's** authenticated core
+is the Step-0 core of `DECLARATION_CONTRACT.md` R12-FIX-2. The event count is
+still **15**.
+
+**Stage 4E-R12-R1 — event 1 token correction.** Event 1's "Known before" cell
+already lists the agreed **token cap**, and that cap is inside the authenticated
+Step-0 core. **Actual** token consumption is *not* an event-1 datum at all: it
+does not exist before the first move. It is metered throughout play and reported
+at **event 15** in the result JSON (`sub_games[].tokens`, `total_tokens`),
+where it sits inside the **RESULT APPROVAL CORE** and is therefore covered by
+`result_sha256` at **event 14**. *(Corrected Stage 4E-R12-R2: that covers the
+integrity and mutual agreement of the **reported** totals; it does **not** by
+itself satisfy Ch 5 §5.5's separate requirement that actual consumption be
+monitored and cryptographically locked, which remains a mandatory runtime
+obligation with a SOURCE-UNSPECIFIED, not-yet-frozen construction and touches no
+timeline event.)* The former
+`token_usage_locked` declaration field is removed; no event was added, removed or
+renumbered, and timeline event 1's family is now implementation-ready.
+
+**Stage 4E-R12-R3 — event 1 / event 2 token-cap chronology.** Event 1's "Known
+before" cell has always listed the **token cap**, and event 2's has always listed
+only "App F floors, board/scent/scoring". That committed reading is now stated as
+law: **`token_budget_per_series` is agreed before `BOOT`**, so event 1 can
+authenticate it and event 2 never negotiates it. Event 2 carries it inside the
+complete proposed core for **equality only**; event 3 binds it again through
+`config_sha256`. The cap's **Appendix-F status is unchanged — NEGOTIABLE** (App F
+Table 18 #4); what R12-R3 fixes is its **project lifecycle**, not its source
+provenance. No event was added, renumbered or re-scoped; the count is still **15**.

@@ -197,3 +197,19 @@ Consequences, recorded so no later stage mistakes one for the other:
   non-deterministic ports named in **P3**.
 - **20 ports** are frozen here: the original 18 plus `SeriesLauncherPort` and
   `CompatibilityProfilePort`, both added at Stage 2A-R2.
+
+**O-note (Stage 4E-R12) — profile provisioning is not an operation.** No `O8` is
+created and **O1-O7 are unchanged**. Two clarifications to the existing text:
+`CompatibilityProfilePort` is listed above as accepting "negotiated profile ids
+(`AuthProfile`, `CommitmentCodec`, `ResultProfile`)" — for `AuthProfile` and its
+`KeyId` this is now read as **provisioned out of band before `BOOT`**, not
+negotiated in band, because verifying the Step-0 `AuthProof` in
+`STEP0_NEGOTIATION` cannot depend on a profile chosen by an unauthenticated
+message (`SIGNATURE_AND_HASH_PROVENANCE.md` R12-A). The port's read-only-at-match-
+time contract and its "unknown/weakening profile ⇒ refuse counted play" failure
+contract are unchanged, and `KeyedAuthPort` still **never returns key material**
+(**P2**). Operations **(a)** and **(b)** in O3 keep the `negotiate` compatibility
+alias; R12 freezes what those operations *carry* — the Step-0 authenticated core
+and envelope for (a), a complete `NegotiatedConfig` core plus the echo set and
+then the four config-lock layers for (b) — without defining any FastMCP
+signature, which stays deferred to Stage 2B-2C (**PRD02-FR-035**).

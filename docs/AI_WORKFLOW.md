@@ -811,3 +811,53 @@
   compare them is the point. The accurate statement is that no *field* is duplicated within a
   single event. Tidy-sounding absolutes are worth re-reading; this one would have justified
   deleting evidence a future auditor needs.
+
+- **The Stage 4E-R12 family** took six stages to close what looked like one reconciliation, and
+  the detours are the part worth keeping. Three of them were my own errors caught by the
+  process rather than by me.
+- **Marking something READY before proving it.** R12 declared Step-0 ready because the *shape*
+  was exact. The supervising instruction then demanded an implementation-level proof, and one
+  member - `token_usage_locked` - turned out to be simultaneously Optional and mandatory, at a
+  cardinality a two-team document cannot satisfy. A contract can look complete field-by-field
+  and still be unimplementable; "every field is specified" is not the same claim as "every
+  field can exist when it is needed". I also edited four tracking documents that stage was not
+  authorized to touch, which is worth naming plainly: scope discipline is not bureaucracy, it
+  is what makes a review able to trust the diff.
+- **Going back to the book beat reasoning from our own contracts.** The token blocker looked
+  like a placement decision - `teams.<g>.` or top level, Required or Optional. It was neither.
+  Re-reading Ch 5 §5.5 showed the source joins token locking to the Step-0 signing with
+  `במקביל` - *in parallel* - and Ch 9 §9.3.3 defines the declaration as fixing *"everything
+  that does not change during the game"*. Actual consumption changes by definition. The field
+  did not belong in the artifact at all. Four derived repository contracts had been quietly
+  wrong for many stages because each cited the previous one; only the primary source broke the
+  loop.
+- **An overclaim I made while fixing an overclaim.** Having removed the field, I argued the
+  source requirement was still satisfied because reported totals sit inside the result approval
+  core under `result_sha256`, mutually compared, 0-to-both on mismatch. The chain is real but
+  it terminates at the *reported* values. A peer that under-meters produces a perfectly
+  consistent report with a perfectly valid digest. Agreement about a number is not evidence
+  about how the number was produced. The honest outcome was to leave a mandatory obligation
+  visibly unresolved - `TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION` - rather
+  than let a tidy chain of citations close it.
+- **Fixing one contradiction created another.** Moving the token cap into the Step-0 core
+  solved the temporal problem and immediately produced a chronology one: event 1 authenticating
+  a value that R12's own text said event 2 agreed. What resolved it was not choosing the
+  convenient model but looking at what was already committed - `PROTOCOL_TIMELINE.md` event 1
+  has always listed the token cap under *Known before*, and `DATA_FLOW.md` has always placed it
+  inside the core. Both predate R12 and survived Stage-1 review. The outlier was R12's
+  exclusion, and the same sweep caught NDEC-005 still listing the cap as excluded - two live
+  contracts disagreeing about core membership, invisible until something forced a mechanical
+  scan.
+- **Provenance and lifecycle are different axes.** The tempting fix was to relabel
+  `token_budget_per_series` FIXED, since it can no longer change. That would have been a lie
+  about Appendix F. It stays **NEGOTIABLE** in source provenance and carries a project
+  lifecycle of **PRE-STEP0-AGREED / SERIES-WIDE / IMMUTABLE-AFTER-STEP0**. When a project rule
+  narrows a source freedom, record both - collapsing them into one label destroys the ability
+  to answer "what does the book actually require?" later.
+- **A derived count is not a source count.** Removing one invented field moved FIELD_MATRIX from
+  75 to 74, and the reflex was to check whether Appendix E or F had to move too. They did not:
+  FIELD_MATRIX is a project-derived row model, the 91/55/32 inventories are source. The sweep
+  that followed also had to distinguish a *current baseline* assertion from twenty-odd
+  stage-stamped historical records that were correct when written. Rewriting those would have
+  destroyed evidence; leaving them ambiguous would have been worse. One explicit current-baseline
+  block plus untouched history was the right shape.

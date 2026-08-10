@@ -11,6 +11,10 @@ Hash/Sig, Replay, Report (Y/—). **Stage 1D.1:** the Step-0/config keyed-auth f
 static metadata (`mcp_endpoint`, `hardware`, `hardware_auth`) were **removed from the
 result** and replaced by a single `declaration_ref` join row — see
 `RESULT_CONTRACT.md` §Stage 2A-R2. Result 13 → **11**; grand total 77 → **75**.
+**Stage 4E-R12-R1:** the declaration `token_usage_locked` row is **removed** as a
+misplaced runtime datum (App E #54 / Ch 9 §9.3.3 place actual consumed tokens in the
+**result**). Declaration 16 → **15**; grand total 75 → **74**. No other artifact changes:
+**74 = 15 / 39 / 9 / 11**.
 
 | Art | Semantic field | Proposed key | Provenance | Req/Opt | Type | Card. | Binding constraint | Req IDs | Primary source | Conflict | Hash/Sig | Replay | Report | Status |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -68,7 +72,6 @@ result** and replaced by a single `declaration_ref` join row — see
 | D | step0 auth alg | `step0_auth.auth_alg` | SRC-SEMANTIC (keyed auth REQ, K1); algo PC | Req | string | 1 | e.g. HMAC-SHA256 | CRYPTO-006 | Ch5 p.55–56 | — | Y | — | Y | PROJECT-DECISION (JDEC-013) |
 | D | step0 key id | `step0_auth.key_id` | SRC-SEMANTIC (pre-supplied key, K1) | Req | string | 1 | **non-secret id only; key never stored** | CRYPTO-006 | Ch5 p.55–56 | — | Y | — | Y | LOCKED (id ref) |
 | D | step0 auth tag | `step0_auth.auth_tag` | SRC-SEMANTIC (signed w/ pre-supplied key, K1); primitive PC | Req | string(hex) | 1 | keyed MAC over `"step0"‖core`; **non-self-ref** | CRYPTO-006 | Ch5 p.55–56 | — | Y | — | Y | NEGOTIATED-PRE-MATCH (JDEC-013; NDEC-005) |
-| D | token-usage lock | `token_usage_locked` | SRC-SEMANTIC | Opt | int | 1 | crypto-locked | PERF-002 | Ch5 p.56 | — | Y | — | Y | LOCKED-PROJECT (own reported datum; authenticated within Step-0, NDEC-005) |
 | L | game/uid/sub-game | `game_id`/`game_uid`/`sub_game` | SRC-SEMANTIC + PC | Req | mixed | 1 | INV-01/02 | JSON-003 | Ch5 p.50; Ch9 p.95 | — | — | Y | — | PROJECT-DECISION (JDEC-004/05) |
 | L | config hash ref | `config_sha256` | SRC-SEMANTIC | Req | string | 1 | INV-03 | GAME-001 | Ch5 p.127 | — | Y | Y | — | LOCAL-ONLY (log copy of the interop `config_sha256`; JDEC-010) |
 | L | turn entries | `entries[]` | SRC-SEMANTIC + PC | Req | array[obj] | ≥1 | Commit→Ack→Reveal | CRYPTO-008 | Ch5 §5.3 | — | Y | Y | — | PROJECT-DECISION (JDEC-007) |
@@ -122,7 +125,6 @@ Final statuses: **LOCKED-SOURCE (LS)**, **LOCKED-PROJECT (LP)**,
 | `result_sha256` (was `approval_sha256`) | REVIEW-REQUIRED | **NPM** — SHA-256 over agreed core; **both reports must be present and equal** or **0 to both** (C-09) | NDEC-006; **C-09** |
 | `github_commit` (decl + result) | LOCKED | **LS** | SOURCE-EXPLICIT |
 | result presentation keys (`reported_by`, nesting) not in approval core | PROJECT-DECISION | **LO** | D4 |
-| `token_usage_locked` | REVIEW-REQUIRED | **NPM** (authenticated within Step-0 keyed auth / result tokens) | NDEC-005; E-54 |
 
 ## Exact reconciliation (counting unit = one semantic-field row above)
 
@@ -146,20 +148,24 @@ surface), **EX** example-only value, **BU** blocking-unresolved.
 
 | Artifact | Total | SE | SS | PC | EX | LS | LP | NPM | LO | EX-STATUS | BU |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| declaration | 16 | 3 | 13 | 0 | 0 | 3 | 9 | 4 | 0 | 0 | 0 |
+| declaration | 15 | 3 | 12 | 0 | 0 | 3 | 8 | 4 | 0 | 0 | 0 |
 | config | 39 | 35 | 4 | 0 | 0 | 16 | 1 | 22 | 0 | 0 | 0 |
 | log | 9 | 0 | 9 | 0 | 0 | 0 | 0 | 3 | 6 | 0 | 0 |
 | result | 11 | 2 | 9 | 0 | 0 | 1 | 3 | 7 | 0 | 0 | 0 |
-| **GRAND** | **75** | **40** | **35** | **0** | **0** | **20** | **13** | **36** | **6** | **0** | **0** |
+| **GRAND** | **74** | **40** | **34** | **0** | **0** | **20** | **12** | **36** | **6** | **0** | **0** |
 
 **Per-artifact derivation (which rows land in which bucket):**
 
-- **declaration (16):** SE = `game_id`, `game_uid`, `github_commit` (3). SS = the other
-  13. Status LS = the 3 SE identity/commit rows; LP (9) = own authenticated declaration
+- **declaration (15):** SE = `game_id`, `game_uid`, `github_commit` (3). SS = the other
+  12. Status LS = the 3 SE identity/commit rows; LP (8) = own authenticated declaration
   data with a fixed project schema (`team_identity`, `members`, `repos`, `mcp_endpoint`,
-  `hardware`, `llm_model`, `code_version`, `times`, `token_usage_locked`); NPM (4) =
+  `hardware`, `llm_model`, `code_version`, `times`); NPM (4) =
   values/mechanisms both peers must agree/verify (`token_cap` mirrors config;
   `step0_auth.auth_alg`, `step0_auth.key_id`, `step0_auth.auth_tag`).
+  *(Stage 4E-R12-R1: the `token_usage_locked` row was removed — Appendix E #54 and Ch 9
+  §9.3.3 place **actual** consumed tokens in the **result** JSON, and the declaration's
+  source-defined role is "everything that does not change during the game". Declaration
+  16 → 15, SS 13 → 12, LP 9 → 8.)*
 - **config (39):** SE = `schema_version` (key) + `agreed_between` + 33 App B value keys
   (35). SS = `config_sha256` + `config_auth.{auth_alg,key_id,auth_tag}` (4). Status LS =
   `agreed_between` + the **15 FIXED** value keys (16); NPM = the **18 MINIMUM/NEGOTIABLE**
@@ -180,8 +186,8 @@ surface), **EX** example-only value, **BU** blocking-unresolved.
   `result_sha256`).
 
 **Invariants (all hold):** provenance total = status total = row total for every
-artifact; 16+39+9+11 = **75**; SE+SS+PC+EX = 40+35+0+0 = **75**;
-LS+LP+NPM+LO+EX+BU = 20+13+36+6+0+0 = **75**. **BU = 0** in every artifact.
+artifact; 15+39+9+11 = **74**; SE+SS+PC+EX = 40+34+0+0 = **74**;
+LS+LP+NPM+LO+EX+BU = 20+12+36+6+0+0 = **74**. **BU = 0** in every artifact.
 **No approximation signs.** No duplicate `Artifact + Semantic Field` identity; every
 field appears exactly once; `verdict` is **not** a separate field — it equals `intent`
 (C-08); `step0_auth`/`config_auth`/`hardware_auth` are distinct objects with distinct

@@ -100,5 +100,12 @@
 | 4E-R11-R1 | Log artifact interoperability + audit exchange reconciliation | Referenced |
 | 4E-R11-R1-CLOSE | Audit log interoperability final audit, payload-core guard, tracking, commit, push, CI | Referenced |
 
+| 4E-R12 | Step-0 + config negotiation + config lock readiness reconciliation | Referenced |
+| 4E-R12-FIX | Scope repair + full readiness proof (exact vocabulary, cores, models) | Referenced |
+| 4E-R12-R1 | Token accounting temporal semantics + Step-0 declaration reconciliation | Referenced |
+| 4E-R12-R2 | Token-accounting evidence provenance + current FIELD_MATRIX baseline reconciliation | Referenced |
+| 4E-R12-R3 | Token-budget agreement chronology reconciliation | Referenced |
+| 4E-R12-CLOSE | Pre-match contract final audit, tracking, commit, push, exact-SHA CI | Referenced |
+
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

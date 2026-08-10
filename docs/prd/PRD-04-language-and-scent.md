@@ -72,7 +72,7 @@ signal from own scent readings; never a truth claim about the opponent.
 | SCENT-001 | MUST | Cryptographically lock the agreed scent model before the series |
 | SCENT-003 | MUST | Before a series, exchange the full emission/decay model with a numeric example and verify |
 | PERF-001 | MUST | Report total LLM tokens consumed in the sub-game (and series) in the completion JSON |
-| PERF-002 | MUST | Monitor and cryptographically lock token consumption at Step-0 |
+| PERF-002 | MUST | Monitor and cryptographically lock **actual** token consumption; the duty is established at Step-0 and the metering runs during play. **PRD-04 owns the metering** (per call, per sub-game, per series — `PRD04-FR-044`); the **cryptographic locking mechanism is owned by PRD-06** and is not yet frozen; the **final reported totals are owned by PRD-07 / the result** *(wording repaired Stage 4E-R12-R1; responsibilities split Stage 4E-R12-R2)* |
 | PERF-003 | SHOULD | Stay within the agreed per-series token budget (default ~200 000; template/ollama can be 0) |
 | GUI-001/002 | MUST / MUST NOT | Local truth only; never expose the objective board |
 
