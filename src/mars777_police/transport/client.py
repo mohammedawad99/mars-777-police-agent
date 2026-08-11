@@ -13,8 +13,22 @@ Appendix-F baseline, not a constant, and no number appears in this module.
 Every response is decoded **strictly**: an operation that must complete with no
 semantic value refuses one, `reveal` requires an exact `bool` rather than `0`,
 `1` or `"true"`, and the digest must be a well-formed `Sha256Digest`.
+
+**One session per peer lifecycle, not one per operation.** Entering this client
+as an async context holds a single FastMCP Streamable-HTTP session open and runs
+every `call_tool` inside it. That is measured, not preferred: over a real public
+tunnel, 30 operations each opening their own session failed from the twenty-first
+onward and left the route unreachable, while the same 30 inside one held session
+all succeeded - in both experiment orders. Outside a held session each call still
+opens its own, so a caller managing no lifecycle keeps the original behaviour.
+
+**A dead session is not silently replaced.** The failure surfaces as
+`E-TRANSPORT` and the operation is never replayed: whether a commitment reached
+the peer is not knowable from here, so reconnection and semantic retry stay
+separate decisions owned by the frozen retry policy.
 """
 
+from contextlib import AsyncExitStack
 from typing import Any
 
 from fastmcp import Client
@@ -51,6 +65,8 @@ class PeerClient:
     def __init__(self, url: str, timeout: float) -> None:
         self._url = url
         self._timeout = timeout
+        self._session: Client[StreamableHttpTransport] | None = None
+        self._stack: AsyncExitStack | None = None
 
     @classmethod
     def for_locked_config(
@@ -74,13 +90,35 @@ class PeerClient:
         """The peer's stable group-level ingress."""
         return self._url
 
+    def _client(self) -> Client[StreamableHttpTransport]:
+        return Client(StreamableHttpTransport(self._url), timeout=self._timeout)
+
+    async def __aenter__(self) -> "PeerClient":
+        """Hold one session open for every call made inside this context."""
+        stack = AsyncExitStack()
+        try:
+            self._session = await stack.enter_async_context(self._client())
+        except Exception as failure:
+            await stack.aclose()
+            raise TransportFailureError(TransportFailureError.error_id) from failure
+        self._stack = stack
+        return self
+
+    async def __aexit__(self, kind: object, value: object, traceback: object) -> None:
+        """Close the held session exactly once, whatever happened inside."""
+        stack, self._stack, self._session = self._stack, None, None
+        if stack is not None:
+            await stack.aclose()
+
     async def call(self, tool: str, kind: str, payload: BaseModel | dict[str, object]) -> Any:
         """Invoke *tool* with the frozen envelope and return its raw result."""
+        request = envelope(kind, payload)
         try:
-            async with Client(StreamableHttpTransport(self._url), timeout=self._timeout) as client:
-                result = await client.call_tool(
-                    tool, envelope(kind, payload), timeout=self._timeout
-                )
+            if self._session is not None:
+                result = await self._session.call_tool(tool, request, timeout=self._timeout)
+            else:
+                async with self._client() as client:
+                    result = await client.call_tool(tool, request, timeout=self._timeout)
         except ToolError as failure:
             raise inbound(str(failure)) from None
         except Exception as failure:

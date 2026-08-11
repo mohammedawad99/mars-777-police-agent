@@ -586,7 +586,7 @@ participant-owned scalars did.
 
 ### R13-R1-11 — error ownership and module identity
 
-Existing IDs only; **error IDs remain 20**: malformed contribution ⇒
+Existing IDs only; **error identities remain 22**: malformed contribution ⇒
 `E-PROTO-MALFORMED`; wrong phase/duplicate/stale ⇒ `E-PROTO-STALE`; wrong
 game/declaration/group, commit-or-core inconsistency, or returned-digest mismatch
 ⇒ `E-REPORT-DISAGREE`; missing delivery ⇒ `E-REPORT-DELIVERY`; own-side fault ⇒
@@ -741,7 +741,7 @@ the proposer compares it with the one it proposed. **No trimming, no timezone
 conversion, no reformatting, no re-precision, no local-clock replacement, no
 silent normalization.**
 
-Existing IDs only — **error IDs remain 20**: malformed timestamp ⇒
+Existing IDs only — **error identities remain 22**: malformed timestamp ⇒
 `E-PROTO-MALFORMED`; unexpected request order, duplicate or stale ⇒
 `E-PROTO-STALE`; **timestamp disagreement** ⇒ `E-REPORT-DISAGREE`; digest mismatch
 ⇒ `E-REPORT-DISAGREE`; delivery failure ⇒ `E-REPORT-DELIVERY`; own-side fault ⇒

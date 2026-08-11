@@ -182,7 +182,7 @@ FIELD_MATRIX — **not** one per role. The declaration therefore already describ
 The router/ingress **does not**: hold game truth · act as a referee · merge the Police and
 Thief packages · share role-mutable state. Exactly one role process is active per
 sub-game; switching which one is active is a **local** operation invisible to the declared
-endpoint value, so **no declaration field changes and the four-artifact matrix stays 75**.
+endpoint value, so **no declaration field changes and the four-artifact matrix stays 74**.
 
 ### 13.6 Network secrets
 

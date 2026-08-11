@@ -137,5 +137,11 @@
 | 4E-R17-RESUME-FIX3 | Wire result digest verification into the production agreement workflow | Referenced |
 | 4E-R17-RESUME-CLOSE-RETRY | R17 architecture reconciliation, tracking, commit, push, exact-SHA CI | Referenced |
 
+| 4E-R18-R1-FIX3 | Wire and prove the persistent lifecycle in production composition; **stopped** on `PUBLIC-MCP-PERSISTENT-LIFECYCLE: BLOCKED-BY-MISSING-PRODUCTION-COMPOSITION-OWNER` | Referenced |
+| 4E-R18-R1-CR0 | Production composition root + BOOT architecture audit (read-only) | Referenced |
+| 4E-R18-R1-CR1 | Typed runtime settings + production clock | Referenced |
+| 4E-R18-R1-CR2 | Concrete inbound `PeerOperations`; **stopped** on five missing application runtimes | Referenced |
+| 4E-R18-R1-CLOSE-RESCOPE | Public ingress / transport infrastructure close; Stage 5 boundary decision | Referenced |
+
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

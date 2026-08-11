@@ -9,7 +9,7 @@ reaches the application.
 import asyncio
 
 import pytest
-from fastmcp import FastMCP
+from fastmcp import Client, FastMCP
 from peer_ops import agreement, commitment
 
 from mars777_police.app.protocol_errors import MalformedMessageError, StaleMessageError
@@ -95,12 +95,39 @@ def test_the_client_exposes_its_endpoint_and_holds_no_game_state() -> None:
         assert not hasattr(client, absent)
 
 
-def test_the_client_builds_a_new_connection_per_call_not_a_global_singleton() -> None:
-    import inspect
+def test_the_client_owns_its_own_session_and_shares_no_global_one() -> None:
+    """The property, not the spelling: no module-level client, none shared.
 
+    R17 asserted this by grepping for `async with Client(` in the source, which
+    broke the moment the session moved behind a helper even though the property
+    it cared about was untouched. This checks the property instead.
+    """
     from mars777_police.transport import client as module
 
-    source = inspect.getsource(module)
-    assert "async with Client(" in source
     assert not hasattr(module, "CLIENT")
+    assert not any(isinstance(value, Client) for value in vars(module).values())
+    first = PeerClient("http://127.0.0.1:9/mcp", timeout=1.0)
+    second = PeerClient("http://127.0.0.1:8/mcp", timeout=1.0)
+    assert first._session is None and second._session is None
+    assert first.url != second.url
     assert isinstance(FastMCP, type)
+
+
+def test_a_call_outside_a_held_session_still_opens_its_own() -> None:
+    """A caller that manages no lifecycle keeps the original per-call behaviour."""
+    client = PeerClient("http://127.0.0.1:9/mcp", timeout=0.5)
+    assert client._session is None
+    with pytest.raises(TransportFailureError):
+        asyncio.run(client.complete("negotiate", "step0", {"a": 1}))
+    assert client._session is None
+
+
+def test_entering_a_dead_endpoint_is_a_transport_failure_not_a_peer_error() -> None:
+    """Holding a session open cannot invent a peer failure when nobody answers."""
+
+    async def hold() -> None:
+        async with PeerClient("http://127.0.0.1:9/mcp", timeout=0.5):
+            pass  # pragma: no cover - the entry above always raises here
+
+    with pytest.raises(TransportFailureError):
+        asyncio.run(hold())

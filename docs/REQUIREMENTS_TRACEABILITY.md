@@ -570,7 +570,7 @@ peer-message families** and are **not implemented**; peer-visible families remai
 **No requirement was added, removed, reclassified or re-owned; no JDEC-016, NDEC-008,
 INV-16 or C-11 was created.** Requirements remain **91** (76/9/4/2); Appendix E **55**;
 Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**;
-INV **15**; C-01…C-10; ports **20**; error IDs **20**; `ProtocolPhase` **1**; PRD-02 IDs
+INV **15**; C-01…C-10; ports **20**; error identities **22**; `ProtocolPhase` **1**; PRD-02 IDs
 **87**; result fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events
 **15**; `num_games` **6 FIXED**.
 
@@ -603,7 +603,7 @@ not started, and **Stage 4E as a whole is NOT COMPLETE.** **No requirement was
 added, removed, reclassified or re-owned; no JDEC-016, NDEC-008, INV-16 or C-11
 was created.** Requirements remain **91** (76/9/4/2); Appendix E **55**; Appendix
 F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**; INV
-**15**; C-01…C-10; ports **20**; error IDs **20**; `ProtocolPhase` **1**; PRD-02
+**15**; C-01…C-10; ports **20**; error identities **22**; `ProtocolPhase` **1**; PRD-02
 IDs **87**; result fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**;
 timeline events **15**; `num_games` **6 FIXED**.
 
@@ -639,7 +639,7 @@ implemented, 0 ready, 6 blocked** — and **Stage 4E as a whole is NOT COMPLETE.
 **No requirement was added, removed, reclassified or re-owned; no JDEC-016,
 NDEC-008, INV-16 or C-11 was created.** Requirements remain **91** (76/9/4/2);
 Appendix E **55**; Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**;
-JDEC **15**; NDEC **7**; INV **15**; C-01…C-10; ports **20**; error IDs **20**;
+JDEC **15**; NDEC **7**; INV **15**; C-01…C-10; ports **20**; error identities **22**;
 `ProtocolPhase` **1**; PRD-02 IDs **87**; result fields **11**; PRD-06 IDs
 **129**; PRD-07 IDs **140**; timeline events **15**; `num_games` **6 FIXED**.
 
@@ -675,7 +675,7 @@ edited. **No requirement was added, removed, reclassified or re-owned; no
 JDEC-016, NDEC-008, INV-16 or C-12 was created.** Requirements remain **91**
 (76/9/4/2); Appendix E **55**; Appendix F **32 = 14/9/9**; FIELD_MATRIX
 **75 = 16/39/9/11**; JDEC **15**; NDEC **7**; INV **15**; **C-01…C-11**; ports
-**20**; error IDs **20**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result fields
+**20**; error identities **22**; `ProtocolPhase` **1**; PRD-02 IDs **87**; result fields
 **11**; PRD-06 IDs **129**; PRD-07 IDs **140**; timeline events **15**;
 `num_games` **6 FIXED**. **Stage 4E as a whole is NOT COMPLETE.**
 
@@ -712,7 +712,7 @@ defer concrete operation signatures to Stage 2B-2C and both peer ports are async
 added, removed, reclassified or re-owned; no JDEC-016, NDEC-008, INV-16 or C-13
 was created.** Requirements remain **91** (76/9/4/2); Appendix E **55**; Appendix
 F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC **15**; NDEC **7**; INV
-**15**; **C-01…C-12**; ports **20**; error IDs **20**; `ProtocolPhase` **1**;
+**15**; **C-01…C-12**; ports **20**; error identities **22**; `ProtocolPhase` **1**;
 PRD-02 IDs **87**; result fields **11**; PRD-06 IDs **129**; PRD-07 IDs **140**;
 timeline events **15**; `num_games` **6 FIXED**. **Stage 4E as a whole is NOT
 COMPLETE.**
@@ -783,7 +783,7 @@ ready, 4 blocked** — and **Stage 4E as a whole is NOT COMPLETE.** **No
 requirement was added, removed, reclassified or re-owned; no JDEC-016, NDEC-008,
 INV-16 or C-13 was created.** Requirements remain **91** (76/9/4/2); Appendix E
 **55**; Appendix F **32 = 14/9/9**; FIELD_MATRIX **75 = 16/39/9/11**; JDEC
-**15**; NDEC **7**; INV **15**; **C-01…C-12**; ports **20**; error IDs **20**;
+**15**; NDEC **7**; INV **15**; **C-01…C-12**; ports **20**; error identities **22**;
 `ProtocolPhase` **1**; PRD-02 IDs **87**; result fields **11**; PRD-06 IDs
 **129**; PRD-07 IDs **140**; timeline events **15**; `num_games` **6 FIXED**.
 
@@ -854,7 +854,7 @@ only later.**
 **No requirement, port, error ID, peer family, Appendix-E/F row or timeline event was
 added, removed or reclassified; no C-13, JDEC-016, NDEC-008 or INV-16 was created.**
 Requirements remain **91** (76/9/4/2); Appendix E **55**; Appendix F **32 = 14/9/9**;
-JDEC **15**; NDEC **7**; INV **15**; **C-01…C-12**; ports **20**; error IDs **20**;
+JDEC **15**; NDEC **7**; INV **15**; **C-01…C-12**; ports **20**; error identities **22**;
 PRD-06 IDs **129**; timeline events **15**; `num_games` **6 FIXED**. **FIELD_MATRIX is
 now 74 = 15/39/9/11** (SE 40 / SS 34; LS 20 / LP 12 / NPM 36 / LO 6; EX 0, BU 0) — a
 **project-derived** row model, never a source inventory; every earlier "75 = 16/39/9/11"
@@ -929,7 +929,7 @@ and the `Sha256Digest` response is an operation result, so **no ninth family** a
 Appendix-E/F row or timeline event was added, removed or reclassified; no C-13,
 JDEC-016, NDEC-008 or INV-16 was created.** Requirements remain **91** (76/9/4/2);
 Appendix E **55**; Appendix F **32 = 14/9/9**; JDEC **15**; NDEC **7**; INV **15**;
-**C-01…C-12**; ports **20**; error IDs **20**; timeline events **15**;
+**C-01…C-12**; ports **20**; error identities **22**; timeline events **15**;
 FIELD_MATRIX **74 = 15/39/9/11** with the repaired **result (11)** prose.
 **`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION` is carried forward
 untouched** — participant token values in the result are what the peers agree was
@@ -998,7 +998,7 @@ implemented / 4 ready / 0 blocked**.
 or FIELD_MATRIX row was added, removed or reclassified; no C-13, JDEC-016,
 NDEC-008 or INV-16 was created.** Requirements remain **91** (76/9/4/2);
 Appendix E **55**; Appendix F **32 = 14/9/9**; JDEC **15**; NDEC **7**; INV
-**15**; **C-01…C-12**; ports **20**; error IDs **20**; timeline events **15**;
+**15**; **C-01…C-12**; ports **20**; error identities **22**; timeline events **15**;
 FIELD_MATRIX **74 = 15/39/9/11** — every type added here is a Python value, not
 an artifact row. **`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`
 is carried forward untouched, and Stage 4 must not be called complete merely
@@ -1055,7 +1055,7 @@ and façade-surface files.
 or FIELD_MATRIX row was added, removed or reclassified; no C-13, JDEC-016,
 NDEC-008 or INV-16 was created.** Requirements remain **91** (76/9/4/2);
 Appendix E **55**; Appendix F **32 = 14/9/9**; JDEC **15**; NDEC **7**; INV
-**15**; **C-01…C-12**; ports **20**; error IDs **20**; timeline events **15**;
+**15**; **C-01…C-12**; ports **20**; error identities **22**; timeline events **15**;
 FIELD_MATRIX **74 = 15/39/9/11**. **`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE:
 BLOCKED-BY-CONSTRUCTION` is carried forward untouched** — contribution token
 counts are what a peer *reports*, never independently verified provider
@@ -1125,7 +1125,7 @@ league- or counted-match-ready.
 
 **No register moved.** Requirements **91**; Appendix E **55**; Appendix F **32 =
 14/9/9**; JDEC **15**; NDEC **7**; INV **15**; **C-01…C-12**; ports **20**;
-error IDs **20**; timeline events **15**; FIELD_MATRIX **74 = 15/39/9/11**. No
+error identities **22**; timeline events **15**; FIELD_MATRIX **74 = 15/39/9/11**. No
 ninth family, no new requirement, no new conflict.
 **`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`** is carried
 forward untouched — R16 aggregates and agrees *reported* token numbers and
@@ -1215,7 +1215,7 @@ deletion). It created **no register-shaped row of any kind**.
 
 **Registers, re-verified at close and unchanged.** Requirements **91** = 76/9/4/2 ·
 Appendix E **55** · Appendix F **32** = 14/9/9 · **C-01…C-12** · JDEC **15** ·
-NDEC **7** · INV **15** · error IDs **20** · ports **20** · timeline **15** ·
+NDEC **7** · INV **15** · error identities **22** · ports **20** · timeline **15** ·
 **FIELD_MATRIX 74 = 15 / 39 / 9 / 11**. Peer-visible families remain **8**, and
 the application-runtime matrix remains **8 IMPLEMENTED / 0 READY / 0 BLOCKED /
 8 TOTAL** — that matrix describes **local application behaviour, not transport**.
@@ -1244,3 +1244,50 @@ reachability evidence, no real opponent, no counted match.
 **`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`** is carried forward
 untouched and remains a mandatory later Stage-4 security slice. **Stage 4E is NOT
 COMPLETE.**
+
+## Stage 4E-R18-R1 — public ingress and public transport (closed at the infrastructure boundary)
+
+Stage 4E-R18-R1 closed across eleven passes with **0 new register rows of any kind**.
+
+**Registers, re-verified at close and unchanged.** Requirements **91** = 76/9/4/2 · Appendix E
+**55** · Appendix F **32** = 14/9/9 · **C-01…C-12** · JDEC **15** · NDEC **7** · INV **15** ·
+error identities **22** · ports **20** · timeline **15** · **FIELD_MATRIX 74 = 15 / 39 / 9 / 11** · peer
+families **8** · application-runtime matrix **8 IMPLEMENTED / 0 READY / 0 BLOCKED / 8**.
+
+**What became executable.** Our group's public ingress: a provider-neutral `PublicIngressPort`
+with ngrok 3.39.10 as the first concrete outer adapter, bounded structured endpoint discovery,
+strict publicity validation (`E-NET-NOT-PUBLIC`), three distinct endpoint identities, the exact
+ten-check `PRD05-FR-021` readiness gate with a real production caller that refuses counted play,
+declaration-before-authentication, `FR-015b` replacement and same-ingress recovery, `infra.settings`
+and `infra.clock`, and a persistent FastMCP session on `PeerClient`.
+
+**What is transport-proven versus application-proven.** Public crossings are verified for all nine
+semantic kinds through the real ngrok route, the real FastMCP server and the real router. Behind
+that boundary, **Step-0**, **ConfigProposal** and **ResultAgreement** reached real production
+runtimes; **Commitment**, **Acknowledgement**, **Reveal**, **FinalNonceReveal** and
+**AuditDocument** reached a test double, because those five have **no production application
+runtime owner**. That distinction replaces the earlier wording, which implied production handling
+for all nine.
+
+**What is still not discharged.** The five missing application runtimes, a concrete
+`PeerOperations`, the outbound peer runner for eight `send_*` operations, the `infra` composition
+root required by D3/D4, BOOT and shutdown, and an executable entrypoint - all carried to **Stage 5
+— Production Application Runtime Integration**. Public two-group readiness, an independent external
+network and a real opponent remain **DEFERRED, NOT CANCELLED** to Stage 4E-R18-R2, which now
+follows Stage 5. **`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`** is carried forward
+untouched. Live ten-check readiness remains **NOT_READY**. **Stage 4 is closed at the
+infrastructure / public-transport boundary only.**
+
+### Operator runtime inputs (project implementation choice, not a source requirement)
+
+`infra.settings` reads six environment variables - `MARS777_ROLE`, `MARS777_BIND_HOST`,
+`MARS777_BIND_PORT`, `MARS777_OPPONENT_ENDPOINT` (optional), `MARS777_KEY_ID`,
+`MARS777_AUTH_SECRET`. No document froze an operator vocabulary and none of these values crosses
+the wire, enters a declaration or is negotiated, so the names are a project implementation choice.
+Deliberately **not** settings: `group_id` (the frozen package `GROUP_CODE`, not operator-
+overridable), `game_id`/`game_uid` (no process-global game identity exists in this architecture),
+our **own public endpoint** (discovered from the ingress, never trusted from the environment), and
+anything `NegotiatedConfig` owns (a post-lock timeout must never be operator-overridable). The
+opponent endpoint is optional at BOOT and required for counted readiness. The keyed-auth secret is
+**environment-only, required at BOOT, never persisted, never serialized, never logged**; the ngrok
+authtoken is operator-only and never enters project settings.

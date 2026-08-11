@@ -1064,3 +1064,29 @@
 - **Name the scope limit in the artifact, not just in the report.** Every document this
   stage touched says local Streamable HTTP is proved and public transport is not. A reader
   who finds only "FastMCP transport implemented" will assume the wrong thing.
+
+### Stage 4E-R18 — what the public-network stage taught
+
+- **A stage boundary is a decision, not a discovery.** R18 kept finding that the next honest step
+  belonged to a different layer: first a provider account limit, then a session lifecycle with no
+  owner, then five application runtimes that were never written. Each time the cheap move was to
+  absorb the work and call the stage complete. Closing at the transport boundary instead is what
+  keeps "public transport works" a statement someone can rely on.
+- **Test doubles hide missing production layers, and only a boundary audit finds them.** The live
+  public suite passed for months of stages with a recorder behind the server for five families.
+  Nothing was wrong with the transport proof; what was wrong was reading it as an application
+  proof. The question that exposed it was mechanical - *which `src/` method accepts this type?*
+- **Measure before attributing.** The public reliability failure was attributed to an ngrok quota
+  in one report. The isolation experiment showed the dominant cause was our own per-operation
+  session churn: 20/30 fresh versus 30/30 persistent, in both orders, with the route left dead by
+  the fresh run and healthy by the persistent one. The earlier attribution was withdrawn.
+- **Check the measurement harness before believing the measurement.** The first public isolation
+  run showed 0/30 in both modes and looked like a catastrophic provider failure. The cause was a
+  missing `/mcp` path in the probe. A "plain HTTP is healthy" check that counted 404s as success
+  nearly confirmed it.
+- **A guard that greps its own source matches the words it forbids.** This recurred twice more in
+  R18, in a `shell=True` guard and a digest-logic guard, after already recurring five times in
+  R16. Reading NAME tokens rather than source text is the only version that works.
+- **Name the scope limit in the artifact, not just the report.** Every document this stage touched
+  says what is transport-proven and what is not implemented, because a reader who finds only
+  "public transport verified" will assume the rest.
