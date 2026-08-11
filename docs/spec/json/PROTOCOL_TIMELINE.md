@@ -16,7 +16,7 @@ the wire yet.
 | 4 | **Turn decision** | acting agent (local) | belief map, scent, own pos, barriers | — | move, hint, intent, nonce (chosen now) | (local) | — | — |
 | 5 | **Commitment** | agent → opponent | state, move, intent, hint, step, role, sub_game, nonce | `H_commit` only | move, hint, nonce | log | **sealed payload → `H_commit`** (NDEC-001/002/003) | at reveal + final audit |
 | 6 | **Acknowledgement** | opponent → agent | received `H_commit` | ack of step + commit | — | log | — | — |
-| 7 | **Reveal** | agent → opponent | move, hint | move + hint | **nonce** (still) | log | — | recompute vs `H_commit` |
+| 7 | **Reveal** | agent → opponent | move, hint | move + hint | **nonce** (still) | log | — | **at final audit only** — the receiver correlates the Reveal with the `H_commit` it already holds for that cursor; recomputation is impossible here and happens at event 12 |
 | 8 | **Move validation** — *local legality decision + transport-level rejection outcome* | receiving peer decides **locally**; the outcome surfaces on the transport response | move legality, capture claim | **the accept/reject outcome of the operation that received the turn** — **not** a standalone semantic message (C-12); **response shape frozen at Stage 4E-R11** as a single `bool` game-legality result of the turn operation (`API_BOUNDARIES.md` O5) | — | log (separate validation record, event 9) | — | at audit |
 | 9 | **Verdict (validation record)** | opponent/local | legality + capture-truth result | — *(local record; the peer-facing part is event 8's transport outcome)* | — | log (separate record) | — | — |
 | 10 | **State transition** | both (state machine) | new positions/barriers | phase transition | opponent true pos (always) | — | — | — |
@@ -25,6 +25,30 @@ the wire yet.
 | 13 | **Result construction** | each team | per-sub-game scores, commit, tokens, four links | — | — | result | result-approval core (NDEC-006) | dual-report compare |
 | 14 | **Mutual result agreement** | both → both | own contribution + all jointly known core values | **each peer's own `ResultContribution`** (six per-sub-game commit + token values); the operation's successful response is the receiver's locally computed `Sha256Digest` *(4E-R13-R1; the digest is **not** in the request — it does not exist jointly until the peer contribution arrives)* | — | result | `result_sha256` over the participant-scoped core | both directions complete with an equal digest |
 | 15 | **Gmail reporting** | each team → lecturer | full **self-contained** result JSON (identities, four links, **FastMCP endpoints**, **signed hardware declarations + `hardware_auth`**, scores, commits, tokens; K3) | result JSON attachment | **key material** | (sent) | — | grader parse/attribution; **missing-from-either-side or contradictory ⇒ 0 to both (E-35, C-09)** |
+
+**Reveal does not recompute `H_commit`, and cannot.** The "Later verified" column
+means exactly that - *later*. At event 7 the receiver holds `H_commit` (event 5)
+plus the disclosed `move` and `hint`, but the sealed record has **eight** members
+and three of them are still secret: the `nonce` is withheld until event 11, and
+`state` and `intent` arrive only with the audit material at event 12. A live
+receiver therefore has nothing to hash. What it does at event 7 is **correlate**:
+this Reveal belongs to the cursor whose commitment and acknowledgement it already
+recorded, and it enforces ordering, phase, staleness, sender and game legality.
+
+This is the source's design, not a gap. Ch 5 §5.3.2 / Figure 6 sequences Commit
+(`H_commit` only) → Acknowledge (locked) → Reveal (move + hint, nonce still
+hidden) → Final Reveal (all nonces, end of game), and the figure's own
+explanation is that a move revealed at stage 3 which does not match the stage-1
+commitment fails **the hash recomputed at the audit stage**. Ch 5 §5.4 then has
+both sides disclose full logs and nonces, reconstruct the opponent's committed
+data, recompute SHA-256 and compare. Deferring the check is what lets a peer
+reveal inconsistent material during live play and still be caught: the proof is
+cryptographic and arrives at audit, where INV-06 turns a mismatch into TAMPERED.
+
+Consequently an ordinary Reveal never raises `E-HASH-MISMATCH`. Cursor, phase,
+ordering, sender and malformed-message checks stay live and typed; game legality
+returns `True`/`False`; commitment correspondence is an audit-stage verdict.
+
 
 ## Key chronology conclusions
 
