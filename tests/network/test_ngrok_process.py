@@ -30,9 +30,17 @@ def process(agent: FakeAgent, clock: FakeClock | None = None) -> NgrokProcess:
 
 
 def test_the_argv_carries_no_credential_and_requests_json_logging() -> None:
-    argv = settings(config_paths=(Path("/x/ngrok.yml"),)).argv(8801)
-    assert argv[:3] == ("/opt/ngrok", "http", "8801")
-    assert "--config" in argv and "/x/ngrok.yml" in argv
+    """The contract is `Path` in, `str(Path)` out - rendered the platform's way.
+
+    Comparing against a hard-coded POSIX spelling asserted the developer's
+    platform rather than the production contract, and only Windows CI could see
+    it. Deriving the expected value from the same `Path` the caller passed keeps
+    the check honest on both platforms without branching on either.
+    """
+    config = Path("/x/ngrok.yml")
+    argv = settings(config_paths=(config,)).argv(8801)
+    assert argv[:3] == (str(EXE), "http", "8801")
+    assert "--config" in argv and str(config) in argv
     assert argv[-4:] == ("--log", "stdout", "--log-format", "json")
     joined = " ".join(argv).lower()
     for forbidden in ("authtoken", "token", "api_key", "secret"):
