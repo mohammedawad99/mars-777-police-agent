@@ -25,6 +25,7 @@ from mars777_police.app.peer_final_messages import ResultAgreement
 from mars777_police.app.protocol_values import Sha256Digest
 from mars777_police.app.step0_runtime import Step0Runtime
 from mars777_police.protocol.declaration import Step0Authenticator
+from mars777_police.transport.inbound_session import InboundSession
 
 TOKEN_BUDGET = 200000
 
@@ -61,39 +62,41 @@ class LiveOperations:
         self.seen.append(name)
         self._write()
 
-    def on_step0(self, exchange: object) -> None:
+    def on_step0(self, exchange: object, session: InboundSession) -> None:
         """Real Step-0 acceptance: a bad proof or a stale game refuses here."""
         self.step0.accept(self.local, exchange)  # type: ignore[arg-type]
         self._record("step0")
 
-    def on_config_proposal(self, value: object) -> None:
+    def on_config_proposal(self, value: object, session: InboundSession) -> None:
         """Real negotiation acceptance: a differing series convention refuses here."""
         self.negotiation.accept(value, GROUP_B, opening=True)  # type: ignore[arg-type]
         self._record("config_proposal")
 
-    def on_config_lock(self, value: object) -> None:
+    def on_config_lock(self, value: object, session: InboundSession) -> None:
         self._record("config_lock")
 
-    def on_commitment(self, value: object) -> None:
+    def on_commitment(self, value: object, session: InboundSession) -> None:
         self._record("commitment")
 
-    def on_acknowledgement(self, value: object) -> None:
+    def on_acknowledgement(self, value: object, session: InboundSession) -> None:
         self._record("acknowledgement")
 
-    def on_reveal(self, value: object) -> bool:
+    def on_reveal(self, value: object, session: InboundSession) -> bool:
         """The frozen R17 legality seam: `False` means game-illegal and nothing else."""
         self._record("reveal")
         return getattr(value, "hint", "") != ILLEGAL_HINT
 
-    def on_final_nonce_reveal(self, value: object) -> None:
+    def on_final_nonce_reveal(self, value: object, session: InboundSession) -> None:
         self._record("final_nonce_reveal")
 
-    def on_audit_disclosure(self, value: object) -> None:
+    def on_audit_disclosure(self, value: object, session: InboundSession) -> None:
         self._record("audit_disclosure")
 
-    def on_result_agreement(self, agreement: ResultAgreement) -> Sha256Digest:
+    def on_result_agreement(
+        self, agreement: ResultAgreement, session: InboundSession
+    ) -> Sha256Digest:
         """Delegate to production; the digest is `ResultExchange`'s, never ours."""
         try:
-            return self.exchange.accept_peer_request(agreement, agreement.contribution.group_id)
+            return self.exchange.accept_peer_request(agreement, GROUP_B)
         finally:
             self._record("result_agreement")

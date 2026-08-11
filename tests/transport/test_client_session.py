@@ -12,8 +12,9 @@ import threading
 
 import pytest
 import uvicorn
-from peer_ops import RecordingOperations, commitment, reveal, step0_exchange
+from peer_ops import commitment, reveal, step0_exchange
 from peer_process import free_port
+from peer_recorder import RecordingOperations
 
 from mars777_police.transport.client import PeerClient
 from mars777_police.transport.codec_declaration import encode_step0

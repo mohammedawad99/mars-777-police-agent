@@ -12,7 +12,6 @@ from fastmcp import Client
 from peer_ops import (
     ILLEGAL_HINT,
     RESULT_DIGEST,
-    RecordingOperations,
     acknowledgement,
     agreement,
     audit_document,
@@ -23,6 +22,7 @@ from peer_ops import (
     reveal,
     step0_exchange,
 )
+from peer_recorder import RecordingOperations
 
 from mars777_police.transport.client import wire_json
 from mars777_police.transport.codec_declaration import encode_step0

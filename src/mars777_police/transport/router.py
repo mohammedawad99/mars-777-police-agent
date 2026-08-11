@@ -9,6 +9,10 @@ contains no second state machine.
 Dispatch is by explicit `kind`, never by inspecting which payload keys happen to
 be present. A valid kind on the wrong tool never reaches here at all - the tool's
 schema refuses it - which is what the frozen contract requires.
+
+The `session` travels straight through untouched. This module neither reads the
+authenticated identity nor decides whether one is required: that is the
+adapter's gate, and duplicating it here would be a second place to get it wrong.
 """
 
 from ..app.protocol_values import Sha256Digest
@@ -23,43 +27,50 @@ from .envelopes import (
     SubmitAuditRequest,
 )
 from .handlers import PeerOperations
+from .inbound_session import InboundSession
 
 
-def route_negotiate(operations: PeerOperations, request: NegotiateRequest) -> None:
+def route_negotiate(
+    operations: PeerOperations, request: NegotiateRequest, session: InboundSession
+) -> None:
     """Step-0, config proposal or config lock - all ordinary completion."""
     if request.kind == "step0":
-        operations.on_step0(decode_step0(request.payload))
+        operations.on_step0(decode_step0(request.payload), session)
     elif request.kind == "config_proposal":
-        operations.on_config_proposal(decode_proposal(request.payload))
+        operations.on_config_proposal(decode_proposal(request.payload), session)
     else:
-        operations.on_config_lock(decode_lock(request.payload))
+        operations.on_config_lock(decode_lock(request.payload), session)
 
 
-def route_receive_turn(operations: PeerOperations, request: ReceiveTurnRequest) -> bool | None:
+def route_receive_turn(
+    operations: PeerOperations, request: ReceiveTurnRequest, session: InboundSession
+) -> bool | None:
     """Commitment and acknowledgement complete; reveal returns its legality."""
     if request.kind == "commitment":
-        operations.on_commitment(decode_commitment(request.payload))
+        operations.on_commitment(decode_commitment(request.payload), session)
         return None
     if request.kind == "acknowledgement":
-        operations.on_acknowledgement(decode_acknowledgement(request.payload))
+        operations.on_acknowledgement(decode_acknowledgement(request.payload), session)
         return None
-    return operations.on_reveal(decode_reveal(request.payload))
+    return operations.on_reveal(decode_reveal(request.payload), session)
 
 
-def route_submit_audit(operations: PeerOperations, request: SubmitAuditRequest) -> None:
+def route_submit_audit(
+    operations: PeerOperations, request: SubmitAuditRequest, session: InboundSession
+) -> None:
     """The nonce disclosure and the audit document - both ordinary completion.
 
     No verdict crosses in either direction: `FinalAuditVerdict` stays local and
     no acknowledgement family exists.
     """
     if request.kind == "final_nonce_reveal":
-        operations.on_final_nonce_reveal(decode_final_nonce(request.payload))
+        operations.on_final_nonce_reveal(decode_final_nonce(request.payload), session)
     else:
-        operations.on_audit_disclosure(request.payload)
+        operations.on_audit_disclosure(request.payload, session)
 
 
 def route_receive_control(
-    operations: PeerOperations, request: ReceiveControlRequest
+    operations: PeerOperations, request: ReceiveControlRequest, session: InboundSession
 ) -> Sha256Digest:
     """The one control kind, returning the frozen `Sha256Digest` result."""
-    return operations.on_result_agreement(decode_result_agreement(request.payload))
+    return operations.on_result_agreement(decode_result_agreement(request.payload), session)

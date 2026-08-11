@@ -11,7 +11,8 @@ import inspect
 import pytest
 from fastmcp import Client
 from fastmcp.exceptions import ToolError
-from peer_ops import RecordingOperations, proposal
+from peer_ops import proposal
+from peer_recorder import RecordingOperations
 
 from mars777_police.app import protocol_errors
 from mars777_police.app.protocol_errors import ConventionMismatchError, PeerProtocolError

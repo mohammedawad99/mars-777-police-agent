@@ -10,7 +10,6 @@ import threading
 
 import uvicorn
 from peer_ops import (
-    RecordingOperations,
     acknowledgement,
     agreement,
     audit_document,
@@ -22,6 +21,7 @@ from peer_ops import (
     step0_exchange,
 )
 from peer_process import free_port
+from peer_recorder import RecordingOperations
 
 from mars777_police.transport.client import PeerClient
 from mars777_police.transport.peer_transport import FastMcpPeerTransport

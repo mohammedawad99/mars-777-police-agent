@@ -10,7 +10,8 @@ import asyncio
 import pytest
 from fastmcp import Client
 from fastmcp.exceptions import ToolError
-from peer_ops import ILLEGAL_HINT, RecordingOperations, commitment, reveal
+from peer_ops import ILLEGAL_HINT, commitment, reveal
+from peer_recorder import RecordingOperations
 
 from mars777_police.app.protocol_errors import (
     AuthFailureError,

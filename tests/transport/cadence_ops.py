@@ -31,6 +31,7 @@ from mars777_police.app.result_agreement_runtime import ResultAgreementRuntime
 from mars777_police.app.result_exchange import ResultExchange
 from mars777_police.app.result_values import ResultContribution, ResultContributionEntry
 from mars777_police.protocol.result_core import ResultDigester
+from mars777_police.transport.inbound_session import InboundSession
 
 COMMITS = {GROUP_A: COMMIT_A, GROUP_B: COMMIT_B}
 
@@ -70,6 +71,7 @@ class CadenceOperations:
 
     def __init__(self, group_id: str, status: Path, base: int = 100) -> None:
         self.group_id = group_id
+        self.peer = GROUP_A if group_id == GROUP_B else GROUP_B
         self.status = status
         self.exchange = exchange_for(group_id, base)
         if self.exchange.runtime.is_proposer:
@@ -99,24 +101,31 @@ class CadenceOperations:
             encoding="utf-8",
         )
 
-    def on_result_agreement(self, agreement: ResultAgreement) -> Sha256Digest:
-        """Delegate entirely to production, then publish the local verdict."""
+    def on_result_agreement(
+        self, agreement: ResultAgreement, session: InboundSession
+    ) -> Sha256Digest:
+        """Delegate to production; the sender is this fixture's declared opponent.
+
+        Not `agreement.contribution.group_id`: feeding that guard its own input
+        makes it `x != x`. Production binds the real identity to the session -
+        this harness exists to exercise the digest cadence, not authentication.
+        """
         try:
-            digest = self.exchange.accept_peer_request(agreement, agreement.contribution.group_id)
+            digest = self.exchange.accept_peer_request(agreement, self.peer)
         finally:
             self._write()
         return digest
 
-    def on_step0(self, exchange: object) -> None: ...
-    def on_config_proposal(self, value: object) -> None: ...
-    def on_config_lock(self, value: object) -> None: ...
-    def on_commitment(self, value: object) -> None: ...
-    def on_acknowledgement(self, value: object) -> None: ...
-    def on_reveal(self, value: object) -> bool:
+    def on_step0(self, exchange: object, session: InboundSession) -> None: ...
+    def on_config_proposal(self, value: object, session: InboundSession) -> None: ...
+    def on_config_lock(self, value: object, session: InboundSession) -> None: ...
+    def on_commitment(self, value: object, session: InboundSession) -> None: ...
+    def on_acknowledgement(self, value: object, session: InboundSession) -> None: ...
+    def on_reveal(self, value: object, session: InboundSession) -> bool:
         return True
 
-    def on_final_nonce_reveal(self, value: object) -> None: ...
-    def on_audit_disclosure(self, value: object) -> None: ...
+    def on_final_nonce_reveal(self, value: object, session: InboundSession) -> None: ...
+    def on_audit_disclosure(self, value: object, session: InboundSession) -> None: ...
 
 
 __all__ = ["CadenceOperations", "GitCommitSha", "contribution_for", "exchange_for"]

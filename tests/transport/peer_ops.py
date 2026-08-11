@@ -1,7 +1,8 @@
 """A recording `PeerOperations` and the semantic fixtures the transport carries.
 
 The fake records what the **application** received - the only way to separate
-"the wire accepted it" from "the runtime got the right semantic value".
+"the wire accepted it" from "the runtime got the right semantic value". It takes
+the Stage-5-R3R session and ignores it: the gate is proved against production.
 """
 
 from r16_builders import (
@@ -40,9 +41,8 @@ from mars777_police.protocol.declaration import Step0Authenticator
 from mars777_police.protocol.keyed_auth import HmacSha256Provider, KeyedAuthenticator
 from mars777_police.transport.handlers import AuditDocument
 
-RESULT_DIGEST = Sha256Digest("c" * 64)
+RESULT_DIGEST, COMMIT_DIGEST = Sha256Digest("c" * 64), Sha256Digest("a" * 64)
 CURSOR = TurnCursor(1, 1)
-COMMIT_DIGEST = Sha256Digest("a" * 64)
 ILLEGAL_HINT = "illegal"
 
 
@@ -76,7 +76,7 @@ def commitment() -> Commitment:
 
 
 def acknowledgement() -> Acknowledgement:
-    """The acknowledgement echoing that commitment."""
+    """The acknowledgement echoing it."""
     return Acknowledgement(CURSOR, COMMIT_DIGEST)
 
 
@@ -102,49 +102,3 @@ def agreement() -> ResultAgreement:
     return ResultAgreement(
         GAME_ID, GAME_UID, DECLARATION_REF, STAMP, contribution(GROUP_B, COMMIT_B)
     )
-
-
-class RecordingOperations:
-    """Records the semantic values the application layer actually received."""
-
-    def __init__(self) -> None:
-        self.seen: list[tuple[str, object]] = []
-        self.failure: BaseException | None = None
-
-    def _record(self, name: str, value: object) -> None:
-        if self.failure is not None:
-            raise self.failure
-        self.seen.append((name, value))
-
-    def kinds(self) -> list[str]:
-        """The operation names invoked, in order."""
-        return [name for name, _ in self.seen]
-
-    def on_step0(self, exchange: Step0DeclarationExchange) -> None:
-        self._record("step0", exchange)
-
-    def on_config_proposal(self, value: ConfigProposal) -> None:
-        self._record("config_proposal", value)
-
-    def on_config_lock(self, value: ConfigLockEvidence) -> None:
-        self._record("config_lock", value)
-
-    def on_commitment(self, value: Commitment) -> None:
-        self._record("commitment", value)
-
-    def on_acknowledgement(self, value: Acknowledgement) -> None:
-        self._record("acknowledgement", value)
-
-    def on_reveal(self, value: Reveal) -> bool:
-        self._record("reveal", value)
-        return value.hint != ILLEGAL_HINT
-
-    def on_final_nonce_reveal(self, value: FinalNonceReveal) -> None:
-        self._record("final_nonce_reveal", value)
-
-    def on_audit_disclosure(self, value: AuditDocument) -> None:
-        self._record("audit_disclosure", value)
-
-    def on_result_agreement(self, value: ResultAgreement) -> Sha256Digest:
-        self._record("result_agreement", value)
-        return RESULT_DIGEST

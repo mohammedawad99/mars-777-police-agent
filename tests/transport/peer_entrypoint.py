@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 def main(group_id: str, port: int) -> None:
     """Serve one peer until terminated."""
     import uvicorn
-    from peer_ops import RecordingOperations
+    from peer_recorder import RecordingOperations
 
     from mars777_police.transport.server import build_server
 
