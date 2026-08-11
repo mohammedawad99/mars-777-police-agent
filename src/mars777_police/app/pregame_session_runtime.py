@@ -109,6 +109,34 @@ class PregameSessionRuntime:
         self.opening = False
         return converges
 
+    def prepare_proposal(self, config: NegotiatedConfig) -> ConfigProposal:
+        """Build **our** proposal for this round and record that we made it.
+
+        The round state has to move for a proposal we send, not only for one we
+        receive. Otherwise `opening` would still be true after we opened the
+        exchange - so the peer's reply would be judged against the
+        initial-proposer rule a second time - and nothing would stop this side
+        proposing twice in one round.
+
+        Our identity comes from the negotiation runtime we were built with, never
+        from a message. `propose` still owns the participant and initial-proposer
+        rules, and it runs first: a refused proposal leaves the round untouched.
+        """
+        us = self.negotiation.group_id
+        if us in self.seen:
+            raise StaleMessageError(f"{us!r} already proposed in this round")
+        proposal = self.negotiation.propose(config, opening=self.opening)
+        self.seen = self.seen | {us}
+        self.opening = False
+        return proposal
+
+    def prepare_lock(self) -> ConfigLockEvidence:
+        """Our lock evidence over the config **this side** adopted this round."""
+        config = self.config
+        if config is None:
+            raise StaleMessageError("lock evidence needs a config this side agreed")
+        return self.lock.outbound(config)
+
     def adopt_config(self, config: NegotiatedConfig) -> None:
         """Register the config **this** side agreed for the current round."""
         self.config = config
