@@ -28,6 +28,7 @@ composition root wires them (`DEPENDENCY_RULES.md` D3/D4).
 | **GuiProjectionPort** | GUI | `infra.gui` consumer of app events | **projection events only** | — | render error is non-fatal | async (subscribe) | — | local UI only |
 | **LlmAdvisorPort** | language/hint subsystem | `infra.llm` | bounded prompt context (no secrets, no forbidden truth) | suggested text/tag | failure ⇒ deterministic fallback | async (bounded) | **non-deterministic** (must not affect legality) | yes (egress, optional) |
 | **SeriesLauncherPort** *(2A-R2)* | match operator | `app`/local launcher | series plan (sub-game index → role) | which independent role process to activate | refuses to launch if the role process is unavailable | sync | deterministic | no |
+| **NonceSourcePort** *(5-R4P)* | app (outbound evidence runtime) | `protocol.secure_nonce` | — | a fresh `NonceValue` | a source that yields a value outside the frozen profile fails value construction; there is no fallback and no retry | sync | **non-deterministic by requirement** (CSPRNG, CRYPTO-010) | no — the nonce stays secret until `FinalNonceReveal` |
 | **CompatibilityProfilePort** *(2A-R2)* | config lock, commitment, reporter | `protocol`/`infra` | negotiated profile ids (`AuthProfile`, `CommitmentCodec`, `ResultProfile`) | active profile set (read-only at match time) | unknown/weakening profile ⇒ refuse counted play | sync | deterministic | no |
 | **SettingsPort** | infra composition root | `infra.settings` | — | local settings; secrets from env | missing secret ⇒ refuse start | sync | — | no |
 
@@ -195,8 +196,13 @@ Consequences, recorded so no later stage mistakes one for the other:
   `BeliefPort`) documents the call boundary; wrapping it in a Protocol adds
   indirection without substitutability. Injection is required for the
   non-deterministic ports named in **P3**.
-- **20 ports** are frozen here: the original 18 plus `SeriesLauncherPort` and
-  `CompatibilityProfilePort`, both added at Stage 2A-R2.
+- **21 ports** are registered here: the original 18, plus `SeriesLauncherPort`
+  and `CompatibilityProfilePort` at Stage 2A-R2, plus `NonceSourcePort` at Stage
+  5-R4P. The last is an authorized architecture evolution rather than a new
+  source requirement: `NonceValue` is representation-only by contract, so
+  CSPRNG production (CRYPTO-010) needed a provider, and hiding that capability
+  behind an unregistered callable would have kept the count honest while making
+  the architecture less so.
 - **Superseded for the four peer tools at Stage 4E-R17-R1** *(see below)*. The
   deferral above was correct while no transport existed; Stage 4E-R17 proved it
   had become the blocker — three semantic variants share `negotiate`, three share
