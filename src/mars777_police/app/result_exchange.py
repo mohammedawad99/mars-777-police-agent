@@ -33,6 +33,7 @@ from .result_core_runtime import SubGameOutcomeLine, assemble
 from .result_core_values import CumulativeResult
 from .result_identity_values import GithubLinks
 from .result_values import ResultContribution
+from .series_audit_gate import SeriesAuditGate
 
 
 @dataclass(slots=True)
@@ -89,6 +90,16 @@ class ResultExchange:
         if self.local_digest is not None and self.peer_digest is not None:
             require_matching_digest(self.local_digest, self.peer_digest)
             self.verified = True
+
+    def require_series_audit(self, gate: SeriesAuditGate) -> None:
+        """Refuse to start unless this side's whole series audit has passed.
+
+        The runtime already owns what a passing verdict means; the gate owns
+        what the series verdict *is*. This only carries one to the other, so an
+        incomplete series arrives as `None` and is refused by the same check
+        that refuses a tampered one.
+        """
+        self.runtime.require_audit(gate.verdict)
 
     def accept_peer_request(self, agreement: ResultAgreement, sender_id: str) -> Sha256Digest:
         """Process the peer's single request and return our own digest."""
