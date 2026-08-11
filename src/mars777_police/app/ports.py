@@ -22,13 +22,16 @@ Consequences that are the point rather than a side effect:
 
 from typing import Protocol
 
+from ..domain.actions import PhysicalAction
 from ..domain.negotiated_config import NegotiatedConfig
 from .artifact_values import UtcTimestamp
 from .auth_values import AuthProof
 from .declaration_values import Declaration
 from .peer_pregame_messages import ConfigLockContext
-from .protocol_values import Sha256Digest
+from .protocol_values import NonceValue, Sha256Digest
 from .result_core_values import ResultApprovalCore
+from .sealed_record_values import ActorRole, Intent, SealedState
+from .turn_cursor import TurnCursor
 
 
 class Step0AuthPort(Protocol):
@@ -101,4 +104,39 @@ class TimestampPort(Protocol):
 
     def now(self) -> UtcTimestamp:
         """Return the current instant in the frozen lexical form."""
+        ...
+
+
+class CommitmentPort(Protocol):
+    """The already-registered `API_BOUNDARIES.md` commitment port, as a seam.
+
+    Its register row freezes the shape: inputs are "sealed record fields (8) -
+    already-valid semantic values, never strings or dicts", outputs are
+    "`H_commit`; later a recompute **comparison result**". This is that row made
+    callable, so the audit runtime can recompute a commitment without `app`
+    importing `protocol` - the D1 edge the architecture forbids.
+
+    Exactly those two operations, and no more. A JSON projection of an action or
+    a domain-coordinate constructor would be a *different* responsibility
+    wearing this port's name: both are reachable inward from `app` already, so
+    borrowing the cryptographic seam for them would widen a frozen contract to
+    save an import.
+    """
+
+    def recompute(
+        self,
+        *,
+        state: SealedState,
+        action: PhysicalAction,
+        intent: Intent,
+        hint: str,
+        cursor: TurnCursor,
+        role: ActorRole,
+        nonce: NonceValue,
+    ) -> Sha256Digest:
+        """Return `H_commit` over the eight-member sealed record."""
+        ...
+
+    def matches(self, expected: Sha256Digest, recomputed: Sha256Digest) -> bool:
+        """Whether two digests are equal. Inequality is a result, not a failure."""
         ...
