@@ -130,6 +130,12 @@
 | 4E-R17-R1 | FastMCP dependency provisioning + transport wire contract freeze | Referenced |
 | 4E-R17-R1-FIX | Direct pydantic dependency ownership | Referenced |
 | 4E-R17-R1-CLOSE | Transport prerequisites tracking, commit, push, exact-SHA CI | Referenced |
+| 4E-R17-RESUME | FastMCP + peer transport adapter integration (implementation) | Referenced |
+| 4E-R17-RESUME-FIX | Result cadence + watchdog + error-identity completion proof | Referenced |
+| 4E-R17-RESUME-FIX2 | Digest-disagreement error + PeerTransportPort architecture proof | Referenced |
+| 4E-R17-RESUME-CLOSE | Attempted close; **stopped** on `RESULT-DIGEST-DISAGREEMENT-INTEGRATION: BLOCKED-BY-UNWIRED-PRODUCTION-GUARD`, 0 files changed | Referenced |
+| 4E-R17-RESUME-FIX3 | Wire result digest verification into the production agreement workflow | Referenced |
+| 4E-R17-RESUME-CLOSE-RETRY | R17 architecture reconciliation, tracking, commit, push, exact-SHA CI | Referenced |
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.

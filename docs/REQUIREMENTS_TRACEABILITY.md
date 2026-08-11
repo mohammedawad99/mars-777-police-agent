@@ -1206,3 +1206,41 @@ application-runtime matrix remains **8 IMPLEMENTED / 0 READY / 0 BLOCKED / 8**,
 which describes **local application behaviour and not transport**.
 **`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`** is carried
 forward untouched. **Stage 4E is NOT COMPLETE.**
+
+## Stage 4E-R17 — FastMCP peer transport (implemented, LOCAL only)
+
+Stage 4E-R17 closed across eight passes with **53 paths per repo** (23 production,
+23 tests, 1 architecture document, 6 tracking; **0** dependency, **0** CI, **0**
+deletion). It created **no register-shaped row of any kind**.
+
+**Registers, re-verified at close and unchanged.** Requirements **91** = 76/9/4/2 ·
+Appendix E **55** · Appendix F **32** = 14/9/9 · **C-01…C-12** · JDEC **15** ·
+NDEC **7** · INV **15** · error IDs **20** · ports **20** · timeline **15** ·
+**FIELD_MATRIX 74 = 15 / 39 / 9 / 11**. Peer-visible families remain **8**, and
+the application-runtime matrix remains **8 IMPLEMENTED / 0 READY / 0 BLOCKED /
+8 TOTAL** — that matrix describes **local application behaviour, not transport**.
+
+**`PeerTransportPort` is not a new register entry.** It is the implementation of
+the already-frozen `API_BOUNDARIES.md` architecture: the outbound
+application-facing port whose adapter is the FastMCP client. Likewise
+`E-REPORT-DISAGREE` covers the digest mismatch introduced in FIX2/FIX3 — a second
+check reaching an **existing** identity, not a new one. The seven peer identities
+(`E-PROTO-MALFORMED`, `E-PROTO-STALE`, `E-AUTH-FAILURE`, `E-CONFIG-MISMATCH`,
+`E-NET-CONVENTION-MISMATCH`, `E-REPORT-DISAGREE`, `E-LOCAL-DEFECT`) are unchanged
+and each round-trips through real FastMCP; `E-TRANSPORT` (delivery failure) and
+`E-TIMEOUT-WATCHDOG` (local supervision) remain separate categories that are not
+members of the peer mapping.
+
+**What became executable.** The peer-visible transport contract that PRD-02
+specified is now a running local server and client: four tools, nine kinds, one
+`request = {kind, payload}` argument. The result-agreement completion workflow —
+previously a set of semantic values and unreached helpers — is owned by
+`app.result_exchange.ResultExchange`, so a genuine digest disagreement raises
+`E-REPORT-DISAGREE` **in production** and neither direction is recorded complete.
+
+**What is still not discharged.** Public network transport (PRD-05) remains
+entirely unimplemented and untested: no tunnel, no external endpoint, no external
+reachability evidence, no real opponent, no counted match.
+**`TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`** is carried forward
+untouched and remains a mandatory later Stage-4 security slice. **Stage 4E is NOT
+COMPLETE.**

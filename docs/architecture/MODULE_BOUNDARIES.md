@@ -398,7 +398,114 @@ Acyclic, and asserted per module from the AST by
 `tests/app/test_runtime_layering.py`: **no `app` module imports `protocol`**, and
 no runtime performs I/O, reads a clock or computes a digest itself.
 
-**Transport is deliberately absent.** No FastMCP adapter, socket, HTTP client or
-server, tunnel, Gmail or GUI module exists. `infra.mcp_server`, `infra.mcp_client`
-and the rest of the infrastructure table remain **specified and not implemented**;
-their rows describe intended boundaries, not shipped code.
+**Transport was absent at R16; it exists as of R17.** The sentence that stood
+here - "no FastMCP adapter, socket, HTTP client or server exists" - was true when
+R16 closed and is false now. A **local** FastMCP Streamable HTTP server and client
+are implemented and verified across independent OS processes; the section below
+records them. `infra.mcp_server` / `infra.mcp_client` remain **superseded rows**:
+the shipped transport lives in `mars777_police.transport`, not under `infra`, and no tunnel,
+Gmail or GUI module exists.
+
+## Stage 4E-R17 — implemented FastMCP peer transport (LOCAL only)
+
+The rows below describe what Stage 4E-R17 (with R17-R1, RESUME, FIX, FIX2 and
+FIX3) **actually implemented and tested**. Dependency directions were read from
+the committed imports and are asserted from the AST, not asserted in prose.
+
+**Scope honesty, stated once and not softened.** What is implemented and verified
+is **local** Streamable HTTP between two peer processes on `127.0.0.1`. A public
+tunnel, an externally reachable endpoint, external reachability evidence, a real
+opponent and a counted match are **none of them implemented and none of them
+tested**. Nothing in this section may be read as readiness for any of those.
+
+### Application layer — the four R17 application modules
+
+`app` still may not import `protocol`, and it may not import `transport` either.
+Every peer call the application makes leaves through a Protocol it owns; the
+FastMCP adapter satisfies that Protocol structurally, from the outside.
+
+| Module | Owns | Depends on | Must not import |
+|---|---|---|---|
+| `app.peer_transport` | **`PeerTransportPort`** - the outbound application-facing port: the nine semantic `send_*` operations, plus the `AuditDocument` alias. Ordinary completion returns `None`; exactly two operations carry a result (`send_reveal` → the peer's game-legality `bool`, `send_result_agreement` → the peer's `Sha256Digest`) | `app` peer-message families and `app.protocol_values` (type references), `typing.Protocol` | `protocol`, `infra`, `transport`, `fastmcp`, `pydantic`, any HTTP library, any wire DTO, any URL handling |
+| `app.peer_supervision` | **`TimeoutPolicy`** (the bootstrap window and `for_config` → the locked `network_and_league.response_timeout_sec`) and **`Watchdog`** (injected clock, `check` / `is_expired`), plus `WatchdogTimeoutError` / `E-TIMEOUT-WATCHDOG` | `domain.negotiated_config` (read-only), stdlib | `protocol`, `transport`, `fastmcp`; **assigns no sanction, no technical loss and no score**, and its error is deliberately **not** a `PeerProtocolError` |
+| `app.result_agreement_gates` | **`MutualAgreementGate`** (the asymmetric local completion verdict) and **`require_matching_digest`** (refuses a peer digest that differs from ours, raising the already-frozen `E-REPORT-DISAGREE`). As of R17-FIX3 both are called from production, by `app.result_exchange` - previously they had no production caller | `app.protocol_values`, `app.protocol_errors` | everything else; `mutual_agreement` is **local state, never a peer field**, and this module owns **no new error identity** |
+| `app.result_exchange` | **`ResultExchange`** - the application owner of one result agreement end to end: it drives the two-request cadence through `ResultAgreementRuntime`, computes the local digest through `result_core_runtime.assemble()` + `ResultDigestPort`, compares with `require_matching_digest`, and reports the verdict through `MutualAgreementGate`. It handles the frozen proposer/non-proposer asymmetry in one `_verify` | `app.peer_transport` (the port), `app.ports` (`ResultDigestPort`), `app.result_agreement_runtime`, `app.result_core_runtime`, `app` result and artifact values, `app.result_agreement_gates` | `protocol`, `infra`, `transport`, `fastmcp`, `pydantic`, any wire DTO; it **never learns how the digest travelled** and computes **no second digest algorithm** |
+
+### Transport layer — the nineteen `mars777_police.transport` modules
+
+Everything below may import **inward** (`app`, `domain`) and is the **only** place
+`fastmcp` and `pydantic` appear. Nothing here owns game truth, decides legality,
+assigns a sanction or holds a score.
+
+| Module | Owns | Depends on | Must not import |
+|---|---|---|---|
+| `transport.__init__` | the package's public surface - `build_server`, `PeerClient`, `PEER_TOOLS`, `FastMcpPeerTransport` | the modules below | anything that would make importing the package do I/O |
+| `transport.wire_scalars` | the constrained wire spellings of the project's scalar semantic values, including the **canonical-text** spelling of every semantic `Decimal` | `pydantic` | `app` runtime modules; **no `float` ever represents a semantic decimal** |
+| `transport.wire_config_sections` | wire DTOs for the seven Appendix-B config sections | `transport.wire_scalars`, `pydantic` | `app` runtime, `domain` services |
+| `transport.wire_config` | wire DTOs for the binding config core, the profile set and the lock evidence | `transport.wire_config_sections`, `transport.wire_scalars` | as above |
+| `transport.wire_declaration` | wire DTOs for the declaration subtree and the Step-0 exchange, including the **conditional** `vram_gb` (omitted, never `null`) | `transport.wire_scalars` | as above |
+| `transport.wire_turn` | wire DTOs for the three turn families and the two end-of-series families | `transport.wire_scalars` | as above |
+| `transport.envelopes` | the **four tool-level request envelopes** and their **closed** `kind` vocabularies. Each tool declares its own kind set - there is deliberately no single union of all nine - and `extra="forbid"` applies at every level | the wire DTO modules, `pydantic` | routing logic, application logic |
+| `transport.codec_auth` | codec for the keyed-auth envelope and the eleven series-wide profiles | `app.auth_values`, `app.interop_profiles`, `transport.wire_*` | key material of any kind - **only `key_id` crosses, never key bytes** |
+| `transport.codec_declaration` | codec for the declaration subtree and the Step-0 exchange | `app.declaration_values`, `app.team_declaration_values`, `transport.codec_auth`, `transport.wire_declaration` | `protocol` canonicalization - it maps, it does not hash |
+| `transport.codec_config` | codec between the config wire DTO and the frozen 35-member semantic core | `domain.negotiated_config`, `domain.config_sections`, `transport.wire_config` | re-implementing an Appendix-F status check the sections already own |
+| `transport.codec_pregame` | codec for the config proposal and the config lock evidence | `app.peer_pregame_messages`, `transport.codec_auth`, `transport.codec_config` | as above |
+| `transport.codec_turn` | codec for the three per-turn peer families | `app.peer_turn_messages`, `domain.actions`, `transport.wire_turn` | movement-legality logic - legality is `domain.rules`, never a codec |
+| `transport.codec_final` | codec for the two end-of-series families (`FinalNonceReveal`, `ResultAgreement`) | `app.peer_final_messages`, `app.result_values`, `transport.wire_turn` | digest computation |
+| `transport.wire_errors` | translating project failures onto the framework error channel, **both ways**: the seven peer identities through `ToolError`, `E-TRANSPORT` for a delivery failure, and an unknown server exception collapsed to `E-LOCAL-DEFECT` | `app.protocol_errors`, `fastmcp` | leaking a traceback, an internal `repr` or any secret onto the wire |
+| `transport.handlers` | **`PeerOperations`** - the **inbound**, server-side application contract the transport calls: the nine `on_*` operations over semantic values | `app` peer-message families | `fastmcp`, `pydantic`; it is **not** an alias of `PeerTransportPort` and the two share no operation name |
+| `transport.router` | dispatching a **validated** envelope to `PeerOperations`, and nothing else | `transport.envelopes`, `transport.handlers`, the codecs | guessing a payload shape - the `kind` discriminator is the only router input |
+| `transport.server` | the FastMCP server adapter: **one stable ingress per peer process**, exposing exactly `PEER_TOOLS` | `transport.router`, `transport.wire_errors`, `fastmcp` | a fifth tool, a heartbeat, an alias |
+| `transport.client` | the FastMCP client adapter: connection, envelope, **per-call deadline** (`for_locked_config` reads the agreed `response_timeout_sec` through `TimeoutPolicy`; `for_bootstrap` uses the frozen negotiation window), response decoding, framework-error translation | `app.peer_supervision`, `transport.wire_errors`, `fastmcp` | a hardcoded timeout; knowing which **family** it is carrying |
+| `transport.peer_transport` | **`FastMcpPeerTransport`** - the concrete adapter that structurally satisfies `PeerTransportPort`, encoding each semantic value with the codec that owns its family | `transport.client`, the codecs, `app` semantic values | importing `app.peer_transport` - conformance is **structural**, proven with no `cast` and no `type: ignore` |
+
+### The two directions, which are never conflated
+
+```
+inbound   peer ─→ FastMCP server ─→ transport.router ─→ PeerOperations ─→ application
+outbound  application ─→ PeerTransportPort ─→ FastMcpPeerTransport ─→ PeerClient ─→ peer
+```
+
+`PeerOperations` is what a peer asks **of us**. `PeerTransportPort` is what we ask
+**of a peer**. Same nine frozen operations, opposite directions, disjoint method
+names (`on_*` vs `send_*`), no alias and no shared base. Conflating them would
+hide which side of the wire a failure came from.
+
+### Implemented import DAG (read from the committed imports)
+
+```
+domain.* ─→ app semantic values ─→ app.ports / app.peer_transport
+                                        ─→ app.*_runtime, app.result_exchange
+                                        (application layer ends here)
+transport.wire_scalars ─→ transport.wire_* ─→ transport.envelopes ─→ transport.router
+transport.codec_* ─→ app semantic values                       (inward only)
+transport.client ─→ app.peer_supervision                       (inward only)
+transport.peer_transport ─→ transport.client + transport.codec_*
+transport.server ─→ transport.router + transport.wire_errors
+```
+
+Acyclic. `domain`, `protocol` and `app` import **nothing** from `transport`;
+`transport` imports inward only. `fastmcp` and `pydantic` appear **only** under
+`transport` - the sole exception being that `pydantic` is a *directly owned*
+project dependency rather than a transitive one, which is a packaging fact, not a
+layering one. Asserted from the AST by `tests/transport/test_peer_transport_port.py`
+alongside the R16 guard in `tests/app/test_runtime_layering.py`.
+
+### The public tool surface, frozen
+
+Exactly four tools - `negotiate`, `receive_turn`, `submit_audit`,
+`receive_control` - carrying exactly nine kinds: `step0`, `config_proposal`,
+`config_lock`, `commitment`, `acknowledgement`, `reveal`, `final_nonce_reveal`,
+`audit_disclosure`, `result_agreement`. One tool argument, `request = {kind,
+payload}`, both members required, `additionalProperties: false` at both levels.
+No heartbeat, no fifth tool, no alias.
+
+### What R17 did NOT implement
+
+- **Public transport**: no tunnel, no externally reachable endpoint, no external
+  reachability validation, no reconnect evidence, no real opponent.
+- **A game orchestrator over `ResultExchange`**: R17 ships the executable
+  application exchange service and proves it across independent peer processes.
+  Wiring it into a complete counted game is a later integration concern.
+- **Token-accounting cryptographic evidence**, which remains
+  `TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`.

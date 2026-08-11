@@ -1033,3 +1033,34 @@
   discharged/superseded in place, with the reason each became false. Deleting them would have
   erased the evidence that the deferral was deliberate and that what replaced it is
   PROJECT-CONTRACT rather than book-mandated.
+
+### Stage 4E-R17 — what the transport stage taught (recorded because two stops were needed)
+
+- **A guard with no caller is not a guard.** `require_matching_digest` and
+  `MutualAgreementGate` were written, tested and unreachable from `src/` at the same time.
+  The test that called the guard directly proved the guard worked; it proved nothing about
+  whether anything used it. The CLOSE gate that greps `src/` for a caller outside the
+  definition is what caught it, and it is now the reason that grep exists.
+- **Stop at the gate rather than repair during a close.** The first CLOSE could have added
+  `ResultExchange` on the spot. It changed **0 files** instead, because a close that fixes
+  code is a close that ships unreviewed code. The fix went through its own reviewed stage.
+- **Probe the framework; never recall it.** Every FastMCP 3.4.6 claim in this stage came
+  from `inspect.signature`, a real `list_tools` call, or a real Streamable HTTP round trip.
+  That is how the tuple-vs-list strict-Pydantic behaviour, the `exclude_none` requirement
+  for the conditional `vram_gb`, and the JSON-number decimal loss were all found rather
+  than assumed.
+- **Measure the alternative before declaring a dependency necessary.** `pydantic` became a
+  *direct* dependency only after a dataclass and a `TypedDict` were both built and both
+  shown to accept extra envelope members. "The framework already pulls it in" was not the
+  argument; "nothing else refuses an unknown key" was.
+- **A test harness that computes the answer cannot fail.** The two-process cadence helpers
+  originally hashed their own digest, so a production digest defect would have passed. They
+  now build fixtures and inject dependencies only - `hashlib`, `sha256` and
+  `require_matching_digest` all appear **0** times in them - and the assertion reads
+  production state.
+- **Delete unreachable code instead of covering it.** The `http_app` wrapper, a runtime
+  `declaration_ref` re-check and a canonical sentinel pre-refusal were each removed once a
+  test proved the redundancy sound, rather than kept alive with a pragma.
+- **Name the scope limit in the artifact, not just in the report.** Every document this
+  stage touched says local Streamable HTTP is proved and public transport is not. A reader
+  who finds only "FastMCP transport implemented" will assume the wrong thing.

@@ -75,13 +75,37 @@ def test_the_framework_error_type_is_available() -> None:
     assert issubclass(ToolError, Exception)
 
 
-def test_no_project_production_module_imports_the_transport_stack_yet() -> None:
-    """R17-R1 resolves prerequisites only; the adapter is R17's work."""
+def test_only_the_transport_package_imports_the_framework_stack() -> None:
+    """R17-R1 forbade these imports anywhere; R17-RESUME confines them.
+
+    The stage that was authorized to write the adapter has written it, so the
+    question changed from *whether* `fastmcp` and `pydantic` may be imported to
+    *where*. The answer is `transport/` and nowhere else: `app`, `domain` and
+    `protocol` must all remain testable, and portable, without the framework.
+    """
     src = Path(__file__).resolve().parents[2] / "src"
-    offenders = [
+    offenders = sorted(
+        str(path.relative_to(src))
+        for path in src.rglob("*.py")
+        if path.parent.name != "transport"
+        and any(
+            line.startswith(("import fastmcp", "from fastmcp", "import pydantic", "from pydantic"))
+            for line in path.read_text(encoding="utf-8").splitlines()
+        )
+    )
+    assert offenders == []
+
+
+def test_the_transport_package_is_where_the_framework_actually_lives() -> None:
+    """The converse: the confinement above is not vacuous."""
+    src = Path(__file__).resolve().parents[2] / "src"
+    users = [
         path.name
         for path in src.rglob("*.py")
-        for token in ("fastmcp", "pydantic")
-        if token in path.read_text(encoding="utf-8")
+        if path.parent.name == "transport"
+        and any(
+            line.startswith(("import fastmcp", "from fastmcp"))
+            for line in path.read_text(encoding="utf-8").splitlines()
+        )
     ]
-    assert offenders == []
+    assert sorted(users) == ["client.py", "server.py", "wire_errors.py"]

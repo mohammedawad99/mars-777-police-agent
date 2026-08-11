@@ -13,6 +13,7 @@ behalf.
 
 from dataclasses import dataclass
 
+from .protocol_errors import ReportDisagreeError
 from .protocol_values import Sha256Digest
 
 
@@ -42,3 +43,19 @@ class MutualAgreementGate:
         if not (self.own_request_sent and self.peer_request_handled):
             return False
         return self.local_digest == self.peer_digest
+
+
+def require_matching_digest(local: Sha256Digest, peer: Sha256Digest) -> None:
+    """Refuse a peer digest that differs from our own locally computed one.
+
+    The comparison is the whole point of the exchange, so a difference is a
+    **typed failure**, not a quiet `is_agreed = False`. Two honest peers that
+    played the same series derive identical bytes; a mismatch means the approval
+    cores genuinely disagree, and `E-REPORT-DISAGREE` is the frozen identity for
+    exactly that (`RESULT_CONTRACT.md` §R13-R2-9).
+
+    The gate above still reports incompleteness for the *other* reasons a
+    direction can be unfinished; this is the one that has a peer to blame.
+    """
+    if local != peer:
+        raise ReportDisagreeError(ReportDisagreeError.error_id)
