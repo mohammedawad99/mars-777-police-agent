@@ -74,7 +74,7 @@ def test_the_composed_graph_completes_a_real_callback_turn(pair: tuple) -> None:
         assert a.runtime_context.current_turn().local_acknowledged
         return await runner_a.reveal_turn(prepared)
 
-    assert asyncio.run(run()) is True
+    assert asyncio.run(run()).accepted is True
 
 
 def test_a_fresh_session_cannot_continue_the_composed_conversation(pair: tuple) -> None:

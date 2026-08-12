@@ -1,13 +1,12 @@
 """The reveal peer message: the turn cursor, the chosen action and the hint.
 
 Ch 5 §5.3.2 (p.51) sends *the action (Move) and the verbal sentence* while the
-nonce stays hidden, so ordinary Reveal is deliberately incomplete relative to
-audit material: no nonce, state, intent, role, sealed record or `H_commit`.
+nonce stays hidden, so Reveal is deliberately incomplete beside audit material:
+no nonce, state, intent, role, sealed record or `H_commit`.
 The member is `action` because it holds the domain's `PhysicalAction`; the
 sealed key stays `move`, mapped later by the canonical layer. `PhysicalAction`
-is a *union alias*, so the rule is exact membership of
-`(MoveAction, BarrierAction)`, never `type(x) is PhysicalAction`, and a wrong
-component is a message fault (`ValueError`), not a domain-value fault.
+is a *union alias*, so the rule is exact membership of `(MoveAction,
+BarrierAction)`, and a wrong component is a message fault, not a domain fault.
 """
 
 import dataclasses
@@ -31,8 +30,17 @@ ACTION = MoveAction(Move.N)
 HINT = "circling near the north gate"
 
 
-def test_the_reveal_carries_exactly_the_cursor_the_action_and_the_hint() -> None:
-    assert tuple(f.name for f in dataclasses.fields(Reveal)) == ("cursor", "action", "hint")
+def test_the_reveal_carries_the_core_three_plus_the_optional_capture_claim() -> None:
+    """R8 added one nullable adjunct; the sealed core is untouched."""
+    assert tuple(f.name for f in dataclasses.fields(Reveal)) == (
+        "cursor",
+        "action",
+        "hint",
+        "capture_claim",
+    )
+    assert Reveal(CURSOR, ACTION, HINT).capture_claim is None
+    with pytest.raises(ValueError, match="capture_claim must be a CaptureClaim"):
+        Reveal(CURSOR, ACTION, HINT, (1, 1))  # type: ignore[arg-type]
 
 
 ABSENT = ["move", "nonce", "state", "intent", "role", "by_role", "sealed_record", "phase"]
@@ -50,8 +58,7 @@ def test_the_reveal_is_frozen_slotted_and_value_equal() -> None:
     reveal = Reveal(CURSOR, ACTION, HINT)
     with pytest.raises(dataclasses.FrozenInstanceError):
         reveal.hint = "other"  # type: ignore[misc]
-    assert not hasattr(reveal, "__dict__")
-    assert Reveal.__slots__ == ("cursor", "action", "hint")
+    assert Reveal.__slots__ == ("cursor", "action", "hint", "capture_claim")
     assert reveal == Reveal(CURSOR, ACTION, HINT)
     assert reveal != Reveal(TurnCursor(2, 1), ACTION, HINT)
     assert reveal != Reveal(CURSOR, MoveAction(Move.S), HINT)
@@ -139,6 +146,5 @@ def test_the_reveal_is_a_distinct_family_and_checks_no_live_state() -> None:
 def test_the_reveal_is_on_the_exhaustive_app_surface() -> None:
     from mars777_police import app
 
-    assert app.Reveal is Reveal
-    assert "Reveal" in app.__all__
+    assert app.Reveal is Reveal and "Reveal" in app.__all__
     assert len(app.__all__) == len(set(app.__all__))

@@ -65,7 +65,7 @@ def test_every_port_operation_reaches_the_application_through_the_adapter() -> N
         return legal
 
     try:
-        assert asyncio.run(drive()) is True
+        assert asyncio.run(drive()).accepted is True
     finally:
         server.should_exit = True
     assert operations.kinds() == [

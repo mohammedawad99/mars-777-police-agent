@@ -20,6 +20,7 @@ from cadence_ops import exchange_for
 from peer_ops import ILLEGAL_HINT, authenticator
 from r16_builders import COMMIT_A, GAME_ID, GROUP_A, GROUP_B, PROFILES, partial
 
+from mars777_police.app.capture_values import TurnOutcome
 from mars777_police.app.config_negotiation_runtime import ConfigNegotiationRuntime
 from mars777_police.app.peer_final_messages import ResultAgreement
 from mars777_police.app.protocol_values import Sha256Digest
@@ -81,7 +82,7 @@ class LiveOperations:
     def on_acknowledgement(self, value: object, session: InboundSession) -> None:
         self._record("acknowledgement")
 
-    def on_reveal(self, value: object, session: InboundSession) -> bool:
+    def on_reveal(self, value: object, session: InboundSession) -> TurnOutcome:
         """The frozen R17 legality seam: `False` means game-illegal and nothing else."""
         self._record("reveal")
         return getattr(value, "hint", "") != ILLEGAL_HINT

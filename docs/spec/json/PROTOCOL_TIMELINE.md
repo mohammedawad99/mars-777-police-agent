@@ -227,3 +227,14 @@ Event 14 comprises **two operation calls, one per peer, in a fixed order** — i
 application-protocol semantics, not a transport race. Transport retries re-send
 the **same immutable** semantic request and are **not** additional semantic
 requests.
+
+### Stage 5-R8 — event 8 is a turn **outcome**, not a legality bool
+
+Event 8's response is `TurnOutcome(accepted, capture)` (`API_BOUNDARIES.md` O5 as
+amended, **C-13**, **JDEC-016**). `accepted` reports only what the receiver can
+check live — the mover's pre-action cell is sealed, so remote spatial legality is
+**not knowable** at this point and is proved at the final audit instead. `capture`
+carries the source-required answer (`NO_QUESTION` / `NOT_CAUGHT` / `CAUGHT`),
+computed by the receiver from its **own** position and public facts, so no
+position is ever transmitted. A declared capture ends ordinary play for that
+sub-game however it is answered.

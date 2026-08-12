@@ -14,6 +14,7 @@ Conformance is **structural**: `app.peer_transport.PeerTransportPort` is a
 check proves the match with no `cast` and no `type: ignore`.
 """
 
+from ..app.capture_values import TurnOutcome
 from ..app.peer_final_messages import FinalNonceReveal, ResultAgreement
 from ..app.peer_pregame_messages import (
     ConfigLockEvidence,
@@ -63,9 +64,10 @@ class FastMcpPeerTransport:
             "receive_turn", "acknowledgement", encode_acknowledgement(acknowledgement)
         )
 
-    async def send_reveal(self, reveal: Reveal) -> bool:
-        """Send our reveal and return the peer's **game-legality** verdict."""
-        return await self._client.legality(encode_reveal(reveal))
+    async def send_reveal(self, reveal: Reveal) -> TurnOutcome:
+        """Send our reveal and return the outcome the peer reported."""
+        outcome: TurnOutcome = await self._client.outcome(encode_reveal(reveal))
+        return outcome
 
     async def send_final_nonce_reveal(self, disclosure: FinalNonceReveal) -> None:
         """Send the batched end-of-sub-game nonce disclosure."""

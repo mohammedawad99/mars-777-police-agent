@@ -39,7 +39,7 @@ def test_every_kind_reaches_a_real_owner_on_one_session(peer: SessionPeer) -> No
     """Nine kinds, nine owners, one authenticated session, zero doubles."""
     results = asyncio.run(drive(peer.url))
     assert len(results) == 9
-    assert results[5] is True
+    assert results[5].accepted is True
     assert isinstance(results[8], str) and len(results[8]) == 64
     assert [r for i, r in enumerate(results) if i not in {5, 8}] == [None] * 7
 

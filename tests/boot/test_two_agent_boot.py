@@ -100,7 +100,7 @@ def test_a_full_callback_turn_runs_through_the_booted_agents(agents: tuple) -> N
             await runner_b.acknowledge_peer_turn()
             return await runner_a.reveal_turn(prepared)
 
-    assert asyncio.run(run()) is True
+    assert asyncio.run(run()).accepted is True
 
 
 def test_a_fresh_session_is_still_refused_after_boot(agents: tuple) -> None:

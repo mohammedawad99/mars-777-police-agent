@@ -768,3 +768,21 @@ with `token_budget_per_series` keeping its SOURCE-NEGOTIABLE status and
 PRE-STEP0-AGREED / SERIES-WIDE / IMMUTABLE-AFTER-STEP0 project lifecycle.
 `FIELD_MATRIX.md` is unchanged at **74 = 15/39/9/11**: every type frozen here is a
 Python supporting value, **not an artifact row**.
+
+## Stage 5-R8 — the counted turn contract is named by the posture
+
+`CompatibilityProfile` now has four members:
+
+| Token | Meaning |
+|---|---|
+| `STRICT_COUNTED_MATCH` | **Legacy.** The pre-R8 turn result: `Reveal` answered with a game-legality `bool`. Parseable, and **not** accepted for current counted play. |
+| `STRICT_COUNTED_MATCH_TURN_OUTCOME_V1` | **Current default and sole strict counted emitter.** `Reveal(cursor, action, hint, capture_claim?)` answers with `TurnOutcome(accepted, capture)`; `CaptureAnswer` is `NO_QUESTION` / `NOT_CAUGHT` / `CAUGHT`; the sealed eight-member commitment record is unchanged. |
+| `LECTURER_REFERENCE_COMPATIBILITY` | Reference artefact/tool-name compatibility. It does **not** imply the synchronous `TurnOutcome` exchange — the reference answers a capture claim on a later message — and is refused for counted turn play until a real adapter proves the whole exchange. |
+| `LECTURER_ATTACHMENT_COMPATIBILITY` | Attachment/artefact compatibility only; it says nothing about the live turn protocol. |
+
+Both peers must echo `STRICT_COUNTED_MATCH_TURN_OUTCOME_V1` **before**
+`CONFIG_LOCKED`. The check lives in `app/turn_contract_gate.py` and runs inside
+the existing config-negotiation profile comparison — there is no second
+negotiation subsystem, no new operation and no new error identity; a mismatch
+raises the existing `E-CONFIG-MISMATCH`. Nothing sniffs the response shape at
+the first reveal, and there is no fallback from `TurnOutcome` to `bool`.

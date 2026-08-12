@@ -89,7 +89,7 @@ def test_no_public_failure_was_reduced_to_a_boolean(public_peer: LivePeer) -> No
 
     async def drive() -> None:
         async with PeerClient(endpoint.url, timeout=TIMEOUT) as client:
-            await client.legality({"kind": "reveal", "payload": {"bad": 1}})
+            await client.outcome({"kind": "reveal", "payload": {"bad": 1}})
 
     with pytest.raises(MalformedMessageError):
         asyncio.run(drive())

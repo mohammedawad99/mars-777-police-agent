@@ -100,13 +100,13 @@ def test_the_full_turn_exchange_crosses_the_transport(peers: object) -> None:
 def test_a_legal_reveal_returns_true_across_two_processes(peers: object) -> None:
     police, _ = peers
     client = PeerClient(police.url, timeout=TIMEOUT)
-    assert asyncio.run(client.legality(encode_reveal(reveal()))) is True
+    assert asyncio.run(client.outcome(encode_reveal(reveal()))).accepted is True
 
 
 def test_an_illegal_reveal_returns_false_across_two_processes(peers: object) -> None:
     police, _ = peers
     client = PeerClient(police.url, timeout=TIMEOUT)
-    assert asyncio.run(client.legality(encode_reveal(reveal(ILLEGAL_HINT)))) is False
+    assert asyncio.run(client.outcome(encode_reveal(reveal(ILLEGAL_HINT)))).accepted is False
 
 
 def test_the_audit_surfaces_cross_the_transport(peers: object) -> None:

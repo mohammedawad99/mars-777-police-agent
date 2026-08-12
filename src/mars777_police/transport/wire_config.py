@@ -59,6 +59,7 @@ class InteropProfileSetWire(BaseModel):
     result_profile: Literal["STRICT_PROJECT_RESULT", "LECTURER_ATTACHMENT_COMPATIBILITY"]
     compatibility_profile: Literal[
         "STRICT_COUNTED_MATCH",
+        "STRICT_COUNTED_MATCH_TURN_OUTCOME_V1",
         "LECTURER_REFERENCE_COMPATIBILITY",
         "LECTURER_ATTACHMENT_COMPATIBILITY",
     ]

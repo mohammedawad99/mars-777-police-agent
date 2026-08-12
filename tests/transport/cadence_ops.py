@@ -25,6 +25,7 @@ from r16_builders import (
 )
 
 from mars777_police.app.artifact_values import GitCommitSha
+from mars777_police.app.capture_values import CaptureAnswer, TurnOutcome
 from mars777_police.app.peer_final_messages import ResultAgreement
 from mars777_police.app.protocol_values import Sha256Digest
 from mars777_police.app.result_agreement_runtime import ResultAgreementRuntime
@@ -121,8 +122,8 @@ class CadenceOperations:
     def on_config_lock(self, value: object, session: InboundSession) -> None: ...
     def on_commitment(self, value: object, session: InboundSession) -> None: ...
     def on_acknowledgement(self, value: object, session: InboundSession) -> None: ...
-    def on_reveal(self, value: object, session: InboundSession) -> bool:
-        return True
+    def on_reveal(self, value: object, session: InboundSession) -> TurnOutcome:
+        return TurnOutcome(True, CaptureAnswer.NO_QUESTION)
 
     def on_final_nonce_reveal(self, value: object, session: InboundSession) -> None: ...
     def on_audit_disclosure(self, value: object, session: InboundSession) -> None: ...

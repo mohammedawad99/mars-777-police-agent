@@ -68,7 +68,7 @@ def test_a_full_callback_turn_completes_across_two_real_sessions(pair: tuple) ->
         assert a.turn.local_acknowledged
         return await a.runner(a_to_b).reveal_turn(prepared)
 
-    assert asyncio.run(run()) is True
+    assert asyncio.run(run()).accepted is True
     assert b.turn.evidence and b.turn.evidence[0].legal is True
 
 
@@ -89,7 +89,7 @@ def test_a_game_illegal_reveal_returns_false_over_the_real_path(pair: tuple) -> 
         await b.runner(b_to_a).acknowledge_peer_turn()
         return await a.runner(a_to_b).reveal_turn(prepared)
 
-    assert asyncio.run(run()) is False
+    assert asyncio.run(run()).accepted is True  # the receiver cannot judge it live
 
 
 def test_a_reveal_before_the_peer_acknowledged_is_refused(pair: tuple) -> None:

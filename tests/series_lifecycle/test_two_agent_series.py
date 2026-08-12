@@ -72,7 +72,7 @@ async def play_sub_game(a: SeriesRuntime, b: SeriesRuntime, sub_game: int, tampe
         cursor = TurnCursor(sub_game, step)
         for series, side in ((mover, role), (waiter, _other(role))):
             series.composition.runtime_context.bind_turn(r7.turn_for(side, cursor))
-        assert await r7.one_turn(mover, waiter, role, cursor) is True
+        assert (await r7.one_turn(mover, waiter, role, cursor)).accepted is True
         for series in (mover, waiter):
             series.close_turn(series.composition.runtime_context.current_turn())
     await _final_audit(a, b, tamper)

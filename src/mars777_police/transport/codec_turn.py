@@ -9,6 +9,7 @@ becomes a `Move` here, at the protocol boundary - the domain never guesses.
 until final audit; the nonces travel exactly once, through `codec_final`.
 """
 
+from ..app.capture_values import CaptureAnswer, CaptureClaim, TurnOutcome
 from ..app.peer_turn_messages import Acknowledgement, Commitment, Reveal
 from ..app.protocol_errors import MalformedMessageError
 from ..app.protocol_values import Sha256Digest
@@ -24,6 +25,7 @@ from .wire_turn import (
     MoveActionWire,
     RevealWire,
     TurnCursorWire,
+    TurnOutcomeWire,
 )
 
 
@@ -73,12 +75,44 @@ def encode_acknowledgement(value: Acknowledgement) -> AcknowledgementWire:
 
 
 def decode_reveal(wire: RevealWire) -> Reveal:
-    """Rebuild a reveal. Legality is the operation result, never a member."""
-    return Reveal(_cursor(wire.cursor), decode_action(wire.action), wire.hint)
+    """Rebuild a reveal. The outcome is the operation result, never a member."""
+    return Reveal(
+        _cursor(wire.cursor),
+        decode_action(wire.action),
+        wire.hint,
+        _claim(wire.capture_claim),
+    )
 
 
 def encode_reveal(value: Reveal) -> RevealWire:
-    """Render a reveal."""
+    """Render a reveal, with the claim only when one was actually made."""
+    claim = value.capture_claim
     return RevealWire(
-        cursor=_cursor_wire(value.cursor), action=encode_action(value.action), hint=value.hint
+        cursor=_cursor_wire(value.cursor),
+        action=encode_action(value.action),
+        hint=value.hint,
+        capture_claim=None if claim is None else [claim.cell.row, claim.cell.col],
     )
+
+
+def _claim(cell: list[int] | None) -> CaptureClaim | None:
+    """Rebuild the optional claim from its frozen `[row, col]` spelling."""
+    if cell is None:
+        return None
+    if len(cell) != 2:
+        raise MalformedMessageError("a capture claim must carry exactly [row, col]")
+    return CaptureClaim(Position(cell[0], cell[1]))
+
+
+def decode_outcome(wire: TurnOutcomeWire) -> TurnOutcome:
+    """Rebuild the turn outcome, refusing any answer outside the vocabulary."""
+    try:
+        answer = CaptureAnswer(wire.capture)
+    except ValueError:
+        raise MalformedMessageError(f"unknown capture answer {wire.capture!r}") from None
+    return TurnOutcome(wire.accepted, answer)
+
+
+def encode_outcome(value: TurnOutcome) -> TurnOutcomeWire:
+    """Render the turn outcome."""
+    return TurnOutcomeWire(accepted=value.accepted, capture=value.capture.value)

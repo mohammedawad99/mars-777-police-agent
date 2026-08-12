@@ -96,29 +96,40 @@ never a referee, never shared truth, never shared game state (PRD02-FR-010,
 PRD02-AC-018). **No separate public Police/Thief URLs** for alternating roles, and
 the declaration is never silently mutated when the local role backend changes.
 
-**O5 — Game-legality result of the turn operation** *(closes
-`MOVE-REJECTION-TRANSPORT-SHAPE`)*. The operation carrying a **Reveal** returns
-exactly one **`bool`** game-legality result:
+**O5 — Turn outcome of the operation carrying a Reveal** *(amended at Stage
+5-R8; supersedes the legality-`bool` form of C-12, see **C-13**)*. The operation
+carrying a **Reveal** returns exactly one **`TurnOutcome`**:
 
-- `True` — the already-authenticated, protocol-valid revealed `PhysicalAction`
-  was locally validated as **game-legal** for the currently expected turn and
-  accepted for the local application path.
-- `False` — the same, validated as **game-illegal** and rejected (App E #14).
+- **`accepted: bool`** — whether the reveal is acceptable on the facts the
+  receiver can actually check: a well-formed action from a role permitted to
+  take it, and for a `BarrierAction` a target that is on the board and not
+  already blocked. It is **not** remote spatial legality. The mover's
+  pre-action cell is sealed until the final audit, so bounds, blocked
+  destinations and the resulting cell are **not knowable live** and are never
+  asserted here.
+- **`capture: CaptureAnswer`** — `NO_QUESTION`, `NOT_CAUGHT` or `CAUGHT`,
+  computed by the receiver from its **own** `LocalTruth` and public facts. Same
+  cell answers a `capture_claim`; a barrier answers by its own public target and
+  by the trapped rule. No position is ever returned.
 
-It **never** means network delivered, JSON parsed, signature valid, sender valid,
-phase valid, cursor valid, commitment valid or reveal-hash valid — those failures
-are raised by O2's owning layers and **never reach this result**. Exactly one
-result per invocation that reaches the legality layer; if authentication or
-protocol validation fails first, **no game-legality result exists at all**.
-Correlation is the awaited invocation itself, so **no `TurnCursor` echo** and no
-duplication of `action`, `hint`, `nonce`, `digest` or `state`. **No free-text
-reason crosses the boundary** — `GameRulesPort`'s reason stays a local diagnostic
-and log evidence, and no Python exception string is ever transported. Legality is
-decided only by `domain.rules` / `LocalTurnService` via `GameRulesPort`;
-`PeerServerPort` exposes the already-computed outcome and `PeerTransportPort`
-returns it to the caller. `False` is a result, not a sanction: interpretation
-belongs to the protocol runtime and `E-PROTO-ILLEGAL-MOVE`. This is
-**PROJECT-CONTRACT** (C-12); the source requires the rejection, not this shape.
+**Local legality is unchanged and still mandatory**: the sender validates its
+own action in full through `domain.rules` / `LocalTurnService` **before**
+committing, so an illegal action never produces an `H_commit` and never leaves.
+
+**Hidden-state-dependent legality is a final-audit responsibility.** From the
+disclosed sealed record the verifier reconstructs the mover's pre-action cell
+and proves or disproves the action and any capture declaration. *(That semantic
+audit is specified here and is **implementation pending** — the next internal
+Stage 5-R8 checkpoint owns it.)*
+
+It never means network delivered, JSON parsed, signature valid, sender valid,
+phase valid, cursor valid, commitment valid or reveal-hash valid — those
+failures are raised by O2's owning layers and **never reach this result**.
+Exactly one result per invocation that reaches this layer. Correlation is the
+awaited invocation itself, so **no `TurnCursor` echo** and no duplication of
+`action`, `hint`, `nonce`, `digest` or `state`. **No free text crosses the
+boundary.** This is **PROJECT-CONTRACT** (C-12 as amended by C-13); the source
+requires the capture resolution and the rejection, not this exact shape.
 
 **O6 — Audit-material submission operation.** Operation (f), alias `submit_audit`
 — **PROJECT-CONTRACT / REFERENCE-COMPATIBILITY, not book-mandated**. Cadence is
@@ -326,7 +337,7 @@ uses text.
 | Kinds | Successful result |
 |---|---|
 | `step0`, `config_proposal`, `config_lock`, `commitment`, `acknowledgement`, `final_nonce_reveal`, `audit_disclosure` | **ordinary completion, no semantic value** — Python `None` |
-| `reveal` | **`bool`** — game legality only (**O5**) |
+| `reveal` | **`TurnOutcome`** — public acceptance + `CaptureAnswer` (**O5**, amended) |
 | `result_agreement` | **`Sha256Digest`**, as exactly 64 lowercase hex characters, reconstructed client-side as `Sha256Digest(text)` |
 
 Ordinary completion is **not** `accepted=true`, `ok=true`, `success=true` or an

@@ -21,6 +21,7 @@ the four also need the session, to refuse an unauthenticated caller.
 
 from typing import Protocol
 
+from ..app.capture_values import TurnOutcome
 from ..app.peer_final_messages import FinalNonceReveal, ResultAgreement
 from ..app.peer_pregame_messages import (
     ConfigLockEvidence,
@@ -40,7 +41,7 @@ class PeerOperations(Protocol):
 
     Ordinary completion returns `None` - **no semantic result**, never an
     `accepted` flag. Exactly two operations carry a result: `reveal` returns the
-    game-legality `bool`, and `result_agreement` returns the locally computed
+    turn `TurnOutcome`, and `result_agreement` returns the locally computed
     `Sha256Digest`.
     """
 
@@ -64,12 +65,13 @@ class PeerOperations(Protocol):
         """Accept the peer's acknowledgement of our commitment."""
         ...
 
-    def on_reveal(self, reveal: Reveal, session: InboundSession) -> bool:
-        """Return whether the revealed action is **game-legal**.
+    def on_reveal(self, reveal: Reveal, session: InboundSession) -> TurnOutcome:
+        """Return what the receiver can honestly report about this reveal.
 
-        `False` means the transport, parsing, authentication and protocol layers
-        all succeeded and the action is illegal. It never encodes any of those
-        failures - each raises its own typed error instead.
+        `accepted` covers public facts only - the mover's hidden pre-action cell
+        makes remote spatial legality unknowable - and `capture` answers the
+        question this turn asked, if it asked one. Every transport, parsing,
+        authentication and protocol failure raises instead.
         """
         ...
 

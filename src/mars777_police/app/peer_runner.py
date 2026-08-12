@@ -33,6 +33,7 @@ from dataclasses import dataclass
 from ..domain.actions import PhysicalAction
 from ..domain.negotiated_config import NegotiatedConfig
 from .artifact_values import UtcTimestamp
+from .capture_values import TurnOutcome
 from .declaration_values import Declaration
 from .outbound_evidence_runtime import OutboundEvidenceRuntime
 from .outbound_evidence_values import PreparedTurn
@@ -94,12 +95,12 @@ class PeerRunner:
         await self.transport.send_commitment(prepared.commitment)
         return prepared
 
-    async def reveal_turn(self, prepared: PreparedTurn) -> bool:
+    async def reveal_turn(self, prepared: PreparedTurn) -> TurnOutcome:
         """Reveal our sealed turn once the peer has acknowledged it.
 
         The gate is the turn runtime's own record, not a flag kept here: only
         `accept_acknowledgement` sets it, and only after the digest matched what
-        we registered. The returned `bool` is the peer's game-legality verdict,
+        we registered. The returned `TurnOutcome` is the peer's own answer,
         passed through exactly - a failure stays a failure.
         """
         turn = self.turns()

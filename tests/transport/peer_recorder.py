@@ -8,6 +8,7 @@ adapter rather than against a recorder.
 
 from peer_ops import ILLEGAL_HINT, RESULT_DIGEST
 
+from mars777_police.app.capture_values import CaptureAnswer, TurnOutcome
 from mars777_police.app.peer_final_messages import FinalNonceReveal, ResultAgreement
 from mars777_police.app.peer_pregame_messages import (
     ConfigLockEvidence,
@@ -51,9 +52,9 @@ class RecordingOperations:
     def on_acknowledgement(self, value: Acknowledgement, session: InboundSession) -> None:
         self._record("acknowledgement", value)
 
-    def on_reveal(self, value: Reveal, session: InboundSession) -> bool:
+    def on_reveal(self, value: Reveal, session: InboundSession) -> TurnOutcome:
         self._record("reveal", value)
-        return value.hint != ILLEGAL_HINT
+        return TurnOutcome(value.hint != ILLEGAL_HINT, CaptureAnswer.NO_QUESTION)
 
     def on_final_nonce_reveal(self, value: FinalNonceReveal, session: InboundSession) -> None:
         self._record("final_nonce_reveal", value)

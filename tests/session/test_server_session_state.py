@@ -47,7 +47,7 @@ def test_every_kind_succeeds_in_process_on_one_session() -> None:
             return [await send(client, t, k, p) for t, k, p in session_calls.payloads()]
 
     results = asyncio.run(run())
-    assert results[5] is True
+    assert results[5].accepted is True
     assert isinstance(results[8], str) and len(results[8]) == 64
 
 

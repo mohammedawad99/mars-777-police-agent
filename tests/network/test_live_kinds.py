@@ -53,8 +53,8 @@ def test_every_peer_kind_crosses_the_public_route(public_peer: LivePeer) -> None
             await client.complete(
                 "receive_turn", "acknowledgement", encode_acknowledgement(acknowledgement())
             )
-            legal = await client.legality(encode_reveal(reveal()))
-            illegal = await client.legality(encode_reveal(reveal(ILLEGAL_HINT)))
+            legal = await client.outcome(encode_reveal(reveal()))
+            illegal = await client.outcome(encode_reveal(reveal(ILLEGAL_HINT)))
             await client.complete(
                 "submit_audit", "final_nonce_reveal", encode_final_nonce(final_nonce())
             )

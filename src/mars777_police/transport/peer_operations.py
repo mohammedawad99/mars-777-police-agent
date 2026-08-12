@@ -26,6 +26,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from ..app.audit_runtime import AuditRuntime
+from ..app.capture_values import TurnOutcome
 from ..app.peer_final_messages import FinalNonceReveal, ResultAgreement
 from ..app.peer_pregame_messages import (
     ConfigLockEvidence,
@@ -74,11 +75,11 @@ class InboundPeerOperations:
         session.require_peer()
         self.turns().accept_acknowledgement(acknowledgement)
 
-    def on_reveal(self, reveal: Reveal, session: InboundSession) -> bool:
-        """Return the game legality the turn runtime decided, unaltered.
+    def on_reveal(self, reveal: Reveal, session: InboundSession) -> TurnOutcome:
+        """Return the outcome the turn runtime decided, unaltered.
 
-        The `bool` is passed through exactly: an exception is never converted to
-        `False`, so `False` keeps meaning "protocol fine, move illegal".
+        The value is passed through exactly: an exception is never converted
+        into an outcome, so `accepted=False` keeps its one public meaning.
         """
         session.require_peer()
         return self.turns().accept_reveal(reveal)

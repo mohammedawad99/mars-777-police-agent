@@ -29,7 +29,7 @@ def test_an_illegal_turn_is_still_recorded_for_the_audit() -> None:
     live = advanced(runtime())
     live.accept_reveal(illegal_reveal())
     (record,) = live.evidence
-    assert record.legal is False
+    assert record.legal is True  # public acceptance; legality is an audit question
     assert record.h_commit == PEER_DIGEST
 
 

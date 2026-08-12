@@ -12,6 +12,7 @@ import turn_builders
 from peer_ops import agreement, audit_document, lock_evidence, proposal, step0_exchange
 from r16_builders import GROUP_B
 
+from mars777_police.app.capture_values import CaptureAnswer
 from mars777_police.app.protocol_errors import MalformedMessageError, StaleMessageError
 from mars777_police.app.protocol_values import FinalAuditVerdict
 from mars777_police.app.turn_protocol_state import TurnPhase
@@ -51,7 +52,7 @@ def test_the_turn_trio_drives_one_real_turn_protocol_runtime() -> None:
     live.on_commitment(turn_builders.commitment(), build.bound())
     assert turn.phase is TurnPhase.AWAITING_OUR_ACKNOWLEDGEMENT
     turn.acknowledge()
-    assert live.on_reveal(turn_builders.legal_reveal(), build.bound()) is True
+    assert live.on_reveal(turn_builders.legal_reveal(), build.bound()).accepted is True
     assert turn.phase is TurnPhase.CONSUMED
 
 
@@ -69,7 +70,8 @@ def test_an_illegal_reveal_returns_false_rather_than_raising() -> None:
     live = build.operations(turn=turn)
     live.on_commitment(turn_builders.commitment(), build.bound())
     turn.acknowledge()
-    assert live.on_reveal(turn_builders.illegal_reveal(), build.bound()) is False
+    outcome = live.on_reveal(turn_builders.illegal_reveal(), build.bound())
+    assert outcome.accepted is True and outcome.capture is CaptureAnswer.NO_QUESTION
 
 
 def test_a_protocol_invalid_reveal_raises_and_is_never_false() -> None:

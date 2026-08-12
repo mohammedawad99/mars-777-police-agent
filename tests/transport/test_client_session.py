@@ -82,9 +82,9 @@ def test_a_held_session_still_carries_the_per_call_result_and_timeout() -> None:
         client = PeerClient(url, timeout=17.0)
         async with client:
             assert client.timeout == 17.0
-            return await client.legality(encode_reveal(reveal()))
+            return await client.outcome(encode_reveal(reveal()))
 
-    assert asyncio.run(drive()) is True
+    assert asyncio.run(drive()).accepted is True
 
 
 def test_the_session_closes_once_even_when_the_body_raises() -> None:

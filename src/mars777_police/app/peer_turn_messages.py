@@ -14,6 +14,7 @@ error type is defined.
 from dataclasses import dataclass
 
 from ..domain.actions import BarrierAction, MoveAction, PhysicalAction
+from .capture_values import CaptureClaim
 from .protocol_values import Sha256Digest
 from .turn_cursor import TurnCursor
 
@@ -96,6 +97,8 @@ class Reveal:
     cursor: TurnCursor
     action: PhysicalAction
     hint: str
+    capture_claim: CaptureClaim | None = None
+    """The police's optional same-cell declaration; never sealed, never a nonce."""
 
     def __post_init__(self) -> None:
         if type(self.cursor) is not TurnCursor:
@@ -106,3 +109,7 @@ class Reveal:
             )
         if type(self.hint) is not str:
             raise ValueError(f"hint must be a str, got {type(self.hint).__name__}")
+        if self.capture_claim is not None and type(self.capture_claim) is not CaptureClaim:
+            raise ValueError(
+                f"capture_claim must be a CaptureClaim, got {type(self.capture_claim).__name__}",
+            )

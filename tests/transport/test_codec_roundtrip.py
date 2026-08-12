@@ -110,7 +110,8 @@ def test_reveal_round_trips_and_never_carries_a_nonce() -> None:
     assert rebuilt == original
     wire = encode_reveal(original).model_dump(mode="json")
     assert "nonce" not in str(wire)
-    assert set(wire) == {"cursor", "action", "hint"}
+    assert set(wire) == {"cursor", "action", "hint", "capture_claim"}
+    assert wire["capture_claim"] is None
 
 
 def test_a_barrier_reveal_round_trips_through_the_tagged_action() -> None:

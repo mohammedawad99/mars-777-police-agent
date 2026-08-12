@@ -122,7 +122,11 @@ def test_the_defining_modules_do_not_import_the_facade() -> None:
     assert "peer_messages" not in _sibling_imports(peer_turn_messages)
     assert "peer_messages" not in _sibling_imports(peer_final_messages)
     assert _sibling_imports(turn_cursor) == set()
-    assert _sibling_imports(peer_turn_messages) == {"protocol_values", "turn_cursor"}
+    assert _sibling_imports(peer_turn_messages) == {
+        "capture_values",
+        "protocol_values",
+        "turn_cursor",
+    }
     assert _sibling_imports(peer_final_messages) == {
         "artifact_values",
         "protocol_values",

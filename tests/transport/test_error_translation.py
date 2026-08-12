@@ -94,8 +94,8 @@ def test_transport_failure_is_a_separate_identity_from_every_protocol_outcome() 
 
 
 def test_no_failure_ever_arrives_as_a_legality_false() -> None:
-    assert call_with(None, encode_reveal(reveal()), "reveal") is True
-    assert call_with(None, encode_reveal(reveal(ILLEGAL_HINT)), "reveal") is False
+    assert call_with(None, encode_reveal(reveal()), "reveal").accepted is True
+    assert call_with(None, encode_reveal(reveal(ILLEGAL_HINT)), "reveal").accepted is False
     for error in IDENTITIES:
         with pytest.raises(ToolError):
             call_with(error(error.error_id), encode_reveal(reveal()), "reveal")

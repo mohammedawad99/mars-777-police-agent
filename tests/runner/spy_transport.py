@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 
+from mars777_police.app.capture_values import TurnOutcome
 from mars777_police.app.protocol_values import Sha256Digest
 
 LEGAL = True
@@ -40,7 +41,7 @@ class SpyTransport:
     async def send_acknowledgement(self, acknowledgement: object) -> None:
         self._record("acknowledgement", acknowledgement)
 
-    async def send_reveal(self, reveal: object) -> bool:
+    async def send_reveal(self, reveal: object) -> TurnOutcome:
         self._record("reveal", reveal)
         return self.legality
 

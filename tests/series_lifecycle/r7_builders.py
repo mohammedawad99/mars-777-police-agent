@@ -15,6 +15,7 @@ from mars777_police.agent_runtime import AgentRuntime
 from mars777_police.app.artifact_store import ArtifactStorePort
 from mars777_police.app.audit_runtime import AuditRuntime
 from mars777_police.app.audit_values import SubGameContext
+from mars777_police.app.capture_values import TurnOutcome
 from mars777_police.app.config_lock_runtime import ConfigLockRuntime
 from mars777_police.app.config_negotiation_runtime import ConfigNegotiationRuntime
 from mars777_police.app.orchestrator import LocalOrchestrator
@@ -96,7 +97,7 @@ def sealed_for(role: ActorRole, step: int = 1) -> SealedState:
 
 async def one_turn(
     mover: SeriesRuntime, waiter: SeriesRuntime, role: ActorRole, cursor: TurnCursor
-) -> bool:
+) -> TurnOutcome:
     """Drive one real commit / acknowledge / reveal turn between two agents."""
     prepared = await mover.composition.peer_runner.open_turn(
         state=sealed_for(role, cursor.step),

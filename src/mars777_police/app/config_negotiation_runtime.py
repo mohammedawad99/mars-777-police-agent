@@ -41,6 +41,7 @@ from .protocol_errors import (
     LocalDefectError,
     StaleMessageError,
 )
+from .turn_contract_gate import require_counted_turn_contract
 
 
 def initial_proposer(config: NegotiatedConfig) -> str:
@@ -117,6 +118,7 @@ class ConfigNegotiationRuntime:
             )
 
     def _check_profiles(self, profiles: InteropProfileSet) -> None:
+        require_counted_turn_contract(profiles)
         if profiles.series_convention is not self.profiles.series_convention:
             raise ConventionMismatchError(
                 "the series convention differs and is never resolved by preference",

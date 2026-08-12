@@ -28,10 +28,10 @@ def test_the_full_live_turn_runs_on_production_objects_alone() -> None:
     assert ack.h_commit == commitment().h_commit
     assert live.phase is TurnPhase.AWAITING_REVEAL
 
-    assert live.accept_reveal(legal_reveal()) is True
+    assert live.accept_reveal(legal_reveal()).accepted is True
     assert live.phase is TurnPhase.CONSUMED
     assert len(live.evidence) == 1
-    assert live.truth.completed_steps == 1
+    assert live.truth.completed_steps == 0  # their move is theirs; ours never advanced
 
 
 def test_our_own_outbound_turn_material_is_tracked_separately() -> None:

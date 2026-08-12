@@ -77,10 +77,10 @@ def test_each_kind_reaches_its_own_handler_with_the_right_value() -> None:
 
 def test_reveal_returns_the_legality_bool_in_both_directions() -> None:
     legal, operations = invoke("receive_turn", "reveal", encode_reveal(reveal()))
-    assert legal is True
+    assert legal.accepted is True
     assert operations.kinds() == ["reveal"]
     illegal, _ = invoke("receive_turn", "reveal", encode_reveal(reveal(ILLEGAL_HINT)))
-    assert illegal is False
+    assert illegal.accepted is False
 
 
 def test_result_agreement_returns_the_digest_as_lowercase_hex() -> None:

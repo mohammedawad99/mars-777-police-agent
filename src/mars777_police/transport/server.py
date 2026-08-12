@@ -43,6 +43,7 @@ from .router import (
     route_submit_audit,
 )
 from .wire_errors import outbound
+from .wire_turn import TurnOutcomeWire
 
 PEER_TOOLS = ("negotiate", "receive_turn", "submit_audit", "receive_control")
 """The complete public surface. There is no fifth peer tool and no alias."""
@@ -78,12 +79,12 @@ def build_server(operations: PeerOperations, name: str = "mars777-peer") -> Fast
         await persist(context, session)
 
     @server.tool
-    async def receive_turn(request: ReceiveTurnRequest, context: Context) -> bool | None:
+    async def receive_turn(request: ReceiveTurnRequest, context: Context) -> TurnOutcomeWire | None:
         """Commitment, acknowledgement and reveal.
 
-        The `bool` is returned **only** by `reveal`, and only once every lower
+        The outcome is returned **only** by `reveal`, and only once every lower
         layer has succeeded. Every failure below leaves by the error channel, so
-        `False` can never mean anything but game-illegal.
+        `accepted=False` can never mean anything but a refused public fact.
         """
         session = await inbound(context)
         try:

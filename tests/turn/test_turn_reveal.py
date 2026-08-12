@@ -1,8 +1,9 @@
-"""Reveal: `True`/`False` for legality only, everything else raises.
+"""Reveal: the outcome the receiver can honestly report, everything else raises.
 
-The distinction this file exists to hold: a protocol failure and an illegal move
-are different answers to different questions, and the boolean is reserved for
-the second.
+Stage 5-R8 replaced the legality bool. The receiver never learns the mover's
+sealed pre-action cell, so it cannot decide whether their move was spatially
+legal - that is proved at the final audit. What it reports live is public-fact
+acceptance plus the capture answer, and the peer's action never moves our piece.
 """
 
 import pytest
@@ -15,21 +16,25 @@ from turn_builders import (
     runtime,
 )
 
+from mars777_police.app.capture_values import CaptureAnswer, TurnOutcome
 from mars777_police.app.protocol_errors import StaleMessageError
 from mars777_police.app.turn_cursor import TurnCursor
 from mars777_police.app.turn_protocol_state import TurnPhase
 
 
-def test_a_legal_revealed_action_returns_true() -> None:
+def test_a_revealed_move_is_accepted_and_asks_no_capture_question() -> None:
     live = advanced(runtime())
-    assert live.accept_reveal(legal_reveal()) is True
+    outcome = live.accept_reveal(legal_reveal())
+    assert outcome == TurnOutcome(True, CaptureAnswer.NO_QUESTION)
     assert live.phase is TurnPhase.CONSUMED
 
 
-def test_a_game_illegal_revealed_action_returns_false() -> None:
-    """The real barrier rules refuse it; the protocol was still valid."""
+def test_a_move_the_receiver_cannot_check_is_still_accepted_live() -> None:
+    """Their pre-action cell is sealed, so we do not pretend to judge it."""
     live = advanced(runtime())
-    assert live.accept_reveal(illegal_reveal()) is False
+    outcome = live.accept_reveal(illegal_reveal())
+    assert outcome.accepted is True
+    assert outcome.capture is CaptureAnswer.NO_QUESTION
     assert live.phase is TurnPhase.CONSUMED
 
 
@@ -55,7 +60,7 @@ def test_a_reveal_for_another_cursor_raises() -> None:
 def test_a_duplicate_reveal_is_refused_and_never_replays_the_action() -> None:
     """The critical anti-replay property: a repeat cannot move a second time."""
     live = advanced(runtime())
-    assert live.accept_reveal(legal_reveal()) is True
+    assert live.accept_reveal(legal_reveal()).accepted is True
     moved_once = live.truth.own_position
     steps_once = live.truth.completed_steps
     with pytest.raises(StaleMessageError, match="cannot arrive"):
@@ -74,20 +79,21 @@ def test_a_protocol_invalid_reveal_never_reaches_the_game() -> None:
     assert live.evidence == ()
 
 
-def test_a_legal_reveal_mutates_truth_exactly_once_and_advances_the_step() -> None:
-    live = advanced(runtime())
-    before = live.truth
-    live.accept_reveal(legal_reveal())
-    assert live.truth is not before
-    assert live.truth.completed_steps == before.completed_steps + 1
-    assert live.cursor == TurnCursor(START.sub_game, live.truth.completed_steps)
-
-
-def test_an_illegal_reveal_leaves_truth_and_the_cursor_untouched() -> None:
-    """Exactly `LocalTurnService` semantics: a refused action produces no truth."""
+def test_a_peer_move_never_moves_our_own_piece() -> None:
+    """The R8 defect removal: their movement is theirs, not ours."""
     live = advanced(runtime())
     before, cursor = live.truth, live.cursor
-    assert live.accept_reveal(illegal_reveal()) is False
+    live.accept_reveal(legal_reveal())
+    assert live.truth is before
+    assert live.truth.own_position == before.own_position
+    assert live.truth.completed_steps == before.completed_steps
+    assert live.cursor == cursor
+
+
+def test_a_move_we_cannot_judge_leaves_truth_and_the_cursor_untouched() -> None:
+    live = advanced(runtime())
+    before, cursor = live.truth, live.cursor
+    assert live.accept_reveal(illegal_reveal()).accepted is True
     assert live.truth is before
     assert live.cursor == cursor
 
@@ -99,8 +105,8 @@ def test_the_hint_is_carried_but_decides_nothing() -> None:
     first = advanced(runtime())
     second = advanced(runtime())
     action = legal_reveal().action
-    assert first.accept_reveal(Reveal(START, action, "north, honestly")) is True
-    assert second.accept_reveal(Reveal(START, action, "south, dishonestly")) is True
+    assert first.accept_reveal(Reveal(START, action, "north, honestly")).accepted is True
+    assert second.accept_reveal(Reveal(START, action, "south, dishonestly")).accepted is True
     assert first.evidence[0].hint != second.evidence[0].hint
 
 

@@ -71,10 +71,10 @@ class AcknowledgementWire(BaseModel):
 
 
 class RevealWire(BaseModel):
-    """`Reveal(cursor, action, hint)` - no nonce, no legality field.
+    """`Reveal(cursor, action, hint)` plus the optional capture claim.
 
-    Legality is the *operation result*, a bool returned by the tool, never a
-    member of the request.
+    No nonce: the outcome is the *operation result*, never a request member.
+    `capture_claim` follows the reference's `[row, col]`; `null` means no claim.
     """
 
     model_config = WIRE
@@ -82,6 +82,20 @@ class RevealWire(BaseModel):
     cursor: TurnCursorWire
     action: ActionWire
     hint: str
+    capture_claim: list[int] | None = None
+
+
+class TurnOutcomeWire(BaseModel):
+    """The frozen result of the operation that carried a Reveal (O5, amended).
+
+    `accepted` is public-fact acceptance, never remote spatial legality, and the
+    `capture` vocabulary is closed. PROJECT-CONTRACT: the reference answers later.
+    """
+
+    model_config = WIRE
+
+    accepted: bool
+    capture: str
 
 
 class NonceRevealEntryWire(BaseModel):

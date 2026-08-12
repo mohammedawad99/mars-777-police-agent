@@ -18,6 +18,7 @@ while the Stage-4E-R16 runtime behind `PeerOperations` stays synchronous.
 
 from typing import Protocol
 
+from .capture_values import TurnOutcome
 from .peer_final_messages import FinalNonceReveal, ResultAgreement
 from .peer_pregame_messages import (
     ConfigLockEvidence,
@@ -36,7 +37,7 @@ class PeerTransportPort(Protocol):
 
     Ordinary completion returns `None` - no semantic result, never an `accepted`
     flag. Exactly two operations carry one: `send_reveal` returns the peer's
-    game-legality `bool`, and `send_result_agreement` returns the peer's locally
+    turn `TurnOutcome`, and `send_result_agreement` returns the peer's locally
     computed `Sha256Digest`.
 
     Failures arrive as the project's own typed failures - the peer's error
@@ -64,8 +65,8 @@ class PeerTransportPort(Protocol):
         """Acknowledge the peer's commitment."""
         ...
 
-    async def send_reveal(self, reveal: Reveal) -> bool:
-        """Send our reveal and return the peer's **game-legality** verdict."""
+    async def send_reveal(self, reveal: Reveal) -> TurnOutcome:
+        """Send our reveal and return the peer's outcome for this turn."""
         ...
 
     async def send_final_nonce_reveal(self, disclosure: FinalNonceReveal) -> None:

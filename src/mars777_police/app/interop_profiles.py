@@ -6,9 +6,8 @@ ever silently promoted to a member - the caller constructs the typed value.
 
 Four types have exactly one current-v1 member (`CONFIG_CONTRACT.md` R14-R1-D).
 That is deliberate: both peers echo the one required profile and a differing echo
-refuses counted play before ``CONFIG_LOCKED``. Single-member enums are kept
-rather than elided so the lock context binds an explicit token instead of an
-implicit assumption.
+refuses counted play before ``CONFIG_LOCKED``. Single-member enums are kept so
+the lock binds an explicit token rather than an implicit assumption.
 
 ``LECTURER_ATTACHMENT_COMPATIBILITY`` is intentionally the serialized value of a
 member of **two** distinct types; they are never interchangeable, and neither is
@@ -50,10 +49,22 @@ class ResultProfile(StrEnum):
     LECTURER_ATTACHMENT_COMPATIBILITY = "LECTURER_ATTACHMENT_COMPATIBILITY"
 
 
+COUNTED_TURN_PROFILE = "STRICT_COUNTED_MATCH_TURN_OUTCOME_V1"
+"""The only posture whose turn contract this build speaks."""
+
+
 class CompatibilityProfile(StrEnum):
-    """The overall compatibility posture; strict is the only counted emitter."""
+    """The compatibility posture, and the turn contract it implies.
+
+    R8 made a Reveal answer with `TurnOutcome` rather than a legality `bool`, so
+    the posture names it and `turn_contract_gate` refuses a mismatch pre-lock.
+    """
 
     STRICT_COUNTED_MATCH = "STRICT_COUNTED_MATCH"
+    """**Legacy**: the pre-R8 legality-bool result; never a counted emitter now."""
+
+    STRICT_COUNTED_MATCH_TURN_OUTCOME_V1 = "STRICT_COUNTED_MATCH_TURN_OUTCOME_V1"
+    """Current counted contract: `Reveal(+capture_claim)` -> `TurnOutcome`."""
     LECTURER_REFERENCE_COMPATIBILITY = "LECTURER_REFERENCE_COMPATIBILITY"
     LECTURER_ATTACHMENT_COMPATIBILITY = "LECTURER_ATTACHMENT_COMPATIBILITY"
 

@@ -1,31 +1,24 @@
 """The FastMCP client adapter: the concrete outbound peer transport.
 
-Owns the target endpoint, the tool invocation, the per-call timeout, response
-decoding and framework-error translation. It owns **no** gameplay state: it
-decides no cadence, verifies no commitment and never re-derives legality.
+Owns the endpoint, the tool invocation, the per-call timeout, response decoding
+and framework-error translation - and **no** gameplay state: no cadence, no
+commitment verification, no legality.
 
-**Timeouts come from the locked config**, and the link is typed rather than
-trusted: `for_locked_config` reads `response_timeout_sec` off the agreed
-`NegotiatedConfig` through the application's `TimeoutPolicy`, and `for_bootstrap`
-uses the negotiation window the state already owns. 30 is that member's
-Appendix-F baseline, not a constant, and no number appears in this module.
+**Timeouts come from the locked config**: `for_locked_config` reads
+`response_timeout_sec` off the agreed `NegotiatedConfig` through `TimeoutPolicy`,
+and `for_bootstrap` uses the negotiation window. No number appears here.
 
-Every response is decoded **strictly**: an operation that must complete with no
-semantic value refuses one, `reveal` requires an exact `bool` rather than `0`,
-`1` or `"true"`, and the digest must be a well-formed `Sha256Digest`.
+Every response is decoded **strictly**: a completing operation refuses a value,
+`reveal` requires an exact `TurnOutcome`, and a digest must be well formed.
 
 **One session per peer lifecycle, not one per operation.** Entering this client
-as an async context holds a single FastMCP Streamable-HTTP session open and runs
-every `call_tool` inside it. That is measured, not preferred: over a real public
-tunnel, 30 operations each opening their own session failed from the twenty-first
-onward and left the route unreachable, while the same 30 inside one held session
-all succeeded - in both experiment orders. Outside a held session each call still
-opens its own, so a caller managing no lifecycle keeps the original behaviour.
+as an async context holds one FastMCP Streamable-HTTP session and runs every
+`call_tool` inside it. That is measured: over a real public tunnel, 30 operations
+each opening their own session failed from the twenty-first onward, while the
+same 30 in one held session all succeeded. Outside one, each call opens its own.
 
-**A dead session is not silently replaced.** The failure surfaces as
-`E-TRANSPORT` and the operation is never replayed: whether a commitment reached
-the peer is not knowable from here, so reconnection and semantic retry stay
-separate decisions owned by the frozen retry policy.
+**A dead session is not silently replaced.** It surfaces as `E-TRANSPORT` and is
+never replayed: whether a commitment reached the peer is unknowable here.
 """
 
 from contextlib import AsyncExitStack
@@ -34,13 +27,16 @@ from typing import Any
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 from fastmcp.exceptions import ToolError
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
+from ..app.capture_values import TurnOutcome
 from ..app.peer_supervision import TimeoutPolicy
 from ..app.protocol_errors import MalformedMessageError
 from ..app.protocol_values import InvalidDigestError, Sha256Digest
 from ..domain.negotiated_config import NegotiatedConfig
+from .codec_turn import decode_outcome
 from .wire_errors import TransportFailureError, inbound
+from .wire_turn import TurnOutcomeWire
 
 
 def wire_json(model: BaseModel) -> dict[str, object]:
@@ -131,12 +127,17 @@ class PeerClient:
         if data is not None:
             raise MalformedMessageError(MalformedMessageError.error_id)
 
-    async def legality(self, payload: BaseModel) -> bool:
-        """Call `reveal` and require an exact `bool` game-legality result."""
+    async def outcome(self, payload: BaseModel) -> TurnOutcome:
+        """Call `reveal` and require an exact `TurnOutcome` result.
+
+        The framework returns structured output as a mapping or as a model it
+        rebuilt, so both go through the one wire model rather than being trusted.
+        """
         data = await self.call("receive_turn", "reveal", payload)
-        if type(data) is not bool:
-            raise MalformedMessageError(MalformedMessageError.error_id)
-        return data
+        try:
+            return decode_outcome(TurnOutcomeWire.model_validate(data, from_attributes=True))
+        except ValidationError:
+            raise MalformedMessageError(MalformedMessageError.error_id) from None
 
     async def digest(self, payload: BaseModel) -> Sha256Digest:
         """Call `receive_control` and require a well-formed `Sha256Digest`."""

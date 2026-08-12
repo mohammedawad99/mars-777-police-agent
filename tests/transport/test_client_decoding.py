@@ -12,6 +12,7 @@ import pytest
 from fastmcp import Client, FastMCP
 from peer_ops import agreement, commitment
 
+from mars777_police.app.capture_values import CaptureAnswer, TurnOutcome
 from mars777_police.app.protocol_errors import MalformedMessageError, StaleMessageError
 from mars777_police.transport.client import PeerClient, envelope, wire_json
 from mars777_police.transport.codec_final import encode_result_agreement
@@ -59,12 +60,13 @@ def test_complete_accepts_only_an_absent_semantic_value() -> None:
             asyncio.run(StubClient(wrong).complete("negotiate", "step0", {}))
 
 
-def test_legality_requires_an_exact_bool() -> None:
-    assert asyncio.run(StubClient(True).legality(encode_commitment(commitment()))) is True
-    assert asyncio.run(StubClient(False).legality(encode_commitment(commitment()))) is False
-    for wrong in (1, 0, "true", "False", None, {"result": True}):
+def test_the_outcome_requires_the_exact_turn_outcome_shape() -> None:
+    good = {"accepted": True, "capture": "CAUGHT"}
+    result = asyncio.run(StubClient(good).outcome(encode_commitment(commitment())))
+    assert result == TurnOutcome(True, CaptureAnswer.CAUGHT)
+    for wrong in (True, 1, "true", None, {"accepted": True}, {"accepted": True, "capture": "X"}):
         with pytest.raises(MalformedMessageError):
-            asyncio.run(StubClient(wrong).legality(encode_commitment(commitment())))
+            asyncio.run(StubClient(wrong).outcome(encode_commitment(commitment())))
 
 
 def test_digest_requires_a_well_formed_lowercase_hex_digest() -> None:
@@ -85,7 +87,7 @@ def test_a_remote_typed_failure_reaches_the_caller_unchanged() -> None:
 def test_a_transport_failure_stays_a_transport_failure() -> None:
     failure = TransportFailureError(TransportFailureError.error_id)
     with pytest.raises(TransportFailureError):
-        asyncio.run(StubClient(failure=failure).legality(encode_commitment(commitment())))
+        asyncio.run(StubClient(failure=failure).outcome(encode_commitment(commitment())))
 
 
 def test_the_client_exposes_its_endpoint_and_holds_no_game_state() -> None:

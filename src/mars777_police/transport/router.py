@@ -19,7 +19,7 @@ from ..app.protocol_values import Sha256Digest
 from .codec_declaration import decode_step0
 from .codec_final import decode_final_nonce, decode_result_agreement
 from .codec_pregame import decode_lock, decode_proposal
-from .codec_turn import decode_acknowledgement, decode_commitment, decode_reveal
+from .codec_turn import decode_acknowledgement, decode_commitment, decode_reveal, encode_outcome
 from .envelopes import (
     NegotiateRequest,
     ReceiveControlRequest,
@@ -28,6 +28,7 @@ from .envelopes import (
 )
 from .handlers import PeerOperations
 from .inbound_session import InboundSession
+from .wire_turn import TurnOutcomeWire
 
 
 def route_negotiate(
@@ -44,15 +45,15 @@ def route_negotiate(
 
 def route_receive_turn(
     operations: PeerOperations, request: ReceiveTurnRequest, session: InboundSession
-) -> bool | None:
-    """Commitment and acknowledgement complete; reveal returns its legality."""
+) -> TurnOutcomeWire | None:
+    """Commitment and acknowledgement complete; reveal returns its outcome."""
     if request.kind == "commitment":
         operations.on_commitment(decode_commitment(request.payload), session)
         return None
     if request.kind == "acknowledgement":
         operations.on_acknowledgement(decode_acknowledgement(request.payload), session)
         return None
-    return operations.on_reveal(decode_reveal(request.payload), session)
+    return encode_outcome(operations.on_reveal(decode_reveal(request.payload), session))
 
 
 def route_submit_audit(

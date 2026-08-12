@@ -34,12 +34,14 @@ own locked role, or its complement.
 from dataclasses import dataclass, field
 
 from ..domain.truth import LocalTruth
+from .capture_observation import observe_reveal, require_claim_shape
+from .capture_values import TurnOutcome
 from .peer_turn_messages import Acknowledgement, Commitment, Reveal
 from .protocol_errors import StaleMessageError
 from .sealed_record_values import ActorRole
 from .turn_cursor import TurnCursor
 from .turn_protocol_state import AckEvidence, PendingCommitment, TurnEvidence, TurnPhase
-from .turn_service import InvalidActionError, LocalTurnService
+from .turn_service import LocalTurnService
 
 
 def _refuse(reason: str) -> StaleMessageError:
@@ -58,6 +60,7 @@ class TurnProtocolRuntime:
     peer_commitment: PendingCommitment | None = field(default=None)
     local_commitment: PendingCommitment | None = field(default=None)
     local_acknowledged: bool = field(default=False)
+    claim_answered: bool = field(default=False)
     evidence: tuple[TurnEvidence, ...] = field(default=())
     acks: tuple[AckEvidence, ...] = field(default=())
 
@@ -107,34 +110,41 @@ class TurnProtocolRuntime:
         self.local_acknowledged = True
         self.acks += (AckEvidence(pending.cursor, pending.h_commit, self.peer_role),)
 
-    def accept_reveal(self, reveal: Reveal) -> bool:
-        """Correlate the peer's reveal, then ask the game whether it is legal.
+    def accept_reveal(self, reveal: Reveal) -> TurnOutcome:
+        """Observe the peer's reveal and answer what we can honestly know.
 
-        Ordering is checked first and the game second, so a stale or out-of-order
-        reveal can never reach `LocalTurnService` and can never move a piece.
+        Two things this deliberately does **not** do. It never applies the
+        peer's action to our own truth - their move is theirs, and moving our
+        piece with it was the defect R8 removed. And it never claims their
+        action was spatially legal: their pre-action cell is sealed until the
+        final audit, so `accepted` reports public facts only.
         """
         pending = self.peer_commitment
         if self.phase is not TurnPhase.AWAITING_REVEAL or pending is None:
             raise _refuse(f"a reveal cannot arrive while {self.phase.value}")
         self._require_cursor(reveal.cursor, "reveal")
-        # No separate "does this match the stored commitment" branch: the cursor
-        # check above already proves it. The commitment was stored only after the
-        # same equality held, and nothing advances the cursor between the two
-        # points, so a mismatch is unreachable rather than merely unlikely - and
-        # `test_the_stored_commitment_always_matches_a_validated_reveal` pins that.
-        legal = self._apply(reveal)
+        self._require_claim_shape(reveal)
+        outcome = self._observe(reveal)
         self.evidence += (
-            TurnEvidence(pending.cursor, pending.h_commit, reveal.action, reveal.hint, legal),
+            TurnEvidence(
+                pending.cursor, pending.h_commit, reveal.action, reveal.hint, outcome.accepted
+            ),
         )
+        self.claim_answered = self.claim_answered or reveal.capture_claim is not None
         self.phase = TurnPhase.CONSUMED
-        return legal
+        return outcome
 
-    def _apply(self, reveal: Reveal) -> bool:
-        """Delegate legality to the game; an illegal action leaves truth alone."""
-        try:
-            result = self.turns.apply(self.truth, reveal.action)
-        except InvalidActionError:
-            return False
-        self.truth = result.truth
-        self.cursor = TurnCursor(self.cursor.sub_game, result.completed_step)
-        return True
+    def _require_claim_shape(self, reveal: Reveal) -> None:
+        """Only the police may declare, and only alongside a movement."""
+        require_claim_shape(reveal, self.peer_role, _refuse)
+
+    def _observe(self, reveal: Reveal) -> TurnOutcome:
+        """Answer from our own position and the public board, and nothing else."""
+        outcome, truth = observe_reveal(reveal, self.truth)
+        self.truth = truth
+        return outcome
+
+    @property
+    def audit_required(self) -> bool:
+        """Whether a declared capture ended ordinary play, however it was answered."""
+        return self.claim_answered

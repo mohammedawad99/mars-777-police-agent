@@ -154,4 +154,15 @@ own Stage-2C red-team findings — its "C-11" is a *profile-downgrade* risk row 
 its "C-12" a *result-hash self-reference* row, both resolved there, and neither
 has any relation to the peer-family inventory. Those are **not**
 Conflict-Register entries, and that historical review is left unchanged. The
-Conflict Register is the single authority for `C-01…C-12`.
+Conflict Register is the single authority for `C-01…C-13`.
+
+## C-13 — Capture resolution vs the derived legality-only turn result (Stage 5-R8)
+
+| Field | Content |
+|---|---|
+| **Conflict** | `PROTOCOL_TIMELINE.md` event 8 has the receiving peer decide "move legality **and capture claim**", and `REQUIREMENT_CATALOG.md` requires capture by contact (`PRD01-FR-050`), by barrier (`BAR-003`), by trapping (`GAME-005`) and truthful capture declarations (`CRYPTO-004`, `CRYPTO-005`). The derived **O5 / C-12** contract returned a single **game-legality `bool`** and carried no capture answer at all. |
+| **Confirmed?** | **Yes — a real derived-contract defect, in two independent ways.** (1) Capture had no channel, so `CAPTURE` was unreachable and every sub-game could only end by survival. (2) The bool itself was not computable: the receiver never learns the mover's sealed pre-action cell, so it cannot decide bounds or blockage — the live code was applying the peer's action to *its own* truth to produce it. |
+| **Authority** | Source (Ch 3, Ch 5 §5.3–5.4, App E #19/#21/#22/#46/#47) requires capture and truthful declaration; the response *shape* was only ever PROJECT-CONTRACT, so the project's own derivation is what changes. |
+| **Resolution** | (a) the **sender** validates full local legality before Commitment; (b) the **receiver** returns `TurnOutcome(accepted, capture)` — public-fact acceptance plus a `CaptureAnswer` computed from its own truth; (c) **hidden-state-dependent legality and capture declarations are verified at the final semantic audit**. |
+| **Status** | (a) and (b) are **implemented** at Stage 5-R8. (c) is **specified and implementation pending** — the next internal Stage 5-R8 checkpoint owns the capture transcript, the anti-fabrication cross-check and the semantic final audit. |
+| **Impact** | No new peer family, wire kind, FastMCP tool, port or error identity. The sealed eight-member commitment record is unchanged. The representation is frozen by **JDEC-016**, and the turn contract is named by the compatibility posture `STRICT_COUNTED_MATCH_TURN_OUTCOME_V1`. |
