@@ -1,7 +1,18 @@
-"""Real compositions bound to OS-assigned ports, plus a truthful launch document."""
+"""Real compositions bound to OS-assigned ports, plus a truthful launch document.
 
+The subprocess helpers live here because they are mechanics, not assertions: how
+to start the executable on either platform, how to know its *application* is
+answering, and how to ask it to stop the way an operator would.
+"""
+
+import http.client
 import json
+import os
+import signal
 import socket
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 import composed_builders as compose
@@ -14,8 +25,60 @@ from mars777_police.transport.codec_auth import encode_profiles
 from mars777_police.transport.codec_declaration import encode_declaration
 
 HOST = "127.0.0.1"
+MCP_PATH = "/mcp"
 SECRET = "out-of-band-provisioned-secret"
 """A synthetic test key; the real one never appears in this repository."""
+
+WINDOWS = sys.platform == "win32"
+"""Windows has no SIGINT to deliver to a child; it has console control events."""
+
+GROUP_FLAG = subprocess.CREATE_NEW_PROCESS_GROUP if WINDOWS else 0
+"""A control event reaches only a child in its own group; POSIX passes 0."""
+
+STOP_EVENT = signal.CTRL_BREAK_EVENT if WINDOWS else signal.SIGINT
+"""An operator's stop: Ctrl-C on POSIX, Ctrl-Break on Windows."""
+
+NOT_ACCEPTABLE = 406
+"""FastMCP's answer to a plain GET - the ASGI stack replying, not the kernel."""
+
+READY_TIMEOUT = 30.0
+POLL_SECONDS = 0.05
+
+
+def spawn(package: str, launch: Path, environment: dict[str, str]) -> "subprocess.Popen[str]":
+    """Start the real executable, in its own process group where that is needed."""
+    return subprocess.Popen(
+        [sys.executable, "-m", package, "--launch", str(launch)],
+        env={**os.environ, **environment},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        creationflags=GROUP_FLAG,
+    )
+
+
+def await_application(child: "subprocess.Popen[str]", port: int) -> int:
+    """Return the status of the first HTTP response the **application** produced.
+
+    A TCP connect proves nothing here. R6 binds and listens itself, so the kernel
+    accepts into the backlog while no server exists yet and holds the request
+    unanswered until one does - a plain connect therefore succeeds long before
+    FastMCP can be interrupted gracefully, which is exactly the window that made
+    CI red. Only a parsed status line proves the ASGI stack is running.
+    """
+    deadline = time.monotonic() + READY_TIMEOUT
+    while time.monotonic() < deadline:
+        if child.poll() is not None:
+            raise AssertionError(f"the agent exited early: {child.communicate()[1]}")
+        connection = http.client.HTTPConnection(HOST, port, timeout=1.0)
+        try:
+            connection.request("GET", MCP_PATH)
+            return int(connection.getresponse().status)
+        except (OSError, http.client.HTTPException):
+            time.sleep(POLL_SECONDS)
+        finally:
+            connection.close()
+    raise AssertionError("the agent never answered an HTTP request")
 
 
 def free_port() -> int:

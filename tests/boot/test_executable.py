@@ -1,17 +1,14 @@
 """`python -m mars777_police`: launch input, failure paths, and a real process."""
 
 import json
-import os
 import signal
-import socket
 import subprocess
-import sys
-import time
 from collections.abc import Coroutine
 from pathlib import Path
 
 import boot_builders as build
 import pytest
+from r16_source import code_of
 
 from mars777_police import __main__ as entry
 from mars777_police.launch_input import (
@@ -19,8 +16,6 @@ from mars777_police.launch_input import (
     parse_launch_document,
     read_launch_document,
 )
-
-READY_TIMEOUT = 30.0
 
 
 def test_the_launch_document_uses_only_frozen_wire_shapes() -> None:
@@ -95,28 +90,20 @@ def environment(directory: Path, port: int = 0) -> dict[str, str]:
 
 
 def test_the_real_module_serves_and_stops_cleanly(tmp_path: Path) -> None:
-    """A real `python -m` process: reachable, then interrupted, then clean."""
+    """A real `python -m` process: *answering*, then interrupted, then clean.
+
+    Waiting for FastMCP's own reply rather than a TCP connect is the whole point.
+    The listener is bound before the server runs, so an interrupt sent on connect
+    can land while `serve` is still starting - before the framework has installed
+    its signal handling - and a graceful shutdown becomes a traceback.
+    """
     port = build.free_port()
-    launch = build.written_launch(tmp_path)
-    child = subprocess.Popen(
-        [sys.executable, "-m", "mars777_police", "--launch", str(launch)],
-        env={**os.environ, **environment(tmp_path, port)},
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
+    child = build.spawn(
+        "mars777_police", build.written_launch(tmp_path), environment(tmp_path, port)
     )
     try:
-        deadline = time.monotonic() + READY_TIMEOUT
-        while time.monotonic() < deadline:
-            with socket.socket() as probe:
-                if probe.connect_ex((build.HOST, port)) == 0:
-                    break
-            if child.poll() is not None:
-                raise AssertionError(f"the agent exited early: {child.communicate()[1]}")
-            time.sleep(0.05)
-        else:
-            raise AssertionError("the agent never became reachable")
-        child.send_signal(signal.SIGINT)
+        assert build.await_application(child, port) == build.NOT_ACCEPTABLE
+        child.send_signal(build.STOP_EVENT)
         out, err = child.communicate(timeout=30)
     finally:
         if child.poll() is None:
@@ -125,6 +112,30 @@ def test_the_real_module_serves_and_stops_cleanly(tmp_path: Path) -> None:
     assert child.returncode == 0, err
     assert "Traceback" not in err
     assert build.SECRET not in out and build.SECRET not in err
+
+
+def test_the_stop_control_and_creation_flag_match_the_platform() -> None:
+    """One mapping, chosen by platform - never a police/thief branch."""
+    windows = (
+        getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", None),
+        getattr(signal, "CTRL_BREAK_EVENT", None),
+    )
+    expected_flag, expected_event = windows if build.WINDOWS else (0, signal.SIGINT)
+    assert expected_flag == build.GROUP_FLAG
+    assert expected_event == build.STOP_EVENT
+
+
+def test_windows_can_never_reach_the_unsupported_sigint_path() -> None:
+    """`Popen.send_signal(SIGINT)` raises `ValueError` on Windows, so it is unreachable there.
+
+    Read from code tokens, not prose: the control event is selected by the same
+    `WINDOWS` test that decides the creation flag, so a group-less child can
+    never be sent a group control event either.
+    """
+    body = code_of(build)
+    assert "signal . CTRL_BREAK_EVENT if WINDOWS else signal . SIGINT" in body
+    assert "subprocess . CREATE_NEW_PROCESS_GROUP if WINDOWS else 0" in body
+    assert "send_signal" not in body
 
 
 def test_an_interrupt_during_the_run_exits_zero(monkeypatch: pytest.MonkeyPatch) -> None:
