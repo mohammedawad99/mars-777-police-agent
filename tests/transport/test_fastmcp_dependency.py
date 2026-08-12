@@ -16,8 +16,9 @@ from fastmcp import Client, FastMCP
 from fastmcp.client.transports import StreamableHttpTransport
 from fastmcp.exceptions import ToolError
 
-COMPOSITION_ROOT = frozenset({"composition.py", "composition_values.py"})
-"""The one place outside `transport` allowed to name the framework (5-R5)."""
+COMPOSITION_ROOT = frozenset({"composition.py", "composition_values.py", "launch_input.py"})
+"""The outer files allowed to name the framework: composition (5-R5) and the
+launch-input adapter (5-R6), which validates the already-frozen wire models."""
 
 DIRECT_DEPENDENCIES = ["fastmcp==3.4.6", "pydantic==2.13.4"]
 """The project's exact direct runtime dependencies.
