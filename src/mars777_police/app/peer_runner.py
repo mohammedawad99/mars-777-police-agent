@@ -20,8 +20,11 @@ the second half of a single `perform_turn`, and why nothing here sleeps or polls
 
 **Lifecycle-scoped owners are resolved per call.** A turn runtime is consumed and
 an evidence runtime is per sub-game, so both arrive as providers and neither is
-captured. The series audit gate and the result exchange are series-scoped, which
-is why those two are held directly.
+captured. `ResultExchange` is a provider for a different reason: it is assembled
+*from* six completed sub-games, so at the moment this runner is built it does not
+truthfully exist yet. Only the two result methods resolve it, which is why an
+agent can play its whole series before the result owner appears. The series audit
+gate is series-scoped from the start, so it is held directly.
 """
 
 from collections.abc import Callable
@@ -53,7 +56,7 @@ class PeerRunner:
     pregame: PregameSessionRuntime
     turns: Callable[[], TurnProtocolRuntime]
     evidence: Callable[[], OutboundEvidenceRuntime]
-    results: ResultExchange
+    results: Callable[[], ResultExchange]
     series: SeriesAuditGate
 
     async def send_step0(self, declaration: Declaration) -> None:
@@ -121,10 +124,12 @@ class PeerRunner:
 
     async def open_result_agreement(self) -> None:
         """Propose the result, once our whole series audit has passed."""
-        self.results.require_series_audit(self.series)
-        await self.results.open_agreement()
+        results = self.results()
+        results.require_series_audit(self.series)
+        await results.open_agreement()
 
     async def respond_to_result(self, timestamp: UtcTimestamp) -> None:
         """Answer the proposer's request, under the same series audit gate."""
-        self.results.require_series_audit(self.series)
-        await self.results.send_response(timestamp)
+        results = self.results()
+        results.require_series_audit(self.series)
+        await results.send_response(timestamp)

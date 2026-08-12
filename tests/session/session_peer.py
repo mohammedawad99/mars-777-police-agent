@@ -51,7 +51,7 @@ def main(port: int) -> None:
     pregame = build.pregame()
     pregame.adopt_config(build.agreed())
     audit = audit_builders.runtime()
-    operations = InboundPeerOperations(pregame, turn_sequence(), lambda: audit, build.exchange())
+    operations = InboundPeerOperations(pregame, turn_sequence(), lambda: audit, build.exchange)
     application = build_server(operations, name="r3r-peer").http_app(path="/mcp")
     uvicorn.run(application, host="127.0.0.1", port=port, log_level="error")
 

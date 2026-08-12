@@ -100,7 +100,7 @@ def test_result_agreement_returns_the_production_digest() -> None:
     from mars777_police.transport.peer_operations import InboundPeerOperations
 
     adapter = InboundPeerOperations(
-        build.pregame(), turn_builders.runtime, audit_builders.runtime, live
+        build.pregame(), turn_builders.runtime, audit_builders.runtime, lambda: live
     )
     digest = adapter.on_result_agreement(agreement(), build.bound(GROUP_B))
     assert digest is live.local_digest and live.peer_request_handled

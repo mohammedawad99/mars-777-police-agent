@@ -24,7 +24,7 @@ def server_and_pregame() -> tuple[object, object]:
     pregame = build.pregame()
     pregame.adopt_config(build.agreed())
     audit = audit_builders.runtime()
-    operations = InboundPeerOperations(pregame, turn_sequence(), lambda: audit, build.exchange())
+    operations = InboundPeerOperations(pregame, turn_sequence(), lambda: audit, build.exchange)
     return build_server(operations, name="r3r-inmemory"), pregame
 
 

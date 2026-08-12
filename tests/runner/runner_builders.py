@@ -68,7 +68,7 @@ class Side:
     def operations(self) -> InboundPeerOperations:
         """The production inbound adapter over this side's real owners."""
         return InboundPeerOperations(
-            self.pregame, lambda: self.turn, lambda: self.audit, self.results
+            self.pregame, lambda: self.turn, lambda: self.audit, lambda: self.results
         )
 
     def runner(self, transport: PeerTransportPort, results: object | None = None) -> PeerRunner:
@@ -79,7 +79,7 @@ class Side:
             self.pregame,
             lambda: self.turn,
             lambda: self.producer,
-            results if results is not None else self.results,
+            (lambda: results) if results is not None else (lambda: self.results),
             self.gate,
         )
 

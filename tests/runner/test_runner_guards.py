@@ -60,7 +60,7 @@ def test_the_turn_provider_is_resolved_per_operation() -> None:
         peer.pregame,
         lambda: next(resolved),
         lambda: peer.producer,
-        peer.results,
+        lambda: peer.results,
         peer.gate,
     )
     asyncio.run(
@@ -90,7 +90,7 @@ def test_the_evidence_provider_is_resolved_per_operation() -> None:
         peer.pregame,
         lambda: peer.turn,
         lambda: next(resolved),
-        peer.results,
+        lambda: peer.results,
         peer.gate,
     )
     asyncio.run(

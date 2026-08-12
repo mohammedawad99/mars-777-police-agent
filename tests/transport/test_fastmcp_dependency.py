@@ -16,6 +16,9 @@ from fastmcp import Client, FastMCP
 from fastmcp.client.transports import StreamableHttpTransport
 from fastmcp.exceptions import ToolError
 
+COMPOSITION_ROOT = frozenset({"composition.py", "composition_values.py"})
+"""The one place outside `transport` allowed to name the framework (5-R5)."""
+
 DIRECT_DEPENDENCIES = ["fastmcp==3.4.6", "pydantic==2.13.4"]
 """The project's exact direct runtime dependencies.
 
@@ -80,14 +83,22 @@ def test_only_the_transport_package_imports_the_framework_stack() -> None:
 
     The stage that was authorized to write the adapter has written it, so the
     question changed from *whether* `fastmcp` and `pydantic` may be imported to
-    *where*. The answer is `transport/` and nowhere else: `app`, `domain` and
-    `protocol` must all remain testable, and portable, without the framework.
+    *where*. The answer is the layers **inward** of the adapter: `app`, `domain`,
+    `protocol` and `infra` must all remain testable, and portable, without the
+    framework.
+
+    Stage 5-R5 widened this by exactly one place. The composition root sits
+    outside `transport` and its job is assembling the graph, so it names
+    `FastMCP` for the type of the server it builds - and nothing else. The
+    protection this test exists for is unchanged: the four inward layers are
+    still checked, and the allowance is a named file, not a directory.
     """
     src = Path(__file__).resolve().parents[2] / "src"
     offenders = sorted(
         str(path.relative_to(src))
         for path in src.rglob("*.py")
         if path.parent.name != "transport"
+        and path.name not in COMPOSITION_ROOT
         and any(
             line.startswith(("import fastmcp", "from fastmcp", "import pydantic", "from pydantic"))
             for line in path.read_text(encoding="utf-8").splitlines()

@@ -15,8 +15,11 @@ that *establishes* the identity, so it binds rather than requires.
 
 **Lifecycle-scoped owners are resolved per call.** `TurnProtocolRuntime` is
 terminal at `CONSUMED` and `AuditRuntime` at `COMPLETE`, so a runtime captured in
-`__init__` would be a consumed one by the second turn. The providers are called
-inside each method, never stored.
+`__init__` would be a consumed one by the second turn. `ResultExchange` is a
+provider too, because it is assembled from six completed sub-games and cannot
+exist while they are still being played - and only `on_result_agreement`
+resolves it, so the other eight operations work throughout the series without
+one.
 """
 
 from collections.abc import Callable
@@ -45,7 +48,7 @@ class InboundPeerOperations:
     pregame: PregameSessionRuntime
     turns: Callable[[], TurnProtocolRuntime]
     audits: Callable[[], AuditRuntime]
-    results: ResultExchange
+    results: Callable[[], ResultExchange]
 
     def on_step0(self, exchange: Step0DeclarationExchange, session: InboundSession) -> None:
         """Verify Step-0, then bind the identity it proved to this session."""
@@ -95,4 +98,4 @@ class InboundPeerOperations:
     ) -> Sha256Digest:
         """Return the production digest, with the sender the session proved."""
         peer = session.require_peer()
-        return self.results.accept_peer_request(agreement, peer)
+        return self.results().accept_peer_request(agreement, peer)

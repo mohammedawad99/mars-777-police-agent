@@ -25,7 +25,7 @@ def rotating(values: list[object]) -> object:
 def test_a_consumed_turn_runtime_is_not_cached_across_operations() -> None:
     first, second = turn_builders.runtime(), turn_builders.runtime()
     adapter = InboundPeerOperations(
-        build.pregame(), rotating([first, second]), audit_builders.runtime, build.exchange()
+        build.pregame(), rotating([first, second]), audit_builders.runtime, build.exchange
     )
     adapter.on_commitment(turn_builders.commitment(), build.bound())
     adapter.on_commitment(turn_builders.commitment(), build.bound())
@@ -42,7 +42,7 @@ def test_a_completed_audit_runtime_is_not_cached_across_operations() -> None:
     """
     first, second = audit_builders.runtime(), audit_builders.runtime()
     adapter = InboundPeerOperations(
-        build.pregame(), turn_builders.runtime, rotating([first, second]), build.exchange()
+        build.pregame(), turn_builders.runtime, rotating([first, second]), build.exchange
     )
     session = build.bound(audit_builders.PEER_GROUP)
     adapter.on_final_nonce_reveal(audit_builders.nonce_batch(), session)
@@ -67,7 +67,7 @@ def test_the_adapter_stores_only_injected_dependencies() -> None:
 def test_a_second_audit_resolution_reaches_the_second_runtime() -> None:
     first, second = audit_builders.runtime(), audit_builders.runtime()
     adapter = InboundPeerOperations(
-        build.pregame(), turn_builders.runtime, rotating([first, second]), build.exchange()
+        build.pregame(), turn_builders.runtime, rotating([first, second]), build.exchange
     )
     session = build.bound(audit_builders.PEER_GROUP)
     adapter.on_final_nonce_reveal(audit_builders.nonce_batch(), session)

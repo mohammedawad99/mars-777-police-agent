@@ -94,7 +94,7 @@ def operations(
         session_runtime if session_runtime is not None else pregame(),
         lambda: live_turn,
         lambda: live_audit,
-        exchange(),
+        lambda: exchange(),
     )
 
 

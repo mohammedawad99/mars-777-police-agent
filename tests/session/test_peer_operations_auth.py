@@ -61,9 +61,7 @@ def test_the_gate_runs_before_the_lifecycle_provider_is_resolved() -> None:
 
     from mars777_police.transport.peer_operations import InboundPeerOperations
 
-    adapter = InboundPeerOperations(
-        build.pregame(), turn_provider, audit_provider, build.exchange()
-    )
+    adapter = InboundPeerOperations(build.pregame(), turn_provider, audit_provider, build.exchange)
     for method, value in GATED:
         with pytest.raises(AuthFailureError):
             getattr(adapter, method)(value, build.unbound())
