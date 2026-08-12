@@ -6,8 +6,9 @@ import subprocess
 from collections.abc import Coroutine
 from pathlib import Path
 
-import boot_builders as build
+import executable_process as process
 import pytest
+from boot_builders import SECRET, free_port
 from r16_source import code_of
 
 from mars777_police import __main__ as entry
@@ -20,14 +21,14 @@ from mars777_police.launch_input import (
 
 def test_the_launch_document_uses_only_frozen_wire_shapes() -> None:
     """`declaration` and `profiles` are the contracts the transport already owns."""
-    document = json.loads(build.launch_document())
+    document = json.loads(process.launch_document())
     assert set(document) == {"declaration", "profiles", "first_sub_game"}
     assert {"game_id", "game_uid", "token_budget_per_series"} <= set(document["declaration"])
 
 
 def test_the_series_identity_is_derived_not_restated() -> None:
     """Nothing is supplied twice and risked disagreeing."""
-    identity = parse_launch_document(build.launch_document())
+    identity = parse_launch_document(process.launch_document())
     assert identity.game_id == identity.declaration.game_id
     assert identity.game_uid == identity.declaration.game_uid
     assert identity.token_budget_per_series == identity.declaration.token_budget_per_series
@@ -57,7 +58,7 @@ def test_help_starts_nothing(capsys: pytest.CaptureFixture[str]) -> None:
 def test_a_bad_launch_path_exits_non_zero_without_starting(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    for name, value in environment(tmp_path).items():
+    for name, value in process.environment().items():
         monkeypatch.setenv(name, value)
     assert entry.main(["--launch", str(tmp_path / "absent.json")]) == 2
     assert "cannot start" in capsys.readouterr().err
@@ -67,72 +68,70 @@ def test_missing_settings_exit_non_zero_without_leaking_a_secret(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("MARS777_AUTH_SECRET", raising=False)
-    launch = build.written_launch(tmp_path)
-    for name, value in environment(tmp_path).items():
+    launch = process.written_launch(tmp_path)
+    for name, value in process.environment().items():
         if name != "MARS777_AUTH_SECRET":
             monkeypatch.setenv(name, value)
     assert entry.main(["--launch", str(launch)]) == 2
     reported = capsys.readouterr().err
     assert "MARS777_AUTH_SECRET" in reported
-    assert build.SECRET not in reported
-
-
-def environment(directory: Path, port: int = 0) -> dict[str, str]:
-    """A synthetic operator environment; never the real one."""
-    return {
-        "MARS777_ROLE": entry.ROLE.value,
-        "MARS777_BIND_HOST": build.HOST,
-        "MARS777_BIND_PORT": str(port or build.free_port()),
-        "MARS777_KEY_ID": "mars777-k1",
-        "MARS777_AUTH_SECRET": build.SECRET,
-        "MARS777_OPPONENT_ENDPOINT": f"http://{build.HOST}:{build.free_port()}/mcp",
-    }
+    assert SECRET not in reported
 
 
 def test_the_real_module_serves_and_stops_cleanly(tmp_path: Path) -> None:
     """A real `python -m` process: *answering*, then interrupted, then clean.
 
-    Waiting for FastMCP's own reply rather than a TCP connect is the whole point.
-    The listener is bound before the server runs, so an interrupt sent on connect
-    can land while `serve` is still starting - before the framework has installed
-    its signal handling - and a graceful shutdown becomes a traceback.
+    Waiting for FastMCP's own reply rather than a TCP connect is the point: the
+    listener is bound before the server runs, so an interrupt sent on connect can
+    land before the framework installs its signal handling.
     """
-    port = build.free_port()
-    child = build.spawn(
-        "mars777_police", build.written_launch(tmp_path), environment(tmp_path, port)
-    )
+    port, launch = free_port(), process.written_launch(tmp_path)
+    child = process.spawn("mars777_police", launch, process.environment(port))
     try:
-        assert build.await_application(child, port) == build.NOT_ACCEPTABLE
-        child.send_signal(build.STOP_EVENT)
+        assert process.await_application(child, port) == process.NOT_ACCEPTABLE
+        child.send_signal(process.STOP_EVENT)
         out, err = child.communicate(timeout=30)
     finally:
         if child.poll() is None:
             child.kill()
             child.communicate(timeout=10)
-    assert child.returncode == 0, err
-    assert "Traceback" not in err
-    assert build.SECRET not in out and build.SECRET not in err
+    process.assert_clean_operator_stop(child.returncode, out, err)
 
 
-def test_the_stop_control_and_creation_flag_match_the_platform() -> None:
-    """One mapping, chosen by platform - never a police/thief branch."""
+GRACEFUL = "\n".join(process.GRACEFUL_MARKERS)
+CONTRACT = [
+    (0, GRACEFUL, True, True),
+    (process.CONTROL_EXIT, GRACEFUL, True, True),
+    (process.CONTROL_EXIT, "Shutting down\nApplication shutdown complete", True, False),
+    (process.CONTROL_EXIT, f"{GRACEFUL}\nTraceback (most recent call last):", True, False),
+    (2, GRACEFUL, True, False),
+    (process.CONTROL_EXIT, GRACEFUL, False, False),
+]
+
+
+@pytest.mark.parametrize(("status", "err", "windows", "clean"), CONTRACT)
+def test_the_clean_operator_stop_contract_is_platform_exact(
+    status: int, err: str, windows: bool, clean: bool
+) -> None:
+    """Windows may report 3 after a control event; that alone is never success."""
+    if clean:
+        process.assert_clean_operator_stop(status, "", err, windows=windows)
+        return
+    with pytest.raises(AssertionError):
+        process.assert_clean_operator_stop(status, "", err, windows=windows)
+
+
+def test_the_platform_stop_mapping_is_exact_and_never_sigint_on_windows() -> None:
+    """One `WINDOWS` test picks both the creation flag and the control event, and
+    `Popen.send_signal(SIGINT)` - which raises there - stays unreachable."""
     windows = (
         getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", None),
         getattr(signal, "CTRL_BREAK_EVENT", None),
     )
-    expected_flag, expected_event = windows if build.WINDOWS else (0, signal.SIGINT)
-    assert expected_flag == build.GROUP_FLAG
-    assert expected_event == build.STOP_EVENT
-
-
-def test_windows_can_never_reach_the_unsupported_sigint_path() -> None:
-    """`Popen.send_signal(SIGINT)` raises `ValueError` on Windows, so it is unreachable there.
-
-    Read from code tokens, not prose: the control event is selected by the same
-    `WINDOWS` test that decides the creation flag, so a group-less child can
-    never be sent a group control event either.
-    """
-    body = code_of(build)
+    expected_flag, expected_event = windows if process.WINDOWS else (0, signal.SIGINT)
+    assert expected_flag == process.GROUP_FLAG
+    assert expected_event == process.STOP_EVENT
+    body = code_of(process)
     assert "signal . CTRL_BREAK_EVENT if WINDOWS else signal . SIGINT" in body
     assert "subprocess . CREATE_NEW_PROCESS_GROUP if WINDOWS else 0" in body
     assert "send_signal" not in body
