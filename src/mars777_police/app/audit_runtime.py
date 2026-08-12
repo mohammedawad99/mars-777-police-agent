@@ -1,21 +1,13 @@
 """The application owner of one completed sub-game's final audit.
 
-This is where the commitment correspondence deferred by Stage 5-R1-R1 happens.
-Ordinary reveal could not open a commitment - three of the eight sealed members
-were still secret - so Ch 5 §5.4 has both sides disclose logs and nonces at the
-end, rebuild the opponent's committed data and recompute SHA-256.
+This is the commitment correspondence deferred by Stage 5-R1-R1: reveal cannot
+open a commitment while three sealed members are secret, so Ch 5 §5.4 discloses
+logs and nonces at the end and recomputes SHA-256 here.
 
-**Live evidence outranks the document, and contradicting it is fatal.** Every
-member also witnessed live - `commit`, `move`, `hint`, `role`, `step` - must
-agree exactly before anything is hashed, so a log rewritten into internal
-self-consistency still fails. `audit_disclosure` has already parsed the move into
-a `PhysicalAction`, so that comparison is **domain-value equality** rather than
-two dictionaries matched through a cryptographic port.
-
-**The peer's verdict has no standing.** `entries[].verified`, `audit.result` and
-`audit.tampered_step` are LOCAL-DERIVED-AUDIT; this runtime derives them itself,
-transmits nothing, and assigns no sanction or score.
-"""
+**Live evidence outranks the document.** Every member also witnessed live -
+`commit`, `move`, `hint`, `role`, `step` - must agree exactly before anything is
+hashed, and that evidence is adopted turn by turn, before any nonce arrives. **The
+peer's verdict has no standing**: our annotations are derived here, sent nowhere."""
 
 from dataclasses import dataclass, field
 
@@ -28,7 +20,7 @@ from .protocol_errors import StaleMessageError
 from .protocol_values import FinalAuditVerdict, NonceValue, Sha256Digest
 from .sealed_record_values import Intent, SealedState
 from .turn_cursor import TurnCursor
-from .turn_protocol_state import TurnEvidence
+from .turn_protocol_state import AckEvidence, TurnEvidence
 
 
 @dataclass(slots=True)
@@ -41,13 +33,28 @@ class AuditRuntime:
     phase: AuditPhase = field(default=AuditPhase.AWAITING_NONCES)
     nonces: dict[TurnCursor, NonceValue] = field(default_factory=dict)
     outcome: AuditOutcome | None = field(default=None)
+    disclosure: dict[str, object] | None = field(default=None)  # retained for the log
+    acks: tuple[AckEvidence, ...] = field(default=())  # log attribution, never audited
 
     def __post_init__(self) -> None:
-        seen = [record.cursor for record in self.evidence]
+        self._require_aggregate(self.evidence)
+
+    def _require_aggregate(self, evidence: tuple[TurnEvidence, ...]) -> None:
+        seen = [record.cursor for record in evidence]
         if len(set(seen)) != len(seen):
             raise ValueError("the evidence aggregate carries a duplicate cursor")
         if any(cursor.sub_game != self.context.sub_game for cursor in seen):
             raise ValueError("every evidence cursor must belong to this sub-game")
+
+    def observe(
+        self, evidence: tuple[TurnEvidence, ...], acks: tuple[AckEvidence, ...] = ()
+    ) -> None:
+        """Adopt a finished turn's evidence, and its acks as log attribution only."""
+        if self.phase is not AuditPhase.AWAITING_NONCES:
+            raise StaleMessageError(f"a turn cannot be observed while {self.phase.value}")
+        self._require_aggregate(self.evidence + evidence)
+        self.evidence += evidence
+        self.acks += acks
 
     @property
     def expected(self) -> tuple[TurnCursor, ...]:
@@ -75,6 +82,7 @@ class AuditRuntime:
         self._require_identity(document)
         disclosed = self._by_cursor(turns(document))
         self.outcome = self._verdict(disclosed)
+        self.disclosure = dict(document)
         self.phase = AuditPhase.COMPLETE
 
     def _require_identity(self, document: dict[str, object]) -> None:

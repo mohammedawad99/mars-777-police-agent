@@ -26,11 +26,12 @@ from .declaration_values import Declaration
 from .peer_final_messages import ResultAgreement
 from .peer_transport import PeerTransportPort
 from .ports import ResultDigestPort
+from .protocol_errors import StaleMessageError
 from .protocol_values import Sha256Digest
 from .result_agreement_gates import MutualAgreementGate, require_matching_digest
 from .result_agreement_runtime import ResultAgreementRuntime
 from .result_core_runtime import SubGameOutcomeLine, assemble
-from .result_core_values import CumulativeResult
+from .result_core_values import CumulativeResult, ResultApprovalCore
 from .result_identity_values import GithubLinks
 from .result_values import ResultContribution
 from .series_audit_gate import SeriesAuditGate
@@ -52,6 +53,7 @@ class ResultExchange:
     peer_digest: Sha256Digest | None = field(default=None)
     own_request_sent: bool = field(default=False)
     peer_request_handled: bool = field(default=False)
+    peer_contribution: ResultContribution | None = field(default=None)
     verified: bool = field(default=False)
     timestamp: UtcTimestamp | None = field(default=None)
 
@@ -66,19 +68,31 @@ class ResultExchange:
             self.peer_request_handled,
         )
 
+    def _core(self, peer: ResultContribution, timestamp: UtcTimestamp) -> ResultApprovalCore:
+        """The one assembled core; every digest and every report uses this call."""
+        return assemble(
+            self.declaration,
+            self.runtime.declaration_ref,
+            self.lines,
+            (self.own, peer),
+            self.links,
+            self.cumulative,
+            timestamp,
+        )
+
     def _digest_with(self, peer: ResultContribution, timestamp: UtcTimestamp) -> Sha256Digest:
         """The one production digest truth: assemble the core, then hash it."""
-        return self.digester.digest(
-            assemble(
-                self.declaration,
-                self.runtime.declaration_ref,
-                self.lines,
-                (self.own, peer),
-                self.links,
-                self.cumulative,
-                timestamp,
-            )
-        )
+        return self.digester.digest(self._core(peer, timestamp))
+
+    def approval_core(self) -> ResultApprovalCore:
+        """The exact core the agreed digest covers, for the official report.
+
+        Rebuilt from the retained facts through the same `_core` the digest
+        used, so a report can never present a core the hash did not cover.
+        """
+        if not self.is_agreed or self.peer_contribution is None or self.timestamp is None:
+            raise StaleMessageError("the approval core exists only once the result is agreed")
+        return self._core(self.peer_contribution, self.timestamp)
 
     def _verify(self) -> None:
         """Compare as soon as both digests exist; a mismatch fails closed.
@@ -104,7 +118,7 @@ class ResultExchange:
     def accept_peer_request(self, agreement: ResultAgreement, sender_id: str) -> Sha256Digest:
         """Process the peer's single request and return our own digest."""
         adopted = self.runtime.accept(agreement, sender_id, proposed=self.timestamp)
-        self.timestamp = adopted
+        self.timestamp, self.peer_contribution = adopted, agreement.contribution
         self.local_digest = self._digest_with(agreement.contribution, adopted)
         self.peer_request_handled = True
         self._verify()

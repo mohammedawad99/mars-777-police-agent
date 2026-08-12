@@ -23,6 +23,12 @@ order", and `E-HASH-MISMATCH` is not reachable from here at all.
 **It owns no game rule and no step counter.** Legality and truth belong to
 `LocalTurnService` and `domain.truth`; the cursor advances from the
 `completed_step` that service reports, so there is no second source of truth.
+
+**Acknowledgements are retained, not re-validated.** Both directions append one
+`AckEvidence` *after* the existing checks pass, so a stale, duplicated or
+mismatched acknowledgement - which raises above - can never leave a log event
+behind. Nothing is added to the wire message: the acking role is this runtime's
+own locked role, or its complement.
 """
 
 from dataclasses import dataclass, field
@@ -32,7 +38,7 @@ from .peer_turn_messages import Acknowledgement, Commitment, Reveal
 from .protocol_errors import StaleMessageError
 from .sealed_record_values import ActorRole
 from .turn_cursor import TurnCursor
-from .turn_protocol_state import PendingCommitment, TurnEvidence, TurnPhase
+from .turn_protocol_state import AckEvidence, PendingCommitment, TurnEvidence, TurnPhase
 from .turn_service import InvalidActionError, LocalTurnService
 
 
@@ -53,6 +59,12 @@ class TurnProtocolRuntime:
     local_commitment: PendingCommitment | None = field(default=None)
     local_acknowledged: bool = field(default=False)
     evidence: tuple[TurnEvidence, ...] = field(default=())
+    acks: tuple[AckEvidence, ...] = field(default=())
+
+    @property
+    def peer_role(self) -> ActorRole:
+        """The other side's config-locked role - the game has exactly two."""
+        return ActorRole.THIEF if self.role is ActorRole.POLICE else ActorRole.POLICE
 
     def _require_cursor(self, cursor: TurnCursor, what: str) -> None:
         if cursor != self.cursor:
@@ -72,6 +84,7 @@ class TurnProtocolRuntime:
         if self.phase is not TurnPhase.AWAITING_OUR_ACKNOWLEDGEMENT or pending is None:
             raise _refuse(f"nothing to acknowledge while {self.phase.value}")
         self.phase = TurnPhase.AWAITING_REVEAL
+        self.acks += (AckEvidence(pending.cursor, pending.h_commit, self.role),)
         return Acknowledgement(pending.cursor, pending.h_commit)
 
     def register_local_commitment(self, commitment: Commitment) -> None:
@@ -92,6 +105,7 @@ class TurnProtocolRuntime:
         if acknowledgement.h_commit != pending.h_commit:
             raise _refuse("the acknowledgement does not carry our committed digest")
         self.local_acknowledged = True
+        self.acks += (AckEvidence(pending.cursor, pending.h_commit, self.peer_role),)
 
     def accept_reveal(self, reveal: Reveal) -> bool:
         """Correlate the peer's reveal, then ask the game whether it is legal.

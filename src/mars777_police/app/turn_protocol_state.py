@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from .protocol_values import Sha256Digest
+from .sealed_record_values import ActorRole
 from .turn_cursor import TurnCursor
 
 
@@ -44,6 +45,22 @@ class PendingCommitment:
     def matches(self, cursor: TurnCursor) -> bool:
         """Whether this commitment belongs to *cursor*."""
         return self.cursor == cursor
+
+
+@dataclass(frozen=True, slots=True)
+class AckEvidence:
+    """One acknowledgement, as the official log records it.
+
+    `LOG_CONTRACT.md` §C keeps the ack a separate event carrying the acked step,
+    the acked digest and the acking role. The first two are copied from the
+    commitment being acknowledged; `by_role` is **log attribution** - derived
+    from the config-locked role mapping, never transmitted and never read from a
+    peer message, exactly as Stage 4E-R3 froze it.
+    """
+
+    cursor: TurnCursor
+    h_commit: Sha256Digest
+    by_role: ActorRole
 
 
 @dataclass(frozen=True, slots=True)
