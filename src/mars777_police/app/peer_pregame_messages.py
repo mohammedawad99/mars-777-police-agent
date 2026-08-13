@@ -16,6 +16,7 @@ from dataclasses import dataclass
 
 from ..domain.config_model import FIRST_SUB_GAME
 from ..domain.negotiated_config import NegotiatedConfig
+from ..domain.scent_model import ScentModelAgreement
 from .auth_values import AuthProof
 from .declaration_values import Declaration
 from .interop_profiles import InteropProfileSet
@@ -81,11 +82,19 @@ class ConfigProposal:
     sub_game: int
     config: NegotiatedConfig
     profiles: InteropProfileSet
+    scent_model: ScentModelAgreement | None = None
+    """The full agreed emission and decay model (SCENT-003), or none yet.
+
+    Optional at the value level because a proposal is also the shape older
+    compatibility postures parse; **whether** a posture may leave it out is a
+    negotiation decision, not a composition rule, and is decided elsewhere."""
 
     def __post_init__(self) -> None:
         _require_sub_game(self.sub_game)
         _require_type(self.config, "config", NegotiatedConfig)
         _require_type(self.profiles, "profiles", InteropProfileSet)
+        if self.scent_model is not None:
+            _require_type(self.scent_model, "scent_model", ScentModelAgreement)
 
 
 @dataclass(frozen=True, slots=True)

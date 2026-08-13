@@ -25,6 +25,7 @@ from .wire_config_sections import (
     WorldWire,
 )
 from .wire_scalars import DigestText, KeyIdText, NonEmptyText, ProofText
+from .wire_scent_model import ScentModelWire
 
 
 class NegotiatedConfigWire(BaseModel):
@@ -85,13 +86,19 @@ class AuthProofWire(BaseModel):
 
 
 class ConfigProposalWire(BaseModel):
-    """`ConfigProposal(sub_game, config, profiles)` - always a complete core."""
+    """`ConfigProposal` - always a complete core, and the complete scent model.
+
+    `scent_model` is absent for a posture that predates the model exchange and
+    present in full for one that requires it (SCENT-003). Which postures require
+    it is negotiation's decision; this shape only carries what it is given.
+    """
 
     model_config = WIRE
 
     sub_game: int
     config: NegotiatedConfigWire
     profiles: InteropProfileSetWire
+    scent_model: ScentModelWire | None = None
 
 
 class ConfigLockContextWire(BaseModel):

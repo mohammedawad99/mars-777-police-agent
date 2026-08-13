@@ -9,6 +9,7 @@ from ..app.peer_pregame_messages import ConfigLockContext, ConfigLockEvidence, C
 from ..app.protocol_values import Sha256Digest
 from .codec_auth import decode_auth, decode_profiles, encode_auth, encode_profiles
 from .codec_config import decode_config, encode_config
+from .codec_scent_model import decode_scent_model, encode_scent_model
 from .wire_config import (
     ConfigLockContextWire,
     ConfigLockEvidenceWire,
@@ -17,16 +18,29 @@ from .wire_config import (
 
 
 def decode_proposal(wire: ConfigProposalWire) -> ConfigProposal:
-    """Rebuild a complete config proposal - never a delta."""
-    return ConfigProposal(wire.sub_game, decode_config(wire.config), decode_profiles(wire.profiles))
+    """Rebuild a complete config proposal - never a delta.
+
+    A scent model that is present is rebuilt in full and validated by its own
+    owners; one that is absent stays absent. Nothing is defaulted in: a proposal
+    that carried no model must not become one that silently carries ours.
+    """
+    model = wire.scent_model
+    return ConfigProposal(
+        wire.sub_game,
+        decode_config(wire.config),
+        decode_profiles(wire.profiles),
+        None if model is None else decode_scent_model(model),
+    )
 
 
 def encode_proposal(proposal: ConfigProposal) -> ConfigProposalWire:
     """Render a complete config proposal."""
+    model = proposal.scent_model
     return ConfigProposalWire(
         sub_game=proposal.sub_game,
         config=encode_config(proposal.config),
         profiles=encode_profiles(proposal.profiles),
+        scent_model=None if model is None else encode_scent_model(model),
     )
 
 

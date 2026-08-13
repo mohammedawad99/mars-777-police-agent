@@ -57,11 +57,14 @@ def test_valid_config_proposal() -> None:
 
 
 def test_config_proposal_field_order() -> None:
+    """The full agreed scent model rides last, and only when there is one."""
     assert [f.name for f in dataclasses.fields(ConfigProposal)] == [
         "sub_game",
         "config",
         "profiles",
+        "scent_model",
     ]
+    assert ConfigProposal(1, config(), profiles()).scent_model is None
 
 
 @pytest.mark.parametrize("bad", [True, "1", 1.0, None])
