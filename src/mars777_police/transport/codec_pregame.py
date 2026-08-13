@@ -54,6 +54,7 @@ def decode_lock(wire: ConfigLockEvidenceWire) -> ConfigLockEvidence:
             context.sub_game,
             Sha256Digest(context.config_sha256),
             decode_profiles(context.profiles),
+            Sha256Digest(context.scent_model_sha256),
         ),
         decode_auth(wire.auth),
     )
@@ -69,6 +70,7 @@ def encode_lock(evidence: ConfigLockEvidence) -> ConfigLockEvidenceWire:
             sub_game=context.sub_game,
             config_sha256=context.config_sha256.value,
             profiles=encode_profiles(context.profiles),
+            scent_model_sha256=context.scent_model_sha256.value,
         ),
         auth=encode_auth(evidence.auth),
     )

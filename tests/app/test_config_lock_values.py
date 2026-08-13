@@ -14,6 +14,8 @@ from mars777_police.app.peer_pregame_messages import (
 from mars777_police.app.protocol_values import Sha256Digest
 
 DIGEST = Sha256Digest("c" * 64)
+MODEL_DIGEST = Sha256Digest("d" * 64)
+"""The agreed model's identity - a different digest, bound in the same context."""
 
 
 def context(**over: object) -> ConfigLockContext:
@@ -23,6 +25,7 @@ def context(**over: object) -> ConfigLockContext:
         "sub_game": 1,
         "config_sha256": DIGEST,
         "profiles": profiles(),
+        "scent_model_sha256": MODEL_DIGEST,
     }
     fields.update(over)
     return ConfigLockContext(**fields)  # type: ignore[arg-type]
@@ -33,13 +36,20 @@ def test_valid_context() -> None:
 
 
 def test_context_field_order() -> None:
+    """The agreed model's identity rides last, beside the config's own."""
     assert [f.name for f in dataclasses.fields(ConfigLockContext)] == [
         "game_id",
         "game_uid",
         "sub_game",
         "config_sha256",
         "profiles",
+        "scent_model_sha256",
     ]
+
+
+def test_the_scent_model_digest_must_be_a_real_digest() -> None:
+    with pytest.raises(InvalidPregameMessageError, match="scent_model_sha256 must be a"):
+        context(scent_model_sha256="d" * 64)
 
 
 def test_context_carries_no_auth_or_full_config() -> None:

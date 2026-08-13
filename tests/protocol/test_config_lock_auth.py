@@ -15,6 +15,7 @@ from mars777_police.app.auth_values import AuthProfile
 from mars777_police.app.interop_profiles import SeriesConvention
 from mars777_police.app.peer_pregame_messages import ConfigLockContext
 from mars777_police.domain.config_sections import WorldTerms
+from mars777_police.domain.scent_model_default import default_scent_model
 from mars777_police.protocol.canonical import canonical_json_bytes
 from mars777_police.protocol.config_lock import (
     ConfigLockAuthenticator,
@@ -22,6 +23,9 @@ from mars777_police.protocol.config_lock import (
     lock_context_core,
 )
 from mars777_police.protocol.keyed_auth import HmacSha256Provider, KeyedAuthenticator
+from mars777_police.protocol.scent_model import scent_model_sha256
+
+MODEL_DIGEST = scent_model_sha256(default_scent_model())
 
 
 def authenticator() -> ConfigLockAuthenticator:
@@ -33,12 +37,21 @@ def authenticator() -> ConfigLockAuthenticator:
 
 
 def context(sub_game: int = 1) -> ConfigLockContext:
-    return ConfigLockContext(GAME_ID, GAME_UID, sub_game, config_sha256(config()), PROFILES)
+    return ConfigLockContext(
+        GAME_ID, GAME_UID, sub_game, config_sha256(config()), PROFILES, MODEL_DIGEST
+    )
 
 
 def test_the_context_binds_identity_sub_game_digest_and_profiles() -> None:
     core = lock_context_core(context())
-    assert set(core) == {"game_id", "game_uid", "sub_game", "config_sha256", "profiles"}
+    assert set(core) == {
+        "game_id",
+        "game_uid",
+        "sub_game",
+        "config_sha256",
+        "profiles",
+        "scent_model_sha256",
+    }
     assert core["config_sha256"] == config_sha256(config()).value
     assert isinstance(core["profiles"], dict)
     assert len(core["profiles"]) == 11
@@ -70,7 +83,7 @@ def test_a_proof_does_not_carry_across_a_changed_config() -> None:
     auth = authenticator()
     proof = auth.prove(context())
     other = replace(config(), world=WorldTerms("New York", 16))
-    moved = ConfigLockContext(GAME_ID, GAME_UID, 1, config_sha256(other), PROFILES)
+    moved = ConfigLockContext(GAME_ID, GAME_UID, 1, config_sha256(other), PROFILES, MODEL_DIGEST)
     assert not auth.verify(moved, proof)
 
 
@@ -78,7 +91,7 @@ def test_a_proof_does_not_carry_across_a_changed_profile_set() -> None:
     auth = authenticator()
     proof = auth.prove(context())
     switched = replace(PROFILES, series_convention=SeriesConvention.REFERENCE_ODD_EVEN_ALTERNATION)
-    moved = ConfigLockContext(GAME_ID, GAME_UID, 1, config_sha256(config()), switched)
+    moved = ConfigLockContext(GAME_ID, GAME_UID, 1, config_sha256(config()), switched, MODEL_DIGEST)
     assert not auth.verify(moved, proof)
 
 

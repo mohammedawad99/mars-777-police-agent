@@ -89,6 +89,7 @@ def compose_agent(
             identity.profiles,
             lock_auth,
             lock_auth,
+            default_scent_model(),
         ),
         identity.declaration,
     )

@@ -44,7 +44,9 @@ def pregame_for(group_id: str, slot: str) -> PregameSessionRuntime:
         ConfigNegotiationRuntime(
             group_id, SUB_GAME, budget, PROFILES, shared, default_scent_model()
         ),
-        ConfigLockRuntime(GAME_ID, GAME_UID, SUB_GAME, PROFILES, shared, shared),
+        ConfigLockRuntime(
+            GAME_ID, GAME_UID, SUB_GAME, PROFILES, shared, shared, default_scent_model()
+        ),
         partial(group_id, COMMIT_A, slot),
     )
 

@@ -85,7 +85,9 @@ def _round(group_id: str, sub_game: int) -> tuple[ConfigNegotiationRuntime, Conf
         ConfigNegotiationRuntime(
             group_id, sub_game, BUDGET, PROFILES, shared, default_scent_model()
         ),
-        ConfigLockRuntime(GAME_ID, GAME_UID, sub_game, PROFILES, shared, shared),
+        ConfigLockRuntime(
+            GAME_ID, GAME_UID, sub_game, PROFILES, shared, shared, default_scent_model()
+        ),
     )
 
 

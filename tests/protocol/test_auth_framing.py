@@ -15,6 +15,7 @@ from r16_builders import COMMIT_A, GAME_ID, GAME_UID, GROUP_A, PROFILES, config,
 
 from mars777_police.app.auth_values import AuthProfile
 from mars777_police.app.peer_pregame_messages import ConfigLockContext
+from mars777_police.domain.scent_model_default import default_scent_model
 from mars777_police.protocol.canonical import canonical_json_bytes
 from mars777_police.protocol.config_lock import config_sha256, lock_context_core
 from mars777_police.protocol.declaration import step0_core
@@ -23,8 +24,12 @@ from mars777_police.protocol.keyed_auth import (
     STEP0_CONTEXT,
     auth_input,
 )
+from mars777_police.protocol.scent_model import scent_model_sha256
 
 CONTEXTS = (STEP0_CONTEXT, CONFIG_CONTEXT)
+
+
+MODEL_DIGEST = scent_model_sha256(default_scent_model())
 
 
 def step0_bytes() -> bytes:
@@ -32,7 +37,9 @@ def step0_bytes() -> bytes:
 
 
 def config_bytes() -> bytes:
-    context = ConfigLockContext(GAME_ID, GAME_UID, 1, config_sha256(config()), PROFILES)
+    context = ConfigLockContext(
+        GAME_ID, GAME_UID, 1, config_sha256(config()), PROFILES, MODEL_DIGEST
+    )
     return auth_input(CONFIG_CONTEXT, lock_context_core(context))
 
 
@@ -70,7 +77,7 @@ def test_the_remainder_is_exactly_the_canonical_bytes(label: bytes, producer: ob
         step0_core(partial(GROUP_A, COMMIT_A, "group_a"), GROUP_A)
         if label == b"step0"
         else lock_context_core(
-            ConfigLockContext(GAME_ID, GAME_UID, 1, config_sha256(config()), PROFILES)
+            ConfigLockContext(GAME_ID, GAME_UID, 1, config_sha256(config()), PROFILES, MODEL_DIGEST)
         )
     )
     assert raw == label + canonical_json_bytes(core)

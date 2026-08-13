@@ -47,7 +47,9 @@ def pregame() -> PregameSessionRuntime:
         ConfigNegotiationRuntime(
             GROUP_A, SUB_GAME, BUDGET, PROFILES, shared, default_scent_model()
         ),
-        ConfigLockRuntime(GAME_ID, GAME_UID, SUB_GAME, PROFILES, shared, shared),
+        ConfigLockRuntime(
+            GAME_ID, GAME_UID, SUB_GAME, PROFILES, shared, shared, default_scent_model()
+        ),
         partial(GROUP_A, COMMIT_A, "group_a"),
     )
 
@@ -62,7 +64,9 @@ def negotiation_for(sub_game: int) -> ConfigNegotiationRuntime:
 def lock_for(sub_game: int) -> ConfigLockRuntime:
     """The lock runtime the same round owns, sharing the production adapter."""
     shared = locker()
-    return ConfigLockRuntime(GAME_ID, GAME_UID, sub_game, PROFILES, shared, shared)
+    return ConfigLockRuntime(
+        GAME_ID, GAME_UID, sub_game, PROFILES, shared, shared, default_scent_model()
+    )
 
 
 def round_of(sub_game: int) -> tuple[ConfigNegotiationRuntime, ConfigLockRuntime]:
@@ -78,7 +82,14 @@ def proposal_for(sub_game: int) -> ConfigProposal:
 def lock_evidence_for(sub_game: int) -> ConfigLockEvidence:
     """Authenticated lock evidence for *sub_game*, over the real digest."""
     shared = locker()
-    context = ConfigLockContext(GAME_ID, GAME_UID, sub_game, shared.digest(config()), PROFILES)
+    context = ConfigLockContext(
+        GAME_ID,
+        GAME_UID,
+        sub_game,
+        shared.digest(config()),
+        PROFILES,
+        shared.scent_model_digest(default_scent_model()),
+    )
     return ConfigLockEvidence(context, shared.prove(context))
 
 

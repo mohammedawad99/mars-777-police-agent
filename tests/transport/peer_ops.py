@@ -40,6 +40,7 @@ from mars777_police.domain.scent_model_default import default_scent_model
 from mars777_police.protocol.config_lock import ConfigLockAuthenticator, config_sha256
 from mars777_police.protocol.declaration import Step0Authenticator
 from mars777_police.protocol.keyed_auth import HmacSha256Provider, KeyedAuthenticator
+from mars777_police.protocol.scent_model import scent_model_sha256
 from mars777_police.transport.handlers import AuditDocument
 
 RESULT_DIGEST, COMMIT_DIGEST = Sha256Digest("c" * 64), Sha256Digest("a" * 64)
@@ -67,7 +68,14 @@ def proposal() -> ConfigProposal:
 
 def lock_evidence() -> ConfigLockEvidence:
     """Authenticated lock evidence over the locally computed digest."""
-    context = ConfigLockContext(GAME_ID, GAME_UID, 1, config_sha256(config()), PROFILES)
+    context = ConfigLockContext(
+        GAME_ID,
+        GAME_UID,
+        1,
+        config_sha256(config()),
+        PROFILES,
+        scent_model_sha256(default_scent_model()),
+    )
     return ConfigLockEvidence(context, ConfigLockAuthenticator(authenticator()).prove(context))
 
 

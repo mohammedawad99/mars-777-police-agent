@@ -74,9 +74,8 @@ class ConfigProposal:
     """Timeline event 2: one complete proposed config plus the series profiles.
 
     Always a **complete** core, never a delta: a delta would presume shared prior
-    state whose equality is exactly what has not yet been established. Whether
-    the opponent agrees, and which members a counter-proposal may alter, are LIVE
-    questions this value does not answer.
+    state whose equality is exactly what has not been established. Whether the
+    opponent agrees is a LIVE question this value does not answer.
     """
 
     sub_game: int
@@ -86,8 +85,7 @@ class ConfigProposal:
     """The full agreed emission and decay model (SCENT-003), or none yet.
 
     Optional at the value level because a proposal is also the shape older
-    compatibility postures parse; **whether** a posture may leave it out is a
-    negotiation decision, not a composition rule, and is decided elsewhere."""
+    postures parse; **whether** one may omit it is negotiation's decision."""
 
     def __post_init__(self) -> None:
         _require_sub_game(self.sub_game)
@@ -101,10 +99,11 @@ class ConfigProposal:
 class ConfigLockContext:
     """What the config authentication proof covers.
 
-    The agreed physics enters only through ``config_sha256`` - binding the digest
-    rather than the 35 members keeps the Appendix-B core free of protocol
-    metadata while still binding it exactly. ``config_auth`` itself is absent:
-    a proof is never inside the bytes it authenticates.
+    The agreed physics enters through two digests, never the members themselves:
+    ``config_sha256`` covers the 35-member config and ``scent_model_sha256`` the
+    emission and decay model agreed before the lock (SCENT-001), which has no
+    room in that frozen core. ``config_auth`` is absent - a proof is never
+    inside the bytes it authenticates.
     """
 
     game_id: str
@@ -112,6 +111,7 @@ class ConfigLockContext:
     sub_game: int
     config_sha256: Sha256Digest
     profiles: InteropProfileSet
+    scent_model_sha256: Sha256Digest
 
     def __post_init__(self) -> None:
         _require_identity(self.game_id, "game_id")
@@ -119,6 +119,7 @@ class ConfigLockContext:
         _require_sub_game(self.sub_game)
         _require_type(self.config_sha256, "config_sha256", Sha256Digest)
         _require_type(self.profiles, "profiles", InteropProfileSet)
+        _require_type(self.scent_model_sha256, "scent_model_sha256", Sha256Digest)
 
 
 @dataclass(frozen=True, slots=True)

@@ -41,13 +41,19 @@ def config_sha256(config: NegotiatedConfig) -> Sha256Digest:
 
 
 def lock_context_core(context: ConfigLockContext) -> dict[str, object]:
-    """Return the authenticated lock context - identity, sub-game, digest, profiles."""
+    """Return the authenticated lock context - identity, sub-game, both digests, profiles.
+
+    The scent model is bound the same way the config is: by its own unkeyed
+    content identity, inside the bytes the existing keyed proof covers. Nothing
+    about the framing changes - the context simply has one more member.
+    """
     return {
         "game_id": context.game_id,
         "game_uid": context.game_uid,
         "sub_game": context.sub_game,
         "config_sha256": context.config_sha256.value,
         "profiles": profiles_core(context.profiles),
+        "scent_model_sha256": context.scent_model_sha256.value,
     }
 
 

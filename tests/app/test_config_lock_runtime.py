@@ -23,6 +23,7 @@ from mars777_police.app.protocol_errors import (
 from mars777_police.app.protocol_values import Sha256Digest
 from mars777_police.app.state_machine import ProtocolMachine, ProtocolPhase
 from mars777_police.domain.config_sections import WorldTerms
+from mars777_police.domain.scent_model_default import default_scent_model
 from mars777_police.protocol.config_lock import ConfigLockAuthenticator
 from mars777_police.protocol.keyed_auth import HmacSha256Provider, KeyedAuthenticator
 
@@ -37,7 +38,9 @@ def adapter() -> ConfigLockAuthenticator:
 
 def runtime(sub_game: int = 1, profiles: object = PROFILES) -> ConfigLockRuntime:
     shared = adapter()
-    return ConfigLockRuntime(GAME_ID, GAME_UID, sub_game, profiles, shared, shared)
+    return ConfigLockRuntime(
+        GAME_ID, GAME_UID, sub_game, profiles, shared, shared, default_scent_model()
+    )
 
 
 def test_both_peers_produce_identical_evidence_from_the_same_config() -> None:
@@ -64,7 +67,9 @@ def test_a_wrong_sub_game_is_stale() -> None:
 
 def test_evidence_for_another_game_is_stale() -> None:
     shared = adapter()
-    other = ConfigLockRuntime("another-game", GAME_UID, 1, PROFILES, shared, shared)
+    other = ConfigLockRuntime(
+        "another-game", GAME_UID, 1, PROFILES, shared, shared, default_scent_model()
+    )
     with pytest.raises(StaleMessageError):
         runtime().accept(other.outbound(config()), adapter().digest(config()))
 

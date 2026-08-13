@@ -91,7 +91,7 @@ def test_opening_the_next_round_resets_what_our_own_proposal_advanced() -> None:
     profiles: InteropProfileSet = opener.pregame.negotiation.profiles
     opener.pregame.open_round(
         ConfigNegotiationRuntime(GROUP_B, 2, budget, profiles, shared, default_scent_model()),
-        ConfigLockRuntime("g", "u", 2, profiles, shared, shared),
+        ConfigLockRuntime("g", "u", 2, profiles, shared, shared, default_scent_model()),
     )
     assert opener.pregame.opening and opener.pregame.seen == frozenset()
     assert opener.pregame.config is None

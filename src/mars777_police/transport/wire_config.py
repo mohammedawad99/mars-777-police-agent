@@ -102,7 +102,12 @@ class ConfigProposalWire(BaseModel):
 
 
 class ConfigLockContextWire(BaseModel):
-    """Identity, sub-game, the unkeyed digest and the eleven profiles."""
+    """Identity, sub-game, the two unkeyed digests and the eleven profiles.
+
+    `scent_model_sha256` is the agreed model's content identity, never the model
+    itself: the full descriptor already crossed in the proposal, and what the
+    lock authenticates is which model that was.
+    """
 
     model_config = WIRE
 
@@ -111,6 +116,7 @@ class ConfigLockContextWire(BaseModel):
     sub_game: int
     config_sha256: DigestText
     profiles: InteropProfileSetWire
+    scent_model_sha256: DigestText
 
 
 class ConfigLockEvidenceWire(BaseModel):

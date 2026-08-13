@@ -11,9 +11,12 @@ The verification order is fixed (`CONFIG_CONTRACT.md` §R12-E): the profile and
 verified, then the digest is compared. The proof comes **before** the digest so
 an unauthenticated core is never even compared.
 
-Two values are never taken on trust. The peer's `config_sha256` is compared
-against our own recomputation, never adopted as the value of their core; and the
-peer's `profiles` are compared member-for-member, never merged. Equal digests
+Three values are never taken on trust. The peer's `config_sha256` is compared
+against our own recomputation, never adopted as the value of their core; its
+`scent_model_sha256` is compared against the digest **we** derive from the model
+that already passed strict agreement, so a peer cannot authenticate a different
+model after agreeing one; and the peer's `profiles` are compared member-for-member,
+never merged. Equal digests
 alone do not authorise counted play, and a verified proof does not mean either
 side has committed - those are three different layers, and the fourth, the local
 `CONFIG_LOCKED` transition, has no bytes at all.
@@ -22,6 +25,7 @@ side has committed - those are three different layers, and the fourth, the local
 from dataclasses import dataclass
 
 from ..domain.negotiated_config import NegotiatedConfig
+from ..domain.scent_model import ScentModelAgreement
 from .interop_profiles import InteropProfileSet
 from .peer_pregame_messages import ConfigLockContext, ConfigLockEvidence
 from .ports import ConfigDigestPort, ConfigLockAuthPort
@@ -45,15 +49,23 @@ class ConfigLockRuntime:
     profiles: InteropProfileSet
     digester: ConfigDigestPort
     auth: ConfigLockAuthPort
+    scent_model: ScentModelAgreement
+    """The model this round agreed. Its digest is derived here, never received."""
+
+    @property
+    def scent_model_sha256(self) -> Sha256Digest:
+        """Our own identity for the agreed model, recomputed on every use."""
+        return self.digester.scent_model_digest(self.scent_model)
 
     def context_for(self, digest: Sha256Digest) -> ConfigLockContext:
-        """Return the lock context binding identity, sub-game, digest and profiles."""
+        """Return the lock context binding identity, sub-game, both digests, profiles."""
         return ConfigLockContext(
             self.game_id,
             self.game_uid,
             self.sub_game,
             digest,
             self.profiles,
+            self.scent_model_sha256,
         )
 
     def outbound(self, config: NegotiatedConfig) -> ConfigLockEvidence:
@@ -81,6 +93,11 @@ class ConfigLockRuntime:
         if context.config_sha256 != local_digest:
             raise ConfigMismatchError(
                 "the peer config digest differs from our local recomputation",
+            )
+        if context.scent_model_sha256 != self.scent_model_sha256:
+            raise ConfigMismatchError(
+                "the locked scent model is not the one this side agreed;"
+                " a valid proof over a different model is still the wrong model",
             )
 
 
