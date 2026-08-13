@@ -16,6 +16,7 @@ from mars777_police.app.peer_pregame_messages import ConfigProposal
 from mars777_police.app.protocol_errors import ConfigMismatchError
 from mars777_police.app.state_machine import ProtocolPhase
 from mars777_police.app.turn_contract_gate import require_counted_turn_contract
+from mars777_police.domain.scent_model_default import default_scent_model
 
 LEGACY = CompatibilityProfile.STRICT_COUNTED_MATCH
 CURRENT = CompatibilityProfile.STRICT_COUNTED_MATCH_TURN_OUTCOME_V1
@@ -49,7 +50,7 @@ def test_every_other_posture_is_refused(profile: CompatibilityProfile) -> None:
 def test_a_legacy_peer_is_refused_while_the_config_can_still_be_refused() -> None:
     """The refusal lands on the peer's proposal, long before `CONFIG_LOCKED`."""
     pregame = build.pregame()
-    proposal = ConfigProposal(1, config(), posture(LEGACY))
+    proposal = ConfigProposal(1, config(), posture(LEGACY), default_scent_model())
     with pytest.raises(ConfigMismatchError, match="different turn contract"):
         pregame.accept_proposal(proposal, GROUP_B)
     assert pregame.config is None
@@ -60,11 +61,18 @@ def test_the_refusal_leaves_no_round_state_behind() -> None:
     pregame = build.pregame()
     before = (pregame.opening, pregame.seen, pregame.config)
     with pytest.raises(ConfigMismatchError):
-        pregame.accept_proposal(ConfigProposal(1, config(), posture(LEGACY)), GROUP_B)
+        pregame.accept_proposal(
+            ConfigProposal(1, config(), posture(LEGACY), default_scent_model()), GROUP_B
+        )
     assert (pregame.opening, pregame.seen, pregame.config) == before
 
 
 def test_the_matching_current_posture_is_accepted_by_the_real_runtime() -> None:
     pregame = build.pregame()
-    assert pregame.accept_proposal(ConfigProposal(1, config(), PROFILES), GROUP_B) is True
+    assert (
+        pregame.accept_proposal(
+            ConfigProposal(1, config(), PROFILES, default_scent_model()), GROUP_B
+        )
+        is True
+    )
     assert pregame.seen == frozenset({GROUP_B})

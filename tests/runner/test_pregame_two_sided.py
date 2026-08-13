@@ -13,6 +13,7 @@ from mars777_police.app.config_lock_runtime import ConfigLockRuntime
 from mars777_police.app.config_negotiation_runtime import ConfigNegotiationRuntime
 from mars777_police.app.protocol_errors import LocalDefectError, StaleMessageError
 from mars777_police.app.sealed_record_values import ActorRole
+from mars777_police.domain.scent_model_default import default_scent_model
 
 
 def sides() -> tuple[object, object]:
@@ -89,8 +90,55 @@ def test_opening_the_next_round_resets_what_our_own_proposal_advanced() -> None:
     shared = ConfigLockAuthenticator(authenticator())
     profiles: InteropProfileSet = opener.pregame.negotiation.profiles
     opener.pregame.open_round(
-        ConfigNegotiationRuntime(GROUP_B, 2, budget, profiles),
+        ConfigNegotiationRuntime(GROUP_B, 2, budget, profiles, shared, default_scent_model()),
         ConfigLockRuntime("g", "u", 2, profiles, shared, shared),
     )
     assert opener.pregame.opening and opener.pregame.seen == frozenset()
     assert opener.pregame.config is None
+
+
+def alternate_model() -> object:
+    """A valid, still-radial model that is not the one either side agreed."""
+    import dataclasses
+
+    from mars777_police.domain.scent_kernel import ScentKernel
+    from mars777_police.domain.scent_model_default import FIGURE_4_WEIGHTS
+
+    rows = [list(row) for row in FIGURE_4_WEIGHTS]
+    for row, col in ((0, 0), (0, 4), (4, 0), (4, 4)):
+        rows[row][col] = "0.03"
+    return dataclasses.replace(default_scent_model(), kernel=ScentKernel.from_rows(rows))
+
+
+def test_a_real_round_agrees_on_the_scent_model_both_sides_carry() -> None:
+    """The opener's real proposal carries its model and the peer accepts it."""
+    opener, other = sides()
+    proposal = opener.pregame.prepare_proposal(config())
+    assert proposal.scent_model == default_scent_model()
+    assert other.pregame.accept_proposal(proposal, GROUP_B)
+
+
+def test_a_real_round_refuses_a_valid_but_different_scent_model() -> None:
+    from r16_builders import PROFILES
+
+    from mars777_police.app.peer_pregame_messages import ConfigProposal
+    from mars777_police.app.protocol_errors import ConfigMismatchError
+
+    _, other = sides()
+    proposal = ConfigProposal(build.SUB_GAME, config(), PROFILES, alternate_model())
+    with pytest.raises(ConfigMismatchError, match="not the one this side agreed"):
+        other.pregame.accept_proposal(proposal, GROUP_B)
+    assert other.pregame.config is None
+
+
+def test_a_real_round_refuses_a_proposal_with_no_scent_model() -> None:
+    from r16_builders import PROFILES
+
+    from mars777_police.app.peer_pregame_messages import ConfigProposal
+    from mars777_police.app.protocol_errors import ConfigMismatchError
+
+    _, other = sides()
+    proposal = ConfigProposal(build.SUB_GAME, config(), PROFILES)
+    with pytest.raises(ConfigMismatchError, match="required pre-game term"):
+        other.pregame.accept_proposal(proposal, GROUP_B)
+    assert other.pregame.config is None

@@ -33,6 +33,7 @@ from mars777_police.domain.board import Board, Position
 from mars777_police.domain.config_model import GridConfig, SeriesConfig
 from mars777_police.domain.config_sections import BoardAndAgentsTerms
 from mars777_police.domain.rules import Move, destination_of
+from mars777_police.domain.scent_model_default import default_scent_model
 from mars777_police.domain.truth import LocalTruth
 from mars777_police.infra.artifacts import JsonArtifactStore
 from mars777_police.protocol.audit_commitment import CommitmentRecomputer
@@ -81,7 +82,9 @@ def _round(group_id: str, sub_game: int) -> tuple[ConfigNegotiationRuntime, Conf
 
     shared = locker()
     return (
-        ConfigNegotiationRuntime(group_id, sub_game, BUDGET, PROFILES),
+        ConfigNegotiationRuntime(
+            group_id, sub_game, BUDGET, PROFILES, shared, default_scent_model()
+        ),
         ConfigLockRuntime(GAME_ID, GAME_UID, sub_game, PROFILES, shared, shared),
     )
 

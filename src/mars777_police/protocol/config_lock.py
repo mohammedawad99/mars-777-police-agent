@@ -26,10 +26,13 @@ from hashlib import sha256
 from ..app.auth_values import AuthProof
 from ..app.peer_pregame_messages import ConfigLockContext
 from ..app.protocol_values import Sha256Digest
+from ..app.scent_model_identity import ScentModelRendering
 from ..domain.negotiated_config import NegotiatedConfig
+from ..domain.scent_model import ScentModelAgreement
 from .canonical import canonical_json_bytes
 from .config_projection import config_core, profiles_core
 from .keyed_auth import CONFIG_CONTEXT, KeyedAuthenticator
+from .scent_model import scent_model_bytes, scent_model_sha256
 
 
 def config_sha256(config: NegotiatedConfig) -> Sha256Digest:
@@ -57,6 +60,18 @@ class ConfigLockAuthenticator:
     def digest(self, config: NegotiatedConfig) -> Sha256Digest:
         """Return `config_sha256`, recomputed locally and never taken from a peer."""
         return config_sha256(config)
+
+    def scent_model_rendering(self, model: ScentModelAgreement) -> ScentModelRendering:
+        """Return the agreed model's rendering, mapped by its own module."""
+        return ScentModelRendering(scent_model_bytes(model))
+
+    def scent_model_digest(self, model: ScentModelAgreement) -> Sha256Digest:
+        """Return the agreed model's identity, recomputed locally every time.
+
+        Never a value a peer supplied: a digest that arrived with the model it
+        covers would prove nothing about the model.
+        """
+        return scent_model_sha256(model)
 
     def prove(self, context: ConfigLockContext) -> AuthProof:
         """Return this peer's proof over *context*."""

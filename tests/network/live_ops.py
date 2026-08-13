@@ -25,6 +25,8 @@ from mars777_police.app.config_negotiation_runtime import ConfigNegotiationRunti
 from mars777_police.app.peer_final_messages import ResultAgreement
 from mars777_police.app.protocol_values import Sha256Digest
 from mars777_police.app.step0_runtime import Step0Runtime
+from mars777_police.domain.scent_model_default import default_scent_model
+from mars777_police.protocol.config_lock import ConfigLockAuthenticator
 from mars777_police.protocol.declaration import Step0Authenticator
 from mars777_police.transport.inbound_session import InboundSession
 
@@ -39,7 +41,14 @@ class LiveOperations:
         self.seen: list[str] = []
         self.local = partial(GROUP_A, COMMIT_A, "group_a")
         self.step0 = Step0Runtime(GROUP_A, Step0Authenticator(authenticator()))
-        self.negotiation = ConfigNegotiationRuntime(GROUP_A, 1, TOKEN_BUDGET, PROFILES)
+        self.negotiation = ConfigNegotiationRuntime(
+            GROUP_A,
+            1,
+            TOKEN_BUDGET,
+            PROFILES,
+            ConfigLockAuthenticator(authenticator()),
+            default_scent_model(),
+        )
         self.exchange = exchange_for(GROUP_A, 200)
         self._write()
 

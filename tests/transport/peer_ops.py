@@ -36,6 +36,7 @@ from mars777_police.app.step0_runtime import Step0Runtime
 from mars777_police.app.turn_cursor import TurnCursor
 from mars777_police.domain.actions import MoveAction
 from mars777_police.domain.rules import Move
+from mars777_police.domain.scent_model_default import default_scent_model
 from mars777_police.protocol.config_lock import ConfigLockAuthenticator, config_sha256
 from mars777_police.protocol.declaration import Step0Authenticator
 from mars777_police.protocol.keyed_auth import HmacSha256Provider, KeyedAuthenticator
@@ -61,7 +62,7 @@ def step0_exchange(vram: int | None = None) -> Step0DeclarationExchange:
 
 def proposal() -> ConfigProposal:
     """A complete config proposal carrying the two FIXED decimals."""
-    return ConfigProposal(1, config(), PROFILES)
+    return ConfigProposal(1, config(), PROFILES, default_scent_model())
 
 
 def lock_evidence() -> ConfigLockEvidence:

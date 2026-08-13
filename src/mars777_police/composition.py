@@ -29,6 +29,7 @@ from .app.pregame_session_runtime import PregameSessionRuntime
 from .app.series_audit_gate import SeriesAuditGate
 from .app.step0_runtime import Step0Runtime
 from .composition_values import AgentComposition, SeriesIdentity
+from .domain.scent_model_default import default_scent_model
 from .infra.clock import SystemClock
 from .infra.settings import RuntimeSettings
 from .protocol.config_lock import ConfigLockAuthenticator
@@ -78,6 +79,8 @@ def compose_agent(
             identity.first_sub_game,
             identity.token_budget_per_series,
             identity.profiles,
+            lock_auth,
+            default_scent_model(),
         ),
         ConfigLockRuntime(
             identity.game_id,

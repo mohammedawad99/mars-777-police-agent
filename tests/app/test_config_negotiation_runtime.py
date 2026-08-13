@@ -10,6 +10,7 @@ from dataclasses import replace
 import pytest
 from r16_builders import GROUP_A, GROUP_B, PROFILES, config
 
+from mars777_police.app.auth_values import AuthProfile, KeyId
 from mars777_police.app.config_negotiation_runtime import ConfigNegotiationRuntime, initial_proposer
 from mars777_police.app.interop_profiles import SeriesConvention
 from mars777_police.app.protocol_errors import (
@@ -20,10 +21,27 @@ from mars777_police.app.protocol_errors import (
 )
 from mars777_police.domain.config_league_sections import NetworkAndLeagueTerms
 from mars777_police.domain.config_sections import WorldTerms
+from mars777_police.domain.scent_model_default import default_scent_model
+from mars777_police.protocol.config_lock import ConfigLockAuthenticator
+from mars777_police.protocol.keyed_auth import HmacSha256Provider, KeyedAuthenticator
+
+KEY_ID = KeyId("mars777-test")
+
+
+def digester() -> ConfigLockAuthenticator:
+    """The production adapter that already implements `ConfigDigestPort`.
+
+    Built from the same keyed authenticator the session builders provision, so
+    a digest computed here is the one production would compute.
+    """
+    provider = HmacSha256Provider({KEY_ID.value: b"config-digest-test-key"})
+    return ConfigLockAuthenticator(KeyedAuthenticator(AuthProfile.HMAC_SHA256, KEY_ID, provider))
 
 
 def runtime(group_id: str, sub_game: int = 1) -> ConfigNegotiationRuntime:
-    return ConfigNegotiationRuntime(group_id, sub_game, 200000, PROFILES)
+    return ConfigNegotiationRuntime(
+        group_id, sub_game, 200000, PROFILES, digester(), default_scent_model()
+    )
 
 
 def test_the_byte_wise_lower_group_id_opens_the_exchange() -> None:
@@ -90,7 +108,9 @@ def test_the_token_cap_is_equality_only_after_step_zero() -> None:
     )
     with pytest.raises(ConfigMismatchError):
         runtime(GROUP_B).propose(lowered, opening=True)
-    incoming = ConfigNegotiationRuntime(GROUP_B, 1, 150000, PROFILES).propose(lowered, opening=True)
+    incoming = ConfigNegotiationRuntime(
+        GROUP_B, 1, 150000, PROFILES, digester(), default_scent_model()
+    ).propose(lowered, opening=True)
     with pytest.raises(ConfigMismatchError) as failure:
         runtime(GROUP_A).accept(incoming, GROUP_B, opening=True)
     assert failure.value.error_id == "E-CONFIG-MISMATCH"
@@ -98,9 +118,9 @@ def test_the_token_cap_is_equality_only_after_step_zero() -> None:
 
 def test_a_differing_series_convention_has_its_own_identity() -> None:
     switched = replace(PROFILES, series_convention=SeriesConvention.REFERENCE_ODD_EVEN_ALTERNATION)
-    proposal = ConfigNegotiationRuntime(GROUP_B, 1, 200000, switched).propose(
-        config(), opening=True
-    )
+    proposal = ConfigNegotiationRuntime(
+        GROUP_B, 1, 200000, switched, digester(), default_scent_model()
+    ).propose(config(), opening=True)
     with pytest.raises(ConventionMismatchError) as failure:
         runtime(GROUP_A).accept(proposal, GROUP_B, opening=True)
     assert failure.value.error_id == "E-NET-CONVENTION-MISMATCH"
@@ -116,7 +136,7 @@ def test_convergence_needs_equal_cores_and_equal_profiles() -> None:
 
 def test_a_sub_game_below_the_first_is_a_local_defect() -> None:
     with pytest.raises(LocalDefectError):
-        ConfigNegotiationRuntime(GROUP_A, 0, 200000, PROFILES)
+        ConfigNegotiationRuntime(GROUP_A, 0, 200000, PROFILES, digester(), default_scent_model())
 
 
 def test_a_sender_outside_the_agreed_parties_is_stale() -> None:
@@ -129,7 +149,8 @@ def test_a_differing_profile_beyond_the_convention_is_a_config_mismatch() -> Non
     from mars777_police.app.interop_profiles import ToolNameProfile
 
     other = replace(PROFILES, tool_name_profile=ToolNameProfile.LECTURER_REFERENCE_ALIASES)
-    proposal = ConfigNegotiationRuntime(GROUP_B, 1, 200000, other).propose(config(), opening=True)
+    peer = ConfigNegotiationRuntime(GROUP_B, 1, 200000, other, digester(), default_scent_model())
+    proposal = peer.propose(config(), opening=True)
     with pytest.raises(ConfigMismatchError):
         runtime(GROUP_A).accept(proposal, GROUP_B, opening=True)
 

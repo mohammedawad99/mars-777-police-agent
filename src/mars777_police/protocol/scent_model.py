@@ -63,6 +63,11 @@ def scent_model_core(agreement: ScentModelAgreement) -> dict[str, object]:
     }
 
 
+def scent_model_bytes(agreement: ScentModelAgreement) -> bytes:
+    """Return the canonical bytes two peers must produce identically."""
+    return canonical_json_bytes(scent_model_core(agreement))
+
+
 def scent_model_sha256(agreement: ScentModelAgreement) -> Sha256Digest:
     """Return the unkeyed content digest over the canonical model bytes."""
-    return Sha256Digest(sha256(canonical_json_bytes(scent_model_core(agreement))).hexdigest())
+    return Sha256Digest(sha256(scent_model_bytes(agreement)).hexdigest())

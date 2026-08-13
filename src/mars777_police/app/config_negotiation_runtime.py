@@ -13,14 +13,19 @@ a property of a whole document, and a delta would need shared prior state whose
 equality is exactly what has not been established yet.
 
 **What may change.** Structural admissibility - FIXED values exact, MINIMUM
-values at or above their floors - is already enforced by `NegotiatedConfig` and
-its sections at construction, so it is not re-implemented here. What this module
-owns is the part a constructor cannot see: `token_budget_per_series` is
-**equality-only** after Step-0, since it was agreed before `BOOT` and is
-authenticated inside both peers' Step-0 cores; a differing value is
-`E-CONFIG-MISMATCH` and never an offer. The eleven series-wide profiles must be
-**identical in every sub-game's proposal**, and a differing series convention has
-its own owning identity.
+values at or above their floors - is already enforced by `NegotiatedConfig` at
+construction, so it is not re-implemented here. What this module owns is the
+part a constructor cannot see: `token_budget_per_series` is **equality-only**
+after Step-0, since it was agreed before `BOOT` and is authenticated inside both
+peers' Step-0 cores; a differing value is `E-CONFIG-MISMATCH`, never an offer.
+The eleven series-wide profiles must be **identical in every sub-game's
+proposal**, and a differing series convention has its own owning identity.
+
+**What the scent model adds.** SCENT-003 makes the agreed emission and decay
+model a pre-game term like any other, so it is checked here: the expectation is
+injected, the remote one arrives in the proposal, and `scent_agreement` reads
+the two three ways. Disagreement is `E-CONFIG-MISMATCH` before `CONFIG_LOCKED`,
+never a sanction - no game has started.
 
 **How it ends.** By convergence - member-for-member equal cores and equal
 profiles - which is *proved at the lock*, not announced. There is no accept
@@ -33,14 +38,17 @@ from dataclasses import dataclass
 
 from ..domain.config_model import FIRST_SUB_GAME
 from ..domain.negotiated_config import NegotiatedConfig
+from ..domain.scent_model import ScentModelAgreement
 from .interop_profiles import InteropProfileSet
 from .peer_pregame_messages import ConfigProposal
+from .ports import ConfigDigestPort
 from .protocol_errors import (
     ConfigMismatchError,
     ConventionMismatchError,
     LocalDefectError,
     StaleMessageError,
 )
+from .scent_agreement import compare_models
 from .turn_contract_gate import require_counted_turn_contract
 
 
@@ -57,6 +65,9 @@ class ConfigNegotiationRuntime:
     sub_game: int
     token_budget_per_series: int
     profiles: InteropProfileSet
+    digests: ConfigDigestPort
+    scent_model: ScentModelAgreement
+    """What this side expects the model to be - injected, never rebuilt here."""
 
     def __post_init__(self) -> None:
         if type(self.sub_game) is not int or self.sub_game < FIRST_SUB_GAME:
@@ -72,7 +83,7 @@ class ConfigNegotiationRuntime:
                 f" {initial_proposer(config)!r} does, not {self.group_id!r}",
             )
         self._check_terms(config)
-        return ConfigProposal(self.sub_game, config, self.profiles)
+        return ConfigProposal(self.sub_game, config, self.profiles, self.scent_model)
 
     def accept(
         self,
@@ -99,6 +110,7 @@ class ConfigNegotiationRuntime:
             raise StaleMessageError(f"{sender_id!r} already proposed in this round")
         self._check_terms(proposal.config)
         self._check_profiles(proposal.profiles)
+        self._check_scent_model(proposal.scent_model)
         return True
 
     def converges(self, ours: ConfigProposal, theirs: ConfigProposal) -> bool:
@@ -115,6 +127,17 @@ class ConfigNegotiationRuntime:
             raise ConfigMismatchError(
                 "token_budget_per_series is equality-only after Step-0;"
                 f" expected {self.token_budget_per_series}, got {cap}",
+            )
+
+    def _check_scent_model(self, theirs: ScentModelAgreement | None) -> None:
+        """Refuse anything but the exact model this side expects (SCENT-003)."""
+        if theirs is None:
+            raise ConfigMismatchError(
+                "the agreed scent model is a required pre-game term and is absent",
+            )
+        if not compare_models(self.scent_model, theirs, self.digests).agreed:
+            raise ConfigMismatchError(
+                "the proposed scent model is not the one this side agreed",
             )
 
     def _check_profiles(self, profiles: InteropProfileSet) -> None:

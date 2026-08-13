@@ -24,6 +24,7 @@ from mars777_police.app.pregame_session_runtime import PregameSessionRuntime
 from mars777_police.app.result_exchange import ResultExchange
 from mars777_police.app.step0_runtime import Step0Runtime
 from mars777_police.app.turn_protocol_runtime import TurnProtocolRuntime
+from mars777_police.domain.scent_model_default import default_scent_model
 from mars777_police.protocol.config_lock import ConfigLockAuthenticator
 from mars777_police.protocol.declaration import Step0Authenticator
 from mars777_police.transport.inbound_session import InboundSession
@@ -43,7 +44,9 @@ def pregame() -> PregameSessionRuntime:
     shared = locker()
     return PregameSessionRuntime(
         Step0Runtime(GROUP_A, Step0Authenticator(authenticator())),
-        ConfigNegotiationRuntime(GROUP_A, SUB_GAME, BUDGET, PROFILES),
+        ConfigNegotiationRuntime(
+            GROUP_A, SUB_GAME, BUDGET, PROFILES, shared, default_scent_model()
+        ),
         ConfigLockRuntime(GAME_ID, GAME_UID, SUB_GAME, PROFILES, shared, shared),
         partial(GROUP_A, COMMIT_A, "group_a"),
     )
@@ -51,7 +54,9 @@ def pregame() -> PregameSessionRuntime:
 
 def negotiation_for(sub_game: int) -> ConfigNegotiationRuntime:
     """The negotiation runtime one authoritative round owns."""
-    return ConfigNegotiationRuntime(GROUP_A, sub_game, BUDGET, PROFILES)
+    return ConfigNegotiationRuntime(
+        GROUP_A, sub_game, BUDGET, PROFILES, locker(), default_scent_model()
+    )
 
 
 def lock_for(sub_game: int) -> ConfigLockRuntime:
@@ -67,7 +72,7 @@ def round_of(sub_game: int) -> tuple[ConfigNegotiationRuntime, ConfigLockRuntime
 
 def proposal_for(sub_game: int) -> ConfigProposal:
     """A complete proposal naming *sub_game*."""
-    return ConfigProposal(sub_game, config(), PROFILES)
+    return ConfigProposal(sub_game, config(), PROFILES, default_scent_model())
 
 
 def lock_evidence_for(sub_game: int) -> ConfigLockEvidence:

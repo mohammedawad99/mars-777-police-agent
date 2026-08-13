@@ -3,33 +3,35 @@
 `API_BOUNDARIES.md` declares ports in `app.ports` and their adapters in
 `protocol`/`infra`, and `MODULE_BOUNDARIES.md` forbids `app` from importing
 `protocol` at all. Both hold here: every port below is a structural `Protocol`
-over **already-valid semantic values**, the concrete implementations live in
+over **already-valid semantic values**, the implementations live in
 `protocol.declaration`, `protocol.config_lock`, `protocol.result_core` and
 `protocol.keyed_auth`, and the composition root wires them (D3).
 
 Consequences that are the point rather than a side effect:
 
-* **no canonicalization, digest or key material reaches `app`.** A port returns
-  an `AuthProof`, a `Sha256Digest` or a verdict - never bytes, never a key
-  (**P2**), and never a transport object (`§AR`);
+* **no mapping, digest or key material reaches `app`.** A port returns an
+  `AuthProof`, a `Sha256Digest`, a rendering or a verdict - never a key (**P2**)
+  and never a transport object (`§AR`);
 * **the runtimes are synchronous and deterministic.** `async` is an I/O property
-  (**O1**), and no port here performs I/O, so none is `async`. `TimestampPort`
-  is the single injected non-determinism, exactly as **P3** requires;
+  (**O1**) and no port here performs I/O; `TimestampPort` is the single injected
+  non-determinism, exactly as **P3** requires;
 * **verification returns a verdict, construction raises.** A peer proof that
-  fails to verify is a `False`, which the calling runtime turns into the owning
-  error identity; a locally impossible request is the adapter's own failure.
+  fails is a `False` the calling runtime turns into the owning error identity;
+  a locally impossible request is the adapter's own failure.
 """
 
 from typing import Protocol
 
 from ..domain.actions import PhysicalAction
 from ..domain.negotiated_config import NegotiatedConfig
+from ..domain.scent_model import ScentModelAgreement
 from .artifact_values import UtcTimestamp
 from .auth_values import AuthProof
 from .declaration_values import Declaration
 from .peer_pregame_messages import ConfigLockContext
 from .protocol_values import NonceValue, Sha256Digest
 from .result_core_values import ResultApprovalCore
+from .scent_model_identity import ScentModelRendering
 from .sealed_record_values import ActorRole, Intent, SealedState
 from .turn_cursor import TurnCursor
 
@@ -37,9 +39,8 @@ from .turn_cursor import TurnCursor
 class Step0AuthPort(Protocol):
     """Keyed authentication over `"step0" ‖ canonical(Step-0 core)` (NDEC-005).
 
-    *group_id* names whose subtree is projected: the core is the **producing
-    team's own** subtree plus the shared identity, because at timeline event 1
-    no peer has yet seen the opponent's.
+    *group_id* names whose subtree is projected: the producing team's own plus
+    the shared identity, because at event 1 no peer has seen the opponent's.
     """
 
     def prove(self, declaration: Declaration, group_id: str) -> AuthProof:
@@ -52,22 +53,33 @@ class Step0AuthPort(Protocol):
 
 
 class ConfigDigestPort(Protocol):
-    """The unkeyed content digest over the 35-member binding config core.
+    """Unkeyed content identity for the two things a pre-game must agree on.
 
     Content identity only - it authenticates nobody (`PRD06-FR-044`), which is
-    why the lock also needs `ConfigLockAuthPort`.
+    why the lock also needs `ConfigLockAuthPort`. The scent-model operations are
+    on **this** port and not a new one: `app` compares two agreed models but may
+    not reach the mapping or SHA-256 that identify them, and that identity is
+    what this port already owns. A rendering is a semantic value (**P2**).
     """
 
     def digest(self, config: NegotiatedConfig) -> Sha256Digest:
         """Return `config_sha256` for *config*."""
         ...
 
+    def scent_model_rendering(self, model: ScentModelAgreement) -> ScentModelRendering:
+        """Return the deterministic rendering both peers must produce alike."""
+        ...
+
+    def scent_model_digest(self, model: ScentModelAgreement) -> Sha256Digest:
+        """Return an agreed scent model's unkeyed content digest."""
+        ...
+
 
 class ConfigLockAuthPort(Protocol):
     """Keyed authentication over `"config" ‖ canonical(ConfigLockContext)`.
 
-    Domain-separated from Step-0 by the context string, so a Step-0 proof can
-    never be replayed as a config proof.
+    Domain-separated from Step-0 by the context string, so a Step-0 proof is
+    never replayable as a config proof.
     """
 
     def prove(self, context: ConfigLockContext) -> AuthProof:
@@ -83,9 +95,8 @@ class ResultDigestPort(Protocol):
     """The unkeyed content digest over the result approval core.
 
     Non-self-referential: `result_sha256` is never a member of the core it
-    covers, and no keyed proof is introduced for result approval - the source
-    requires a SHA-256-backed mutual acknowledgement, not producer
-    authentication.
+    covers, and no keyed proof exists - the source requires a SHA-256-backed
+    mutual acknowledgement, not producer authentication.
     """
 
     def digest(self, core: ResultApprovalCore) -> Sha256Digest:
@@ -98,8 +109,7 @@ class TimestampPort(Protocol):
 
     Only the deterministic proposer ever calls it, exactly once per agreement
     attempt; the non-proposer echoes the received value verbatim and never
-    consults a clock. Tests inject a fixed instant, so no test depends on wall
-    time.
+    consults a clock. Tests inject a fixed instant, so none depends on wall time.
     """
 
     def now(self) -> UtcTimestamp:
@@ -110,17 +120,14 @@ class TimestampPort(Protocol):
 class CommitmentPort(Protocol):
     """The already-registered `API_BOUNDARIES.md` commitment port, as a seam.
 
-    Its register row freezes the shape: inputs are "sealed record fields (8) -
-    already-valid semantic values, never strings or dicts", outputs are
-    "`H_commit`; later a recompute **comparison result**". This is that row made
-    callable, so the audit runtime can recompute a commitment without `app`
-    importing `protocol` - the D1 edge the architecture forbids.
+    Its register row freezes the shape: inputs are the eight already-valid
+    sealed members, outputs are "`H_commit`; later a recompute **comparison
+    result**" - the row made callable, so the audit runtime recomputes a
+    commitment without `app` importing `protocol`.
 
-    Exactly those two operations, and no more. A JSON projection of an action or
-    a domain-coordinate constructor would be a *different* responsibility
-    wearing this port's name: both are reachable inward from `app` already, so
-    borrowing the cryptographic seam for them would widen a frozen contract to
-    save an import.
+    Exactly those two operations. A JSON projection or a coordinate constructor
+    is a *different* responsibility wearing this port's name, and both are
+    reachable inward from `app` already.
     """
 
     def recompute(
