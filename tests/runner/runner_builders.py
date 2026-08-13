@@ -117,4 +117,5 @@ def audit_over(turn: TurnProtocolRuntime, peer_group_id: str, peer_role: ActorRo
         SubGameContext(GAME_ID, GAME_UID, SUB_GAME, evidence.CONFIG, peer_role, peer_group_id),
         turn.evidence,
         CommitmentRecomputer(),
+        capture=turn.capture.inbound,
     )

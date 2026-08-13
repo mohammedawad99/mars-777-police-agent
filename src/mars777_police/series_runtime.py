@@ -17,7 +17,6 @@ from dataclasses import dataclass, field
 from .agent_runtime import AgentRuntime, RuntimeState
 from .app import artifact_store as artifacts
 from .app.audit_runtime import AuditRuntime
-from .app.log_document import finalized_log
 from .app.orchestrator import LocalOrchestrator
 from .app.outbound_evidence_runtime import OutboundEvidenceRuntime
 from .app.protocol_errors import LocalDefectError
@@ -25,6 +24,7 @@ from .app.result_core_runtime import SubGameOutcomeLine
 from .app.result_exchange import ResultExchange
 from .app.series_record import contribution_of, cumulative_of, links_of, outcome_line
 from .app.state_machine import ProtocolPhase
+from .app.sub_game_closure import closed_sub_game
 from .app.token_accounting import TokenAccountingPort
 from .app.turn_protocol_runtime import TurnProtocolRuntime
 from .artifact_documents import config_document, declaration_document, result_document
@@ -49,6 +49,11 @@ class SeriesRuntime:
         return self.agent.composition
 
     @property
+    def game_id(self) -> str:
+        """The identity every official artifact of this series is written under."""
+        return self.composition.identity.game_id
+
+    @property
     def sub_game(self) -> int:
         """The current sub-game - delegated, because the orchestrator owns it."""
         return self.orchestrator.sub_game
@@ -62,14 +67,11 @@ class SeriesRuntime:
         self._advance(ProtocolPhase.STEP0_NEGOTIATION)
 
     def record_declaration(self) -> artifacts.StoredArtifact:
-        """Write the declaration - ours alone would name only one participant."""
-        pregame = self.composition.pregame
-        if pregame.peer is None:
+        """Write the merged declaration - ours alone would name one participant."""
+        if self.composition.pregame.peer is None:
             raise LocalDefectError("the declaration artifact waits for the peer's Step-0")
-        return self.store.store(
-            artifacts.declaration_name(self.composition.identity.game_id),
-            declaration_document(pregame.declaration),
-        )
+        merged = declaration_document(self.composition.pregame.declaration)
+        return self.store.store(artifacts.declaration_name(self.game_id), merged)
 
     def lock_config(self, config: NegotiatedConfig) -> artifacts.StoredArtifact:
         """Record the config this sub-game locked, once the lock actually happened.
@@ -83,13 +85,11 @@ class SeriesRuntime:
         if pregame.config != config:
             raise LocalDefectError("the config offered for the record is not the locked one")
         if self.orchestrator.machine.phase is ProtocolPhase.STEP0_NEGOTIATION:
-            self._advance(ProtocolPhase.CONFIG_NEGOTIATION)
-            self._advance(ProtocolPhase.CONFIG_LOCKED)
-            self._advance(ProtocolPhase.READY)
-        return self.store.store(
-            artifacts.config_name(self.composition.identity.game_id, self.sub_game),
-            config_document(config),
-        )
+            self._advance(
+                ProtocolPhase.CONFIG_NEGOTIATION, ProtocolPhase.CONFIG_LOCKED, ProtocolPhase.READY
+            )
+        name = artifacts.config_name(self.game_id, self.sub_game)
+        return self.store.store(name, config_document(config))
 
     def open_sub_game(self, evidence: OutboundEvidenceRuntime, audit: AuditRuntime) -> None:
         """Bind this sub-game's evidence and audit owners, for both directions."""
@@ -98,22 +98,24 @@ class SeriesRuntime:
         self.composition.runtime_context.bind_sub_game(evidence, audit)
 
     def close_turn(self, turn: TurnProtocolRuntime) -> None:
-        """Carry what a finished turn witnessed into this sub-game's audit."""
-        self.composition.runtime_context.current_audit().observe(turn.evidence, turn.acks)
+        """Carry what a finished turn witnessed **about the peer** into its audit.
+
+        Our own capture rows do not travel here: `PeerRunner` adopted them when
+        the peer's answer actually arrived, the only moment they may be written.
+        """
+        audit = self.composition.runtime_context.current_audit()
+        audit.observe(turn.evidence, turn.acks, turn.capture.inbound)
 
     def close_sub_game(self, outcome: Outcome) -> artifacts.StoredArtifact:
-        """Record the outcome, finalize the log, and move the cursor - in that order."""
+        """Review, record and finalize this sub-game, then move the cursor."""
         context = self.composition.runtime_context
-        evidence = context.current_evidence()
-        audit = context.current_audit()
+        evidence, audit = context.current_evidence(), context.current_audit()
         if len(self.lines) != self.sub_game - 1:
             raise LocalDefectError(f"sub-game {self.sub_game} was already recorded")
-        stored = self.store.store(
-            artifacts.log_name(self.composition.identity.game_id, self.sub_game),
-            finalized_log(evidence, audit),
-        )
+        closed = closed_sub_game(evidence, audit, self.composition.pregame.config, outcome)
+        stored = self.store.store(artifacts.log_name(self.game_id, self.sub_game), closed.document)
         self.composition.series_audit.record(audit)
-        self.lines = (*self.lines, outcome_line(self.sub_game, outcome))
+        self.lines = (*self.lines, outcome_line(self.sub_game, closed.outcome))
         self._advance(ProtocolPhase.SUBGAME_COMPLETE)
         last = self.orchestrator.is_last_sub_game
         self._advance(ProtocolPhase.SERIES_COMPLETE if last else ProtocolPhase.READY)
@@ -139,11 +141,10 @@ class SeriesRuntime:
         if not exchange.is_agreed:
             raise LocalDefectError("the result artifact waits for a mutual agreement")
         self._advance(ProtocolPhase.REPORT_READY)
-        return self.store.store(
-            artifacts.result_name(self.composition.identity.game_id),
-            result_document(exchange, self.composition.group_id),
-        )
+        document = result_document(exchange, self.composition.group_id)
+        return self.store.store(artifacts.result_name(self.game_id), document)
 
-    def _advance(self, target: ProtocolPhase) -> None:
+    def _advance(self, *targets: ProtocolPhase) -> None:
         """Move the one orchestrator; the cursor rule is its decision, not ours."""
-        self.orchestrator = self.orchestrator.advance(target).orchestrator
+        for target in targets:
+            self.orchestrator = self.orchestrator.advance(target).orchestrator

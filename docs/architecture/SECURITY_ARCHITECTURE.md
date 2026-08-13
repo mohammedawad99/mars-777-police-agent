@@ -60,3 +60,32 @@ cannot be replayed across object types.
 - **Constant-time comparison** for digests/tags where the language provides it.
 - **Bounded everything**: payload size, queue depth, retries, decision time, log size.
 - **Deterministic verification** over trust, always.
+
+## Stage 5-R8 — what protects the two facts SHA-256 cannot
+
+The commit-reveal scheme protects everything inside `H_commit`. Two facts of a
+real game sit outside it and needed their own protection.
+
+**A capture claim and its answer are unsealed.** They are live interaction
+facts: the claim is a question about a cell only the opponent knows, and the
+answer is computed by the opponent from state nobody else can see. Neither can
+be committed to in advance. The protection is **mutual retention**: both sides
+keep the row they really saw, each discloses its own half at the final audit,
+and each compares the other's half against its own. A peer that rewrites,
+adds, drops, duplicates or reorders a row is refused before any verdict is
+derived — not because the row is signed, but because two independent records of
+the same event exist and must agree.
+
+**A disclosed log can be internally consistent and still be fiction.** A peer
+can seal a game it never played: a piece that teleports, a move through a
+barrier, a snapshot listing a barrier nobody placed. Every one of those hashes
+correctly. The protection is the **semantic replay**, which rebuilds the
+sub-game from the config-locked start cells and the placements both sides
+actually revealed, and judges each action with the same `domain.rules` /
+`domain.barriers` code the mover was required to obey locally.
+
+Neither mechanism transmits a position, a nonce or a verdict, and neither adds a
+message, a tool, a port or an error identity. The one asymmetry worth stating
+plainly: a false capture **declaration** is a legal move played badly and is
+scored (technical loss, 0/0), while a false **answer** is a forgery and is
+treated exactly as a failed digest is.

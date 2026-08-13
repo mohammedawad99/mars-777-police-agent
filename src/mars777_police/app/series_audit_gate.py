@@ -12,6 +12,12 @@ the prerequisite was always series-wide. Nothing held six outcomes. This does.
 caller chooses *when* to record a finished audit but never *what* it decided or
 *which* sub-game it belongs to.
 
+**It records what the sub-game concluded in full.** `recorded_outcome` is the
+hashes *and* the replay: a peer whose disclosed game never happened is tampering
+even though every digest matched. A false capture claim is deliberately not -
+that sub-game verified, and it is scored 0/0 as a technical loss rather than
+blocking the series (`semantic_values.TAMPERING`).
+
 **It keeps the outcome, not the runtime.** `AuditOutcome` is frozen; the runtime
 is not. Holding the runtime would mean asking a mutable object again later and
 getting a different answer than the one that was recorded.
@@ -54,7 +60,7 @@ class SeriesAuditGate:
             raise LocalDefectError(f"sub-game {sub_game} is not part of this series")
         if sub_game in self.outcomes:
             raise LocalDefectError(f"sub-game {sub_game} was already audited")
-        self.outcomes[sub_game] = audit.outcome
+        self.outcomes[sub_game] = audit.recorded_outcome
 
     @property
     def audited(self) -> tuple[int, ...]:

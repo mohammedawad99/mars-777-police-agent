@@ -25,6 +25,9 @@ from dataclasses import dataclass, field
 
 from ..domain.actions import PhysicalAction
 from .audit_disclosure_writer import AuditDocument, document
+from .capture_observation import require_claim_shape
+from .capture_transcript import CaptureRecord
+from .capture_values import CaptureClaim
 from .nonce_source import NonceSourcePort
 from .outbound_evidence_values import (
     EvidencePhase,
@@ -49,6 +52,7 @@ class OutboundEvidenceRuntime:
     commitments: CommitmentPort
     phase: EvidencePhase = field(default=EvidencePhase.OPEN)
     records: tuple[SealedTurnRecord, ...] = field(default=())
+    capture: tuple[CaptureRecord, ...] = field(default=())
 
     @property
     def ordered(self) -> tuple[SealedTurnRecord, ...]:
@@ -63,15 +67,23 @@ class OutboundEvidenceRuntime:
         intent: Intent,
         hint: str,
         cursor: TurnCursor,
+        claim: CaptureClaim | None = None,
     ) -> PreparedTurn:
         """Seal one turn of ours and return only what a peer may receive.
 
         The nonce is drawn, used and kept; what comes back is the commitment and
         the reveal, so the caller cannot disclose early even by mistake.
+
+        *claim* is the one member of the reveal that is **not** sealed: it is a
+        question about a cell only the opponent knows, so there is nothing of
+        ours to commit to. It is checked against the same shape rule the
+        receiver applies, so we cannot send a declaration a peer must refuse.
         """
         if self.phase is not EvidencePhase.OPEN:
             raise StaleMessageError(f"no turn may be prepared while {self.phase.value}")
         self._require_cursor(cursor)
+        reveal = Reveal(cursor, action, hint, claim)
+        require_claim_shape(reveal, self.context.role, LocalDefectError)
         if state.role is not self.context.role:
             raise LocalDefectError(
                 f"sealed state names {state.role.value!r}, not our own {self.context.role.value!r}",
@@ -89,7 +101,7 @@ class OutboundEvidenceRuntime:
             nonce=nonce,
         )
         self.records += (SealedTurnRecord(cursor, state, action, intent, hint, nonce, commit),)
-        return PreparedTurn(Commitment(cursor, commit), Reveal(cursor, action, hint))
+        return PreparedTurn(Commitment(cursor, commit), reveal)
 
     def _require_cursor(self, cursor: TurnCursor) -> None:
         """Refuse another sub-game's turn, and refuse the same turn twice."""
@@ -113,9 +125,19 @@ class OutboundEvidenceRuntime:
             tuple(NonceRevealEntry(record.cursor, record.nonce) for record in self.ordered)
         )
 
+    def observe_capture(self, capture: tuple[CaptureRecord, ...]) -> None:
+        """Adopt what our own finished reveals asked and were answered."""
+        if self.phase is EvidencePhase.COMPLETE:
+            raise StaleMessageError("this sub-game's disclosure was already rendered")
+        self.capture += capture
+
     def audit_disclosure(self) -> AuditDocument:
-        """Render our disclosure core, once the nonces are already disclosed."""
+        """Render our disclosure core, once the nonces are already disclosed.
+
+        The capture rows are what our own reveals asked and were answered; the
+        peer checks them against the answers it actually gave.
+        """
         if self.phase is EvidencePhase.OPEN:
             raise StaleMessageError("the audit disclosure follows the final nonce reveal")
         self.phase = EvidencePhase.COMPLETE
-        return document(self.context, self.ordered)
+        return document(self.context, self.ordered, self.capture)

@@ -425,3 +425,43 @@ final `audit` block (they are hidden until then).
   representation is **[RR]**", contradicting §B of this same file.)*
 - Placeholder hashes/nonces are literal `PLACEHOLDER…` strings — **not** real
   cryptographic material.
+
+## Stage 5-R8 — the capture transcript and the semantic finding
+
+Two additions, both inside the one log model this contract already freezes.
+
+**Disclosure core (SHARED-AUDIT-INPUT).** The audit-disclosure document carries
+`capture[]` alongside `entries[]`: one row per reveal that produced a
+`TurnOutcome`, in the order the sub-game produced them, each exactly
+`{step, claim, answer}` — `claim` is `null` or `[row, col]`, and `answer` is one
+of `NO_QUESTION` / `NOT_CAUGHT` / `CAUGHT`. The rows are **not** hashed: they
+were never members of `H_commit` (JDEC-016). What makes them evidence is that
+the receiver compares them against the rows it observed live; a disclosure whose
+transcript differs in any row is refused, and a document with no `capture`
+member at all is refused rather than treated as an empty transcript.
+
+**Log events (AUDITED-LOCAL).** Every `reveal` event — ours and the peer's —
+carries `capture_claim` and `capture_answer` in the same two spellings. A turn
+that was sealed but never revealed writes `null` for both: `NO_QUESTION` means
+"the reveal asked nothing", which is a different fact from "there was no reveal".
+
+**`audit.semantic` (LOCAL-DERIVED-AUDIT).** The audit block gains
+`{verdict, step, at_fault, also_at_fault}` — the finding **this** side's replay
+reached, never one accepted from a peer, exactly like `audit.result` and
+`audit.tampered_step`. `verdict` is one of `CONSISTENT`, `WRONG_START`,
+`BROKEN_TRAJECTORY`, `ILLEGAL_ACTION`, `WRONG_BARRIER_SET`,
+`FALSE_CAPTURE_CLAIM`, `DISHONEST_CAPTURE_ANSWER`, `FALSE_CLAIM_AFFIRMED`.
+`step` and `at_fault` are `null` only when the verdict is `CONSISTENT`.
+
+`also_at_fault` is always present and is `null` for every verdict except
+`FALSE_CLAIM_AFFIRMED`, the one event with a fault on each side: the claimant
+declared a capture that never happened (`CRYPTO-005`) and the answerer confirmed
+it (`CRYPTO-004`). It is a second role, never a list and never free text — the
+game has exactly two sides.
+
+A disqualifying finding also drives `audit.result` to `TAMPERED` at that step,
+so the file and the series gate cannot disagree. A **scored** finding
+(`ILLEGAL_ACTION`, `FALSE_CAPTURE_CLAIM`, and the claimant's half of
+`FALSE_CLAIM_AFFIRMED`) leaves `audit.result` at `Verified OK` and changes the
+sub-game's end event to `TECHNICAL_LOSS` instead — an honest record of illegal
+play is not a forgery.

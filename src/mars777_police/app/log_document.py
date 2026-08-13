@@ -25,6 +25,7 @@ this side derived from the config-locked roles - never a transmitted field.
 from .audit_disclosure import turns
 from .audit_disclosure_writer import AuditDocument
 from .audit_runtime import AuditRuntime
+from .capture_transcript import CaptureRecord
 from .log_events import (
     ack_event,
     final_reveal,
@@ -36,6 +37,8 @@ from .log_events import (
 )
 from .outbound_evidence_runtime import OutboundEvidenceRuntime
 from .protocol_errors import LocalDefectError
+from .sealed_record_values import ActorRole
+from .semantic_values import SemanticFinding
 from .turn_protocol_state import AckEvidence
 
 
@@ -44,9 +47,35 @@ def _acked(ack: AckEvidence | None, sub_game: int) -> list[dict[str, object]]:
     return [] if ack is None else [ack_event(ack, sub_game)]
 
 
+def _side(role: ActorRole | None) -> str | None:
+    """One named side of a finding, or `null` where the replay names none."""
+    return None if role is None else role.value
+
+
+def semantic_value(finding: SemanticFinding) -> dict[str, object]:
+    """The replay's finding, in the four fields the audit block records it as.
+
+    `also_at_fault` is written on every finding - `null` for the unilateral ones
+    - so a reader never has to decide whether an absent key means "nobody else"
+    or "an older writer".
+    """
+    return {
+        "verdict": finding.verdict.value,
+        "step": finding.step,
+        "at_fault": _side(finding.at_fault),
+        "also_at_fault": _side(finding.also_at_fault),
+    }
+
+
+def _rows(capture: tuple[CaptureRecord, ...]) -> dict[int, CaptureRecord]:
+    """One direction's capture transcript, addressed by the step it belongs to."""
+    return {row.cursor.step: row for row in capture}
+
+
 def finalized_log(evidence: OutboundEvidenceRuntime, audit: AuditRuntime) -> AuditDocument:
     """Render the audited local log for one completed, audited sub-game."""
-    outcome, disclosure = audit.outcome, audit.disclosure
+    disclosure = audit.disclosure
+    outcome = None if audit.outcome is None else audit.recorded_outcome
     if outcome is None or disclosure is None:
         raise LocalDefectError("a log is finalized only after this sub-game was audited")
     context = evidence.context
@@ -60,6 +89,7 @@ def finalized_log(evidence: OutboundEvidenceRuntime, audit: AuditRuntime) -> Aud
     ours = {record.cursor.step: record for record in records}
     theirs = {turn.step: turn for turn in disclosed}
     acks = {(ack.cursor.step, ack.by_role): ack for ack in audit.acks}
+    asked, answered = _rows(evidence.capture), _rows(audit.capture)
     role, peer_role = context.role, audit.context.peer_role
     entries: list[dict[str, object]] = []
     for step in sorted(set(ours) | set(theirs)):
@@ -67,12 +97,12 @@ def finalized_log(evidence: OutboundEvidenceRuntime, audit: AuditRuntime) -> Aud
         if record is not None:
             entries.append(own_commit(record, role))
             entries += _acked(acks.get((step, peer_role)), context.sub_game)
-            entries.append(own_reveal(record, role))
+            entries.append(own_reveal(record, role, asked.get(step)))
         turn = theirs.get(step)
         if turn is not None:
             entries.append(peer_commit(turn, verified_at(step, outcome.tampered_step)))
             entries += _acked(acks.get((step, role)), context.sub_game)
-            entries.append(peer_reveal(turn))
+            entries.append(peer_reveal(turn, answered.get(step)))
     return {
         "game_id": context.game_id,
         "game_uid": context.game_uid,
@@ -83,5 +113,6 @@ def finalized_log(evidence: OutboundEvidenceRuntime, audit: AuditRuntime) -> Aud
             "final_reveal": final_reveal(records, context.role, audit),
             "result": outcome.verdict.value,
             "tampered_step": outcome.tampered_step,
+            "semantic": semantic_value(audit.semantic),
         },
     }

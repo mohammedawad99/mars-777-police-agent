@@ -14,6 +14,7 @@ receives cannot drift into two spellings of one fact.
 from .audit_disclosure import DisclosedTurn
 from .audit_disclosure_writer import action_value, entry_value, state_value
 from .audit_runtime import AuditRuntime
+from .capture_transcript import CaptureRecord
 from .outbound_evidence_values import SealedTurnRecord
 from .protocol_values import Sha256Digest
 from .sealed_record_values import ActorRole, SealedState
@@ -30,8 +31,27 @@ def own_commit(record: SealedTurnRecord, role: ActorRole) -> dict[str, object]:
     return entry
 
 
-def own_reveal(record: SealedTurnRecord, role: ActorRole) -> dict[str, object]:
-    """What we revealed for that turn: the action and the sentence."""
+def capture_fields(row: CaptureRecord | None) -> dict[str, object]:
+    """What this reveal asked about capture and what came back.
+
+    A turn that was sealed but never revealed produced no answer at all, and
+    says so with nulls rather than borrowing `NO_QUESTION` - that token means
+    "the reveal asked nothing", which is a different fact from "there was no
+    reveal".
+    """
+    if row is None:
+        return {"capture_claim": None, "capture_answer": None}
+    claim = row.claim
+    return {
+        "capture_claim": None if claim is None else [claim.cell.row, claim.cell.col],
+        "capture_answer": row.answer.value,
+    }
+
+
+def own_reveal(
+    record: SealedTurnRecord, role: ActorRole, row: CaptureRecord | None
+) -> dict[str, object]:
+    """What we revealed for that turn: the action, the sentence and the answer."""
     return {
         "phase": REVEAL,
         "sub_game": record.cursor.sub_game,
@@ -39,6 +59,7 @@ def own_reveal(record: SealedTurnRecord, role: ActorRole) -> dict[str, object]:
         "role": role.value,
         "move": action_value(record.action),
         "hint": record.hint,
+        **capture_fields(row),
     }
 
 
@@ -67,8 +88,8 @@ def peer_commit(turn: DisclosedTurn, verified: bool | None) -> dict[str, object]
     }
 
 
-def peer_reveal(turn: DisclosedTurn) -> dict[str, object]:
-    """The peer's revealed action and sentence for that turn."""
+def peer_reveal(turn: DisclosedTurn, row: CaptureRecord | None) -> dict[str, object]:
+    """The peer's revealed action and sentence, with the answer we gave it."""
     return {
         "phase": REVEAL,
         "sub_game": turn.sub_game,
@@ -76,6 +97,7 @@ def peer_reveal(turn: DisclosedTurn) -> dict[str, object]:
         "role": turn.role,
         "move": action_value(turn.move),
         "hint": turn.hint,
+        **capture_fields(row),
     }
 
 

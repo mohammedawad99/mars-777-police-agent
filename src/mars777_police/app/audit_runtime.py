@@ -11,14 +11,16 @@ peer's verdict has no standing**: our annotations are derived here, sent nowhere
 
 from dataclasses import dataclass, field
 
-from ..domain.actions import BarrierAction, MoveAction
-from .audit_disclosure import DisclosedTurn, identity, turns
+from .audit_capture import capture_rows
+from .audit_disclosure import turns
 from .audit_values import AuditOutcome, AuditPhase, SubGameContext
+from .audit_verification import by_cursor, require_identity, verdict_for
+from .capture_transcript import CaptureRecord, require_same_transcript
 from .peer_final_messages import FinalNonceReveal
 from .ports import CommitmentPort
 from .protocol_errors import StaleMessageError
-from .protocol_values import FinalAuditVerdict, NonceValue, Sha256Digest
-from .sealed_record_values import Intent, SealedState
+from .protocol_values import FinalAuditVerdict, NonceValue
+from .semantic_values import CONSISTENT, SemanticFinding
 from .turn_cursor import TurnCursor
 from .turn_protocol_state import AckEvidence, TurnEvidence
 
@@ -35,6 +37,8 @@ class AuditRuntime:
     outcome: AuditOutcome | None = field(default=None)
     disclosure: dict[str, object] | None = field(default=None)  # retained for the log
     acks: tuple[AckEvidence, ...] = field(default=())  # log attribution, never audited
+    capture: tuple[CaptureRecord, ...] = field(default=())  # what we watched happen
+    semantic: SemanticFinding = field(default=CONSISTENT)  # the replay's finding
 
     def __post_init__(self) -> None:
         self._require_aggregate(self.evidence)
@@ -47,14 +51,18 @@ class AuditRuntime:
             raise ValueError("every evidence cursor must belong to this sub-game")
 
     def observe(
-        self, evidence: tuple[TurnEvidence, ...], acks: tuple[AckEvidence, ...] = ()
+        self,
+        evidence: tuple[TurnEvidence, ...],
+        acks: tuple[AckEvidence, ...] = (),
+        capture: tuple[CaptureRecord, ...] = (),
     ) -> None:
-        """Adopt a finished turn's evidence, and its acks as log attribution only."""
+        """Adopt a finished turn's evidence, its acks and what it asked about capture."""
         if self.phase is not AuditPhase.AWAITING_NONCES:
             raise StaleMessageError(f"a turn cannot be observed while {self.phase.value}")
         self._require_aggregate(self.evidence + evidence)
         self.evidence += evidence
         self.acks += acks
+        self.capture += capture
 
     @property
     def expected(self) -> tuple[TurnCursor, ...]:
@@ -79,72 +87,49 @@ class AuditRuntime:
         """Verify the peer's disclosed log against what we already witnessed."""
         if self.phase is not AuditPhase.AWAITING_DISCLOSURE:
             raise StaleMessageError(f"a disclosure cannot arrive while {self.phase.value}")
-        self._require_identity(document)
-        disclosed = self._by_cursor(turns(document))
-        self.outcome = self._verdict(disclosed)
+        require_identity(document, self.context)
+        require_same_transcript(self.capture, capture_rows(document))
+        indexed = by_cursor(turns(document), self.expected)
+        self.outcome = verdict_for(
+            self.evidence, indexed, self.nonces, self.context.peer_role, self.commitments
+        )
         self.disclosure = dict(document)
         self.phase = AuditPhase.COMPLETE
 
-    def _require_identity(self, document: dict[str, object]) -> None:
-        game_id, game_uid, sub_game, config = identity(document)
-        expected = (
-            self.context.game_id,
-            self.context.game_uid,
-            self.context.sub_game,
-            self.context.config_sha256.value,
-        )
-        if (game_id, game_uid, sub_game, config) != expected:
-            raise StaleMessageError("the disclosed log is not this sub-game's")
+    def adopt_semantic(self, finding: SemanticFinding) -> None:
+        """Adopt the replay's finding about the log this audit just verified.
 
-    def _by_cursor(self, disclosed: tuple[DisclosedTurn, ...]) -> dict[TurnCursor, DisclosedTurn]:
-        indexed: dict[TurnCursor, DisclosedTurn] = {}
-        for turn in disclosed:
-            cursor = TurnCursor(turn.sub_game, turn.step)
-            if cursor in indexed:
-                raise StaleMessageError("the disclosed log repeats a turn")
-            indexed[cursor] = turn
-        if tuple(sorted(indexed, key=lambda c: c.step)) != self.expected:
-            raise StaleMessageError("the disclosed log does not match the played turns")
-        return indexed
+        Only after the disclosure: the replay needs the peer's own positions,
+        and those arrive with it. Once, because a second finding would be a
+        second answer to a question this sub-game has already answered.
+        """
+        if self.phase is not AuditPhase.COMPLETE:
+            raise StaleMessageError(f"a semantic finding cannot arrive while {self.phase.value}")
+        if not self.semantic.consistent:
+            raise StaleMessageError("this sub-game was already reviewed")
+        self.semantic = finding
 
-    def _verdict(self, indexed: dict[TurnCursor, DisclosedTurn]) -> AuditOutcome:
-        for record in sorted(self.evidence, key=lambda r: r.cursor.step):
-            if not self._turn_verifies(record, indexed[record.cursor]):
-                return AuditOutcome(FinalAuditVerdict.TAMPERED, record.cursor.step)
-        return AuditOutcome(FinalAuditVerdict.VERIFIED_OK)
+    @property
+    def recorded_outcome(self) -> AuditOutcome:
+        """The outcome the series records: the hashes **and** the replay.
 
-    def _turn_verifies(self, live: TurnEvidence, turn: DisclosedTurn) -> bool:
-        """Cross-check the log against live facts, then recompute the digest."""
-        action, peer = live.action, self.context.peer_role
-        if not isinstance(action, MoveAction | BarrierAction):
-            return False
-        disclosed = (turn.commit, turn.hint, turn.role, turn.step, turn.move)
-        if disclosed != (live.h_commit.value, live.hint, peer.value, live.cursor.step, action):
-            return False
-        try:
-            state = SealedState(
-                Sha256Digest(turn.config_sha256), turn.self_pos, turn.barriers, turn.step, peer
-            )
-            intent = Intent(turn.intent)
-        except ValueError:
-            return False
-        recomputed = self.commitments.recompute(
-            state=state,
-            action=action,
-            intent=intent,
-            hint=live.hint,
-            cursor=live.cursor,
-            role=peer,
-            nonce=self.nonces[live.cursor],
-        )
-        return self.commitments.matches(live.h_commit, recomputed)
+        A forged story that hashes correctly is still a forgery, so a tampering
+        finding decides the outcome at the step it names. A false capture claim
+        is not tampering and leaves this untouched - it is scored, not blocked.
+        """
+        outcome = self.outcome
+        if outcome is None:
+            raise StaleMessageError("this sub-game has not been audited")
+        if self.semantic.honest:
+            return outcome
+        return AuditOutcome(FinalAuditVerdict.TAMPERED, self.semantic.step)
 
     @property
     def verdict(self) -> FinalAuditVerdict | None:
         """The local verdict, or `None` until the audit completes."""
-        return self.outcome.verdict if self.outcome is not None else None
+        return None if self.outcome is None else self.recorded_outcome.verdict
 
     @property
     def verified(self) -> bool:
         """Whether result agreement may proceed for this sub-game."""
-        return self.outcome is not None and self.outcome.verified
+        return self.outcome is not None and self.recorded_outcome.verified

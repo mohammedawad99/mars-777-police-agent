@@ -24,6 +24,52 @@ simple, reversible representations are preferred.
 | **JDEC-015** | Terminal threshold admissibility: a counted configuration MUST satisfy `survival_threshold <= max_moves`; a violating configuration is refused before `CONFIG_LOCKED` | App F T15 #3/#4 fix only the two MINIMUM-35 floors and let both be raised **independently**; Ch 3 Table 2 defines exactly three end events (capture, prolonged survival, technical loss) and **no** outcome for a survival threshold the step ceiling can never reach | (a) invent a terminal for `max_moves` reached first (tie / survival / capture / technical loss) · (b) let the sub-game run past its own ceiling · (c) treat the combination as an inadmissible configuration | **(c) admissibility invariant `survival_threshold <= max_moves`** | Preserves every source-defined terminal outcome instead of inventing a fourth; keeps both MINIMUM-35 floors intact; the only alternative that adds no game rule | both peers must reject the same configurations before play; refusal happens pre-`CONFIG_LOCKED`, never mid-game | none (no key, hash or nonce involvement) | admissibility unit tests (35/35, 40/35, 40/40 accepted; 35/40 rejected) | low (validation-only; no artifact field, no numeric change) |
 | **JDEC-016** | Capture-resolution turn contract: `Reveal` gains a nullable `capture_claim` (one cell), and the operation carrying it answers with `TurnOutcome(accepted, capture)` where `CaptureAnswer` is exactly `NO_QUESTION` / `NOT_CAUGHT` / `CAUGHT`; the current strict counted-turn posture is `STRICT_COUNTED_MATCH_TURN_OUTCOME_V1` | The source requires capture by contact, by barrier and by trapping, and truthful capture declarations, but fixes no bytes for them; the previous legality-`bool` result was PROJECT-CONTRACT (C-12) and is corrected by C-13 | (a) a new peer family / wire kind / FastMCP tool for capture · (b) a control-channel adjunct · (c) an adjunct on the existing Reveal plus a typed operation result | **(c) adjunct on the existing Reveal, typed result** | Capture belongs to the turn that asks it; the lecturer reference likewise carries `capture_claim` on its turn message, so the request stays reference-compatible while the synchronous result removes the reference's deferred-answer ambiguity | both peers must agree the posture **before** `CONFIG_LOCKED`: `STRICT_COUNTED_MATCH` keeps its legacy legality-`bool` meaning and is **not** accepted for current counted play | none — `capture_claim` and `TurnOutcome` are outside `H_commit`; the sealed eight-member record is unchanged | codec round-trip, live runtime and two-agent real-FastMCP capture tests | low (no register growth: tools 4, families 8, kinds 9, ports 21, errors 22) |
 
+### JDEC-016 amended in place (Stage 5-R8 semantic-audit checkpoint) — **no JDEC-017**
+
+The decision above fixed the live representation. What it deliberately left open
+was how a claim and an answer become *evidence*, since neither is a member of
+`H_commit` and neither can be checked while the game is being played. That is
+settled here, inside the same decision, because it is the same contract:
+
+1. **Retention.** Each side keeps one `CaptureRecord{cursor, claim, answer}` for
+   **every** reveal that produced a `TurnOutcome`, in both directions and
+   including the ordinary `NO_QUESTION` ones — an omitted row would let a whole
+   interaction disappear. The outbound row is written only once the transport
+   invocation has actually returned the peer's answer.
+2. **Disclosure.** The existing `AuditDocument` gains one member, `capture[]`,
+   whose rows are `{step, claim, answer}` with `claim` either `null` or `[r,c]`.
+   No new message, tool, wire kind or file. A document with **no** `capture`
+   member is refused rather than read as an empty transcript.
+3. **Cross-check.** The receiver compares the disclosed transcript against the
+   rows it observed, as an ordered sequence, before any verdict is derived.
+4. **Replay convention (interoperability-binding, see point 6).**
+   `state.self_pos` is the mover's cell **before** that step's action — the cell
+   it occupied when it sealed the commitment, never the cell the action leads
+   to. `state.barriers` is likewise the public barrier set **before** that
+   step's action: every placement revealed in steps `1…k-1` by either side, and
+   no placement revealed at step `k`, because both step-`k` commitments are
+   sealed before either step-`k` reveal. Consequently a step-`k` capture claim
+   is recomputed against the answerer's own sealed cell for step `k`, both sides
+   of a step are checked against the same board, and the step's effects are
+   applied only afterwards.
+5. **Findings and sanctions.** The replay yields one `SemanticFinding`, the
+   first violation in step order, recorded in the official log under
+   `audit.semantic` and mapped to the sanctions listed in **C-13**. The single
+   event that carries a fault on **each** side — a false declaration the
+   opponent affirmed — is the closed verdict `FALSE_CLAIM_AFFIRMED`, which names
+   both roles (`at_fault`, `also_at_fault`); no fault is dropped for being
+   second.
+6. **The counted posture binds all of the above.** A peer that echoes
+   `STRICT_COUNTED_MATCH_TURN_OUTCOME_V1` is agreeing to the whole contract in
+   this decision, not only to the live `TurnOutcome` shape: the `capture[]`
+   transcript member, the row-for-row cross-check, and the pre-action reading of
+   `state.self_pos` and `state.barriers`. A peer that read either member as
+   post-action would compute different capture truth from the same bytes, so
+   there is no interoperable semantic audit without this clause. It is stated in
+   the profile tables themselves (`COMPATIBILITY_PROFILES.md`,
+   `INTEROPERABILITY_NEGOTIATION.md`, `CONFIG_CONTRACT.md`); **no fifth profile
+   value and no JDEC-017 exist**.
+
 ## Stage 1D audit (KEEP / MODIFY / RETIRE) + JDEC-012/013 + Stage-2A-R2 JDEC-014
 
 | JDEC | Action | Change |

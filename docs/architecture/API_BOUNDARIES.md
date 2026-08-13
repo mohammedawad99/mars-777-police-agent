@@ -118,9 +118,9 @@ committing, so an illegal action never produces an `H_commit` and never leaves.
 
 **Hidden-state-dependent legality is a final-audit responsibility.** From the
 disclosed sealed record the verifier reconstructs the mover's pre-action cell
-and proves or disproves the action and any capture declaration. *(That semantic
-audit is specified here and is **implementation pending** — the next internal
-Stage 5-R8 checkpoint owns it.)*
+and proves or disproves the action and any capture declaration. *(Implemented
+at the Stage 5-R8 semantic-audit checkpoint: `app.semantic_review` replays the
+sub-game from the two disclosed logs — see **C-13** and **JDEC-016**.)*
 
 It never means network delivered, JSON parsed, signature valid, sender valid,
 phase valid, cursor valid, commitment valid or reveal-hash valid — those
@@ -130,6 +130,12 @@ awaited invocation itself, so **no `TurnCursor` echo** and no duplication of
 `action`, `hint`, `nonce`, `digest` or `state`. **No free text crosses the
 boundary.** This is **PROJECT-CONTRACT** (C-12 as amended by C-13); the source
 requires the capture resolution and the rejection, not this exact shape.
+
+**O6 payload gained one member at Stage 5-R8**: the audit-disclosure document
+carries `capture[]` — `{step, claim, answer}` rows for the reveals this side
+made — beside `entries[]`. Still one schema, one operation, no new tool: the
+transcript is part of the same document the peer already parses, and the
+receiver refuses a document that omits it (`LOG_CONTRACT.md`).
 
 **O6 — Audit-material submission operation.** Operation (f), alias `submit_audit`
 — **PROJECT-CONTRACT / REFERENCE-COMPATIBILITY, not book-mandated**. Cadence is

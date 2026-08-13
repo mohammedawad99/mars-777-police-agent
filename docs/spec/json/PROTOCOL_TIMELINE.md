@@ -238,3 +238,26 @@ carries the source-required answer (`NO_QUESTION` / `NOT_CAUGHT` / `CAUGHT`),
 computed by the receiver from its **own** position and public facts, so no
 position is ever transmitted. A declared capture ends ordinary play for that
 sub-game however it is answered.
+
+### Stage 5-R8 — event 9 is a **replay**, and it happens after event 12
+
+Event 9 (the validation record) was always local, and it was always deferred:
+legality that depends on a sealed cell, and the truth of a capture declaration,
+are simply not decidable while the sub-game is being played. They are decided
+once, at the end, in this order:
+
+1. **Final nonce reveal** (event 12) — both sides release their nonces.
+2. **Audit disclosure** — each side sends its own log core **plus** its own
+   capture transcript.
+3. **Transcript cross-check** — the received transcript must be, row for row,
+   the one this side actually observed.
+4. **Commitment recomputation** — the existing R7 SHA-256 pass.
+5. **Semantic replay** — both trajectories reconstructed from the config-locked
+   start cells, every action re-judged by the domain rules, the public barrier
+   chronology rebuilt, and every capture answer recomputed against the cell its
+   answerer disclosed.
+6. **Sanction** — a false declaration ends the sub-game as a technical loss;
+   any forgery is `TAMPERED` and blocks result agreement.
+
+Nothing in this sequence adds a message: steps 3-6 all read material events 12
+and O6 already carry.

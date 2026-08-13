@@ -14,11 +14,11 @@ inconsistent material during live play and the proof arrives later. What this
 runtime does instead is **correlate** - this reveal belongs to the cursor whose
 commitment and acknowledgement it already recorded - and enforce ordering.
 
-**`False` means one thing only.** A protocol-valid reveal whose action the game
-rejects returns `False`; every protocol failure - wrong phase, wrong cursor,
-wrong role, no commitment, a duplicate - raises. Collapsing those into `False`
-would tell the caller "you played illegally" when the truth is "you are out of
-order", and `E-HASH-MISMATCH` is not reachable from here at all.
+**An outcome is not a refusal.** `TurnOutcome` reports what a public fact
+allowed and what the capture question answered; every protocol failure - wrong
+phase, wrong cursor, wrong role, no commitment, a duplicate - raises instead.
+Returning one for the other would tell a caller "you played illegally" when the
+truth is "you are out of order", and `E-HASH-MISMATCH` is unreachable here.
 
 **It owns no game rule and no step counter.** Legality and truth belong to
 `LocalTurnService` and `domain.truth`; the cursor advances from the
@@ -35,6 +35,7 @@ from dataclasses import dataclass, field
 
 from ..domain.truth import LocalTruth
 from .capture_observation import observe_reveal, require_claim_shape
+from .capture_transcript import TurnTranscript
 from .capture_values import TurnOutcome
 from .peer_turn_messages import Acknowledgement, Commitment, Reveal
 from .protocol_errors import StaleMessageError
@@ -60,9 +61,9 @@ class TurnProtocolRuntime:
     peer_commitment: PendingCommitment | None = field(default=None)
     local_commitment: PendingCommitment | None = field(default=None)
     local_acknowledged: bool = field(default=False)
-    claim_answered: bool = field(default=False)
     evidence: tuple[TurnEvidence, ...] = field(default=())
     acks: tuple[AckEvidence, ...] = field(default=())
+    capture: TurnTranscript = field(default_factory=TurnTranscript)
 
     @property
     def peer_role(self) -> ActorRole:
@@ -123,28 +124,26 @@ class TurnProtocolRuntime:
         if self.phase is not TurnPhase.AWAITING_REVEAL or pending is None:
             raise _refuse(f"a reveal cannot arrive while {self.phase.value}")
         self._require_cursor(reveal.cursor, "reveal")
-        self._require_claim_shape(reveal)
-        outcome = self._observe(reveal)
+        require_claim_shape(reveal, self.peer_role, _refuse)
+        outcome, self.truth = observe_reveal(reveal, self.truth)
         self.evidence += (
             TurnEvidence(
                 pending.cursor, pending.h_commit, reveal.action, reveal.hint, outcome.accepted
             ),
         )
-        self.claim_answered = self.claim_answered or reveal.capture_claim is not None
+        self.capture.observe_inbound(reveal, outcome)
         self.phase = TurnPhase.CONSUMED
         return outcome
 
-    def _require_claim_shape(self, reveal: Reveal) -> None:
-        """Only the police may declare, and only alongside a movement."""
-        require_claim_shape(reveal, self.peer_role, _refuse)
+    def observe_outgoing(self, reveal: Reveal, outcome: TurnOutcome) -> None:
+        """Retain what the peer answered **our** reveal, once the call returned.
 
-    def _observe(self, reveal: Reveal) -> TurnOutcome:
-        """Answer from our own position and the public board, and nothing else."""
-        outcome, truth = observe_reveal(reveal, self.truth)
-        self.truth = truth
-        return outcome
+        Only the caller that completed the transport invocation may record it: a
+        guessed answer is the fabrication the audit cross-check exists to catch.
+        """
+        self.capture.observe_outgoing(reveal, outcome)
 
     @property
     def audit_required(self) -> bool:
         """Whether a declared capture ended ordinary play, however it was answered."""
-        return self.claim_answered
+        return self.capture.declared

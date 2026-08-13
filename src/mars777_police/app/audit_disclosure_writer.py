@@ -26,6 +26,7 @@ no standing to make. The receiver derives them itself.
 
 from ..domain.actions import BarrierAction, MoveAction, PhysicalAction
 from ..domain.board import Position
+from .capture_transcript import CaptureRecord
 from .outbound_evidence_values import LocalEvidenceContext, SealedTurnRecord
 from .sealed_record_values import SealedState
 
@@ -72,12 +73,32 @@ def entry_value(record: SealedTurnRecord, role: str) -> dict[str, object]:
     }
 
 
-def document(context: LocalEvidenceContext, records: tuple[SealedTurnRecord, ...]) -> AuditDocument:
-    """Render the whole sub-game's disclosure from retained evidence only."""
+def capture_value(record: CaptureRecord) -> dict[str, object]:
+    """One capture row: the turn it belongs to, what was asked, what was answered."""
+    claim = record.claim
+    return {
+        "step": record.cursor.step,
+        "claim": None if claim is None else [claim.cell.row, claim.cell.col],
+        "answer": record.answer.value,
+    }
+
+
+def document(
+    context: LocalEvidenceContext,
+    records: tuple[SealedTurnRecord, ...],
+    capture: tuple[CaptureRecord, ...] = (),
+) -> AuditDocument:
+    """Render the whole sub-game's disclosure from retained evidence only.
+
+    `capture` is what our own reveals asked and were answered - the rows the
+    peer will compare against what it actually replied, so a rewritten story
+    fails the cross-check rather than passing quietly.
+    """
     return {
         "game_id": context.game_id,
         "game_uid": context.game_uid,
         "sub_game": context.sub_game,
         "config_sha256": context.config_sha256.value,
         "entries": [entry_value(record, context.role.value) for record in records],
+        "capture": [capture_value(record) for record in capture],
     }

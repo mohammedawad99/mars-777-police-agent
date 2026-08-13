@@ -11,6 +11,7 @@ from audit_builders import (
     GAME_ID,
     PEER_GROUP,
     audited,
+    capture_json,
     document,
     entry,
     nonce_batch,
@@ -50,7 +51,7 @@ def test_a_missing_expected_turn_is_refused() -> None:
     live = runtime()
     live.accept_final_nonce_reveal(nonce_batch(), PEER_GROUP)
     with pytest.raises(StaleMessageError, match="played turns"):
-        live.accept_audit_disclosure(document((1,)))
+        live.accept_audit_disclosure(document((1,), capture=capture_json()))
 
 
 def test_an_extra_impossible_turn_is_refused() -> None:

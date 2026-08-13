@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from ..domain.actions import BarrierAction, MoveAction, PhysicalAction
 from ..domain.board import Position
 from ..domain.rules import Move
-from .protocol_errors import MalformedMessageError
+from .audit_json import mapping, point, refuse, text, whole
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,39 +47,6 @@ class DisclosedTurn:
     config_sha256: str
 
 
-def _refuse(what: str) -> MalformedMessageError:
-    return MalformedMessageError(f"audit disclosure {what}")
-
-
-def _mapping(value: object, what: str) -> dict[str, object]:
-    if not isinstance(value, dict):
-        raise _refuse(f"{what} is not an object")
-    return value
-
-
-def _text(source: dict[str, object], key: str) -> str:
-    value = source.get(key)
-    if type(value) is not str or not value:
-        raise _refuse(f"has no usable {key!r}")
-    return value
-
-
-def _whole(source: dict[str, object], key: str) -> int:
-    value = source.get(key)
-    if type(value) is not int:
-        raise _refuse(f"has no integer {key!r}")
-    return value
-
-
-def _point(value: object, what: str) -> Position:
-    if not isinstance(value, list | tuple) or len(value) != 2:
-        raise _refuse(f"{what} is not a two-member position")
-    row, col = value
-    if type(row) is not int or type(col) is not int:
-        raise _refuse(f"{what} is not an integer position")
-    return Position(row, col)
-
-
 def _action(value: object) -> PhysicalAction:
     """The disclosed move as a domain action, or a typed refusal.
 
@@ -87,29 +54,29 @@ def _action(value: object) -> PhysicalAction:
     kind table, and no default - an unknown token is refused rather than rounded
     to `STAY`, and a barrier keeps its exact declared cell.
     """
-    tagged = _mapping(value, "move")
+    tagged = mapping(value, "move")
     if set(tagged) != {"kind", "value"}:
-        raise _refuse("move is not the two-key tagged action")
+        raise refuse("move is not the two-key tagged action")
     payload = tagged["value"]
     if tagged["kind"] == "MOVE":
         if type(payload) is not str:
-            raise _refuse("move value is not a movement token")
+            raise refuse("move value is not a movement token")
         try:
             return MoveAction(Move(payload))
         except ValueError as failure:
-            raise _refuse(f"names no movement {payload!r}") from failure
+            raise refuse(f"names no movement {payload!r}") from failure
     if tagged["kind"] == "BARRIER":
-        return BarrierAction(_point(payload, "barrier placement"))
-    raise _refuse("move names no known action kind")
+        return BarrierAction(point(payload, "barrier placement"))
+    raise refuse("move names no known action kind")
 
 
 def identity(document: dict[str, object]) -> tuple[str, str, int, str]:
     """The four SHARED-AUDIT-INPUT identity members, or a typed refusal."""
     return (
-        _text(document, "game_id"),
-        _text(document, "game_uid"),
-        _whole(document, "sub_game"),
-        _text(document, "config_sha256"),
+        text(document, "game_id"),
+        text(document, "game_uid"),
+        whole(document, "sub_game"),
+        text(document, "config_sha256"),
     )
 
 
@@ -117,26 +84,26 @@ def turns(document: dict[str, object]) -> tuple[DisclosedTurn, ...]:
     """Every disclosed entry, copied out as immutable values."""
     listing = document.get("entries")
     if not isinstance(listing, list):
-        raise _refuse("has no 'entries' collection")
+        raise refuse("has no 'entries' collection")
     disclosed: list[DisclosedTurn] = []
     for item in listing:
-        entry = _mapping(item, "entry")
-        state = _mapping(entry.get("state"), "entry state")
+        entry = mapping(item, "entry")
+        state = mapping(entry.get("state"), "entry state")
         barriers = state.get("barriers")
         if not isinstance(barriers, list | tuple):
-            raise _refuse("entry state has no barrier list")
+            raise refuse("entry state has no barrier list")
         disclosed.append(
             DisclosedTurn(
-                step=_whole(entry, "step"),
-                sub_game=_whole(entry, "sub_game"),
-                role=_text(entry, "role"),
+                step=whole(entry, "step"),
+                sub_game=whole(entry, "sub_game"),
+                role=text(entry, "role"),
                 move=_action(entry.get("move")),
-                intent=_text(entry, "intent"),
-                hint=_text(entry, "hint"),
-                commit=_text(entry, "commit"),
-                self_pos=_point(state.get("self_pos"), "entry state self_pos"),
-                barriers=tuple(_point(one, "entry state barrier") for one in barriers),
-                config_sha256=_text(state, "config_sha256"),
+                intent=text(entry, "intent"),
+                hint=text(entry, "hint"),
+                commit=text(entry, "commit"),
+                self_pos=point(state.get("self_pos"), "entry state self_pos"),
+                barriers=tuple(point(one, "entry state barrier") for one in barriers),
+                config_sha256=text(state, "config_sha256"),
             )
         )
     return tuple(disclosed)

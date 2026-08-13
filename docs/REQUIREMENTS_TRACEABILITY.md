@@ -27,17 +27,17 @@
 | NET-004 | MCP via FastMCP, not replaceable | PDF p.26 | Mandatory | Both | PRD-02 | protocol inspection | tool schema | EXTRACTED | — |
 | GAME-001 | Byte-identical signed config both sides | PDF p.34,128,144 (E-11) | Mandatory | Both | PRD-01/06 | `config_sha256` equality | signature exchange | EXTRACTED | H-02 |
 | GAME-002 | Raise MINIMUMs only, never lower | PDF p.144,155 (E-12) | Mandatory | Both | config validator | vs App F floors | validation report | EXTRACTED | H-02 |
-| GAME-003 | Orthogonal moves only | PDF p.37,144 (E-13) | Mandatory | Both | PRD-01 | move-legality tests | validator | EXTRACTED | H-12 |
+| GAME-003 | Orthogonal moves only | PDF p.37,144 (E-13) | Mandatory | Both | PRD-01 | move-legality tests | validator | EXTRACTED | H-12; 5-R8 semantic audit replays the disclosed move: illegal → `ILLEGAL_ACTION` + `TECHNICAL_LOSS` 0/0, never a hash-tamper DQ |
 | GAME-004 | No diagonal moves | PDF p.37,144 (E-14) | Mandatory | Both | PRD-01 | reject-diagonal test | validator | EXTRACTED | H-12 |
-| GAME-005 | Trapped thief (no legal move) = captured | PDF p.37,149 (E-47) | Mandatory | Both | PRD-01 | trap-state test | end log | EXTRACTED | — |
+| GAME-005 | Trapped thief (no legal move) = captured | PDF p.37,149 (E-47) | Mandatory | Both | PRD-01 | trap-state test | end log | EXTRACTED | Live answer `app.capture_rules`; recomputed at the semantic audit (5-R8) |
 | GAME-006 | Score per scoring table | PDF p.38,154,149 (E-48) | Mandatory | Both | PRD-01 | scoring tests | result scores | EXTRACTED | C-06 label order (resolved); C-07 technical_loss 0/0 binding via Ch3/E-48, **not** App F |
 | GAME-007 | Board dimensions from config (≥7×7) | PDF p.35,152 | Mandatory | Both | PRD-01 | grid-bound tests | config | CONFLICT | C-01 (resolved by App F) |
 | GAME-008 | Step ceiling / survival threshold from config | PDF p.38,153 | Mandatory | Both | PRD-01 | end-of-game tests | log | EXTRACTED | — |
 | GAME-009 | Movement legality is deterministic code (never LLM) | PDF p.58,66 | Mandatory | Both | PRD-03 | code path review | strategy module | EXTRACTED | H-12 |
 | BAR-001 | Declare every barrier placement | PDF p.37,144 (E-15) | Mandatory | Police | PRD-01 | audit vs declared | log audit | EXTRACTED | H-06 |
 | BAR-002 | No lying about barrier location | PDF p.37,144 (E-16) | Mandatory | Police | PRD-01 | log-audit cross-check | log | EXTRACTED | H-06 |
-| BAR-003 | Barrier on thief's cell = capture | PDF p.37,149 (E-46) | Mandatory | Police | PRD-01 | capture-by-barrier test | end log | EXTRACTED | — |
-| BAR-004 | Barrier placement rules (forgo move; own/adjacent; irreversible) | PDF p.37 | Mandatory | Police | PRD-01 | placement tests | validator | EXTRACTED | — |
+| BAR-003 | Barrier on thief's cell = capture | PDF p.37,149 (E-46) | Mandatory | Police | PRD-01 | capture-by-barrier test | end log | EXTRACTED | Live answer `app.capture_rules`; recomputed at the semantic audit (5-R8) |
+| BAR-004 | Barrier placement rules (forgo move; own/adjacent; irreversible) | PDF p.37 | Mandatory | Police | PRD-01 | placement tests | validator | EXTRACTED | 5-R8 semantic audit also enforces the police-only half, which the domain cannot see: illegal placement → `ILLEGAL_ACTION` + `TECHNICAL_LOSS` 0/0 |
 | BAR-005 | Barrier quota (≥14 default) | PDF p.37,153 | Mandatory | Police | PRD-01 | quota test | config | EXTRACTED | — |
 | SCENT-001 | Crypto-lock scent model before series | PDF p.47,145 (E-23) | Mandatory | Both | PRD-04/06 | model-hash exchange | signed hash | EXTRACTED | H-13 |
 | SCENT-002 | Scent emission/decay per formula | PDF p.43,153 | Mandatory | Both | PRD-04 | formula unit tests | snapshots | EXTRACTED | H-13 |
@@ -45,8 +45,8 @@
 | CRYPTO-001 | SHA-256 commit-reveal | PDF p.50,145 (E-17) | Mandatory | Both | PRD-06 | conformance test | commit hashes | EXTRACTED | H-03 |
 | CRYPTO-002 | Nonce secret until game end | PDF p.51,145 (E-18) | Mandatory | Both | PRD-06 | reveal-timing test | reveal order | EXTRACTED | H-03 |
 | CRYPTO-003 | DQ on hash mismatch (score 0) | PDF p.55,145 (E-19) | Mandatory | Both | PRD-06/07 | tamper-injection | replay verdict | EXTRACTED | H-03 |
-| CRYPTO-004 | Truthful capture declaration | PDF p.38,145 (E-21) | Mandatory | Both | PRD-06 | capture audit | log | EXTRACTED | H-06 |
-| CRYPTO-005 | No false capture claim | PDF p.145 (E-22) | Mandatory | Police | PRD-06 | false-claim audit | log | EXTRACTED | H-06 |
+| CRYPTO-004 | Truthful capture declaration | PDF p.38,145 (E-21) | Mandatory | Both | PRD-06 | capture audit | log | EXTRACTED | H-06; 5-R8 semantic audit: a dishonest answer is TAMPERED / DQ (`audit.semantic`), including as the answerer's half of `FALSE_CLAIM_AFFIRMED` |
+| CRYPTO-005 | No false capture claim | PDF p.145 (E-22) | Mandatory | Police | PRD-06 | false-claim audit | log | EXTRACTED | H-06; 5-R8 semantic audit: technical loss 0/0, `at_fault` recorded; if the peer affirmed it, `also_at_fault` names the claimant |
 | CRYPTO-006 | Signed Step-0 hardware declaration | PDF p.55,145 (E-24) | Mandatory | Both | PRD-06 | Step-0 signature check | declaration JSON | EXTRACTED | H-08 |
 | CRYPTO-007 | Mutual log audit at game end | PDF p.55,147 (E-36) | Mandatory | Both | PRD-06/07 | audit-flow test | audit record | EXTRACTED | — |
 | CRYPTO-008 | 4-step order; nonce hidden until final audit | PDF p.50–52 | Mandatory | Both | PRD-06 | sequence test | protocol log | EXTRACTED | H-03 |

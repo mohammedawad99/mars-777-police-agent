@@ -71,3 +71,21 @@ def test_a_repeat_disclosure_reproduces_the_same_associations() -> None:
 def test_an_empty_sub_game_discloses_an_empty_batch() -> None:
     assert producer().final_nonce_reveal().entries == ()
     assert build.SUB_GAME == 1
+
+
+def test_a_capture_row_cannot_arrive_after_the_disclosure_was_rendered() -> None:
+    """The document is already out; a row added now would never be in it."""
+    from mars777_police.app.capture_transcript import CaptureRecord
+    from mars777_police.app.capture_values import CaptureAnswer
+    from mars777_police.app.turn_cursor import TurnCursor
+
+    live = producer()
+    prepare(live, 1)
+    live.final_nonce_reveal()
+    late = (CaptureRecord(TurnCursor(build.SUB_GAME, 1), None, CaptureAnswer.NO_QUESTION),)
+    live.observe_capture(late)
+    assert live.audit_disclosure()["capture"] == [
+        {"step": 1, "claim": None, "answer": "NO_QUESTION"}
+    ]
+    with pytest.raises(StaleMessageError, match="already rendered"):
+        live.observe_capture(late)

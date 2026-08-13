@@ -33,6 +33,22 @@ Lifetimes: **SERIES** = whole 6-sub-game series · **SUBGAME** = one sub-game ·
 | Local runtime settings | `infra.settings` | infra only | settings load | local file/env (git-ignored) | process start | PROCESS | LOCAL |
 | State-machine current state | `app.state_machine` | orchestrator | state_machine only | log transitions | sub-game start | SUBGAME | LOCAL |
 
+## Stage 5-R8 additions
+
+| State | Sole owner | Readers | Written by | Persisted as | Lifetime | Scope | Classification |
+|---|---|---|---|---|---|---|---|
+| Capture transcript, inbound | `app.turn_protocol_runtime` (`TurnTranscript.inbound`) | this sub-game's `AuditRuntime`, logger | the turn runtime, when it answers a reveal | log `reveal` events + `capture[]` of the peer's disclosure | per turn → sub-game audit | TURN→SUBGAME | PUBLIC after reveal |
+| Capture transcript, outbound | `app.turn_protocol_runtime` (`TurnTranscript.outbound`) → `app.outbound_evidence_runtime` | our own disclosure writer, logger | `PeerRunner`, only once the peer's answer returned | our own `capture[]` | per turn → sub-game | TURN→SUBGAME | PUBLIC after reveal |
+| Semantic finding | `app.audit_runtime` (`semantic`) | `SeriesAuditGate`, logger | `app.sub_game_closure`, once per sub-game, after the disclosure | log `audit.semantic` | sub-game end | SUBGAME | **LOCAL-DERIVED-AUDIT** |
+
+8. **A capture row has two independent custodians on purpose.** The answerer
+   keeps what it answered and the asker keeps what it was told; the final audit
+   compares them. This is the one place where duplication is the mechanism
+   rather than a defect, and it is why the two directions are never merged.
+9. **The semantic finding is derived, never received.** Like `audit.result`, a
+   peer's claim about it has no standing: each side replays the disclosed game
+   itself.
+
 ## Anti-duplication rules
 
 1. **Own position** exists once (`domain.truth`). GUI/logger receive copies in events; they never write back.

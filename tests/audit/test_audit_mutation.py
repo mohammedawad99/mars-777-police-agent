@@ -70,7 +70,7 @@ def test_the_runtime_retains_no_part_of_the_document() -> None:
 
 def test_a_non_action_in_live_evidence_cannot_verify() -> None:
     """`TurnEvidence.action` is typed `object`, so the audit narrows defensively."""
-    from audit_builders import context, digest
+    from audit_builders import capture, context, digest
 
     from mars777_police.app.audit_runtime import AuditRuntime
     from mars777_police.app.turn_protocol_state import TurnEvidence
@@ -79,7 +79,7 @@ def test_a_non_action_in_live_evidence_cannot_verify() -> None:
     bogus = (
         TurnEvidence(TurnCursor(SUB_GAME, 1), digest(1), "not an action", "moving north", True),
     )
-    live = AuditRuntime(context(), bogus, CommitmentRecomputer())
+    live = AuditRuntime(context(), bogus, CommitmentRecomputer(), capture=capture((1,)))
     live.accept_final_nonce_reveal(nonce_batch((1,)), PEER_GROUP)
     live.accept_audit_disclosure(document((1,)))
     assert live.verdict is FinalAuditVerdict.TAMPERED

@@ -5,8 +5,11 @@ uses, so a tampering test proves the real comparison failed rather than that a
 stand-in disagreed.
 """
 
+from mars777_police.app.audit_disclosure_writer import capture_value
 from mars777_police.app.audit_runtime import AuditRuntime
 from mars777_police.app.audit_values import SubGameContext
+from mars777_police.app.capture_transcript import CaptureRecord
+from mars777_police.app.capture_values import CaptureAnswer
 from mars777_police.app.peer_final_messages import FinalNonceReveal, NonceRevealEntry
 from mars777_police.app.protocol_values import NonceValue, Sha256Digest
 from mars777_police.app.sealed_record_values import ActorRole, Intent, SealedState
@@ -58,8 +61,20 @@ def evidence(steps: tuple[int, ...] = (1, 2)) -> tuple[TurnEvidence, ...]:
     )
 
 
+def capture(steps: tuple[int, ...] = (1, 2)) -> tuple[CaptureRecord, ...]:
+    """What these ordinary turns asked about capture: nothing at all."""
+    return tuple(
+        CaptureRecord(TurnCursor(SUB_GAME, s), None, CaptureAnswer.NO_QUESTION) for s in steps
+    )
+
+
+def capture_json(steps: tuple[int, ...] = (1, 2)) -> list[dict[str, object]]:
+    """That same transcript as the peer would disclose it."""
+    return [capture_value(row) for row in capture(steps)]
+
+
 def runtime(steps: tuple[int, ...] = (1, 2)) -> AuditRuntime:
-    return AuditRuntime(context(), evidence(steps), CommitmentRecomputer())
+    return AuditRuntime(context(), evidence(steps), CommitmentRecomputer(), capture=capture(steps))
 
 
 def nonce_batch(steps: tuple[int, ...] = (1, 2)) -> FinalNonceReveal:
@@ -89,13 +104,18 @@ def entry(step: int) -> dict[str, object]:
 
 
 def document(steps: tuple[int, ...] = (1, 2), **overrides: object) -> dict[str, object]:
-    """A well-formed disclosure, plus any hostile override a test needs."""
+    """A well-formed disclosure, plus any hostile override a test needs.
+
+    The capture transcript follows *steps*, so a test about the sealed entries
+    alone must keep the whole transcript with `capture=capture_json()`.
+    """
     doc: dict[str, object] = {
         "game_id": GAME_ID,
         "game_uid": GAME_UID,
         "sub_game": SUB_GAME,
         "config_sha256": CONFIG.value,
         "entries": [entry(s) for s in steps],
+        "capture": capture_json(steps),
     }
     doc.update(overrides)
     return doc

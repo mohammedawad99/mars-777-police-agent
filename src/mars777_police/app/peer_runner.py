@@ -33,7 +33,7 @@ from dataclasses import dataclass
 from ..domain.actions import PhysicalAction
 from ..domain.negotiated_config import NegotiatedConfig
 from .artifact_values import UtcTimestamp
-from .capture_values import TurnOutcome
+from .capture_values import CaptureClaim, TurnOutcome
 from .declaration_values import Declaration
 from .outbound_evidence_runtime import OutboundEvidenceRuntime
 from .outbound_evidence_values import PreparedTurn
@@ -80,6 +80,7 @@ class PeerRunner:
         intent: Intent,
         hint: str,
         cursor: TurnCursor,
+        claim: CaptureClaim | None = None,
     ) -> PreparedTurn:
         """Seal our turn, register the commitment locally, then send it.
 
@@ -89,7 +90,7 @@ class PeerRunner:
         carries no nonce, state or intent to leak.
         """
         prepared = self.evidence().prepare_turn(
-            state=state, action=action, intent=intent, hint=hint, cursor=cursor
+            state=state, action=action, intent=intent, hint=hint, cursor=cursor, claim=claim
         )
         self.turns().register_local_commitment(prepared.commitment)
         await self.transport.send_commitment(prepared.commitment)
@@ -109,7 +110,10 @@ class PeerRunner:
             raise StaleMessageError("the peer has not acknowledged our commitment yet")
         if registered.h_commit != prepared.commitment.h_commit:
             raise StaleMessageError("this prepared turn is not the commitment we registered")
-        return await self.transport.send_reveal(prepared.reveal)
+        outcome = await self.transport.send_reveal(prepared.reveal)
+        turn.observe_outgoing(prepared.reveal, outcome)
+        self.evidence().observe_capture(turn.capture.outbound[-1:])
+        return outcome
 
     async def acknowledge_peer_turn(self) -> None:
         """Send the acknowledgement the turn runtime produced for the peer."""
