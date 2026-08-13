@@ -83,7 +83,24 @@ class ScentField:
         """
         if not isinstance(kernel, ScentKernel) or not isinstance(params, ScentParams):
             raise InvalidScentError("evolve needs a ScentKernel and ScentParams")
-        deposits = self._deposits(kernel, sources)
+        return self._advance(self._deposits(kernel, sources), params)
+
+    def absorb(self, deposits: dict[tuple[int, int], Decimal], params: ScentParams) -> "ScentField":
+        """Return the next field for a deposit map somebody else already rendered.
+
+        The same single step as `evolve`, for the receiver that was *told* the
+        emission instead of computing it from a source it is not allowed to
+        know. The recurrence lives in `_advance` and exists exactly once, so the
+        two entry points cannot drift apart (SCENT-002 / PRD01-FR-040).
+        """
+        if not isinstance(params, ScentParams):
+            raise InvalidScentError("absorbing an emission needs ScentParams")
+        return self._advance(deposits, params)
+
+    def _advance(
+        self, deposits: dict[tuple[int, int], Decimal], params: ScentParams
+    ) -> "ScentField":
+        """`min(0.9, max(0, (1-rho)*tau + delta))` - the one recurrence, once."""
         zero = Decimal(0)
         with localcontext(SCENT_CONTEXT):
             retained = Decimal(1) - params.decay
@@ -115,6 +132,10 @@ class ScentField:
                             current = deposits.get(cell, Decimal(0))
                             deposits[cell] = current + kernel.weight_at(d_row, d_col)
         return deposits
+
+    def index_of(self, position: Position) -> tuple[int, int]:
+        """The field-local `(row, col)` of *position*, refusing a cell outside it."""
+        return self._index(position)
 
     def _index(self, position: Position) -> tuple[int, int]:
         if not isinstance(position, Position):

@@ -108,6 +108,8 @@ def test_evolve_requires_a_kernel_and_params() -> None:
         field.evolve("kernel", (CENTRE,), ScentParams())  # type: ignore[arg-type]
     with pytest.raises(InvalidScentError):
         field.evolve(KERNEL, (CENTRE,), "params")  # type: ignore[arg-type]
+    with pytest.raises(InvalidScentError, match="absorbing an emission needs ScentParams"):
+        field.absorb({}, "params")  # type: ignore[arg-type]
 
 
 def test_field_index_rejects_a_non_position() -> None:
