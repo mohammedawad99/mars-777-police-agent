@@ -27,7 +27,9 @@ no standing to make. The receiver derives them itself.
 from ..domain.actions import BarrierAction, MoveAction, PhysicalAction
 from ..domain.board import Position
 from .capture_transcript import CaptureRecord
+from .decimal_text import text_from_decimal
 from .outbound_evidence_values import LocalEvidenceContext, SealedTurnRecord
+from .scent_records import ScentRecord
 from .sealed_record_values import SealedState
 
 AuditDocument = dict[str, object]
@@ -83,16 +85,35 @@ def capture_value(record: CaptureRecord) -> dict[str, object]:
     }
 
 
+def scent_value(record: ScentRecord) -> dict[str, object]:
+    """One scent row: the turn it belongs to, and exactly what it deposited.
+
+    Intensities are rendered as canonical decimal text through the one shared
+    authority, so a trailing zero survives the round trip and no binary float is
+    ever written into a document.
+    """
+    return {
+        "step": record.cursor.step,
+        "emission": [
+            {"cell": _point(deposit.cell), "intensity": text_from_decimal(deposit.intensity)}
+            for deposit in record.emission.deposits
+        ],
+    }
+
+
 def document(
     context: LocalEvidenceContext,
     records: tuple[SealedTurnRecord, ...],
     capture: tuple[CaptureRecord, ...] = (),
+    scent: tuple[ScentRecord, ...] = (),
 ) -> AuditDocument:
     """Render the whole sub-game's disclosure from retained evidence only.
 
     `capture` is what our own reveals asked and were answered - the rows the
     peer will compare against what it actually replied, so a rewritten story
-    fails the cross-check rather than passing quietly.
+    fails the cross-check rather than passing quietly. `scent` is the same kind
+    of evidence for the emissions those reveals carried: retained history, never
+    re-projected here from an action, a truth or a model.
     """
     return {
         "game_id": context.game_id,
@@ -101,4 +122,5 @@ def document(
         "config_sha256": context.config_sha256.value,
         "entries": [entry_value(record, context.role.value) for record in records],
         "capture": [capture_value(record) for record in capture],
+        "scent": [scent_value(record) for record in scent],
     }

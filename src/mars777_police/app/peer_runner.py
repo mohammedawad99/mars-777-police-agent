@@ -122,7 +122,7 @@ class PeerRunner:
             raise StaleMessageError("this prepared turn is not the commitment we registered")
         outcome = await self.transport.send_reveal(prepared.reveal)
         turn.observe_outgoing(prepared.reveal, outcome)
-        self.evidence().observe_capture(turn.capture.outbound[-1:])
+        self.evidence().observe_capture(turn.capture.outbound[-1:], turn.capture.sent_scent[-1:])
         return outcome
 
     async def acknowledge_peer_turn(self) -> None:

@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from .capture_values import CaptureAnswer, CaptureClaim, TurnOutcome
 from .peer_turn_messages import Reveal
 from .protocol_errors import StaleMessageError
+from .scent_records import ScentRecord
 from .turn_cursor import TurnCursor
 
 
@@ -77,6 +78,12 @@ class TurnTranscript:
     inbound: tuple[CaptureRecord, ...] = field(default=())
     outbound: tuple[CaptureRecord, ...] = field(default=())
     declared: bool = field(default=False)
+    sent_scent: tuple[ScentRecord, ...] = field(default=())
+    """The emissions **our own** reveals carried, exactly as they were sent.
+
+    Outbound only. What the peer emitted arrives as `TurnEvidence.scent` and
+    stays there - one historical authority per direction - and a pre-V2 reveal
+    carries no emission, so it leaves no row here."""
 
     def observe_inbound(self, reveal: Reveal, outcome: TurnOutcome) -> None:
         """Retain the answer we just gave to the peer's reveal."""
@@ -84,9 +91,16 @@ class TurnTranscript:
         self.declared = self.declared or reveal.capture_claim is not None
 
     def observe_outgoing(self, reveal: Reveal, outcome: TurnOutcome) -> None:
-        """Retain the answer the peer gave to our reveal, once it really arrived."""
+        """Retain the answer the peer gave to our reveal, once it really arrived.
+
+        The emission is copied out of the very `Reveal` being recorded - never
+        re-projected from the action, the truth or the model - because what the
+        audit must be able to prove is what we *sent*, not what we could send now.
+        """
         self.outbound += (CaptureRecord(reveal.cursor, reveal.capture_claim, outcome.capture),)
         self.declared = self.declared or reveal.capture_claim is not None
+        if reveal.scent_emission is not None:
+            self.sent_scent += (ScentRecord(reveal.cursor, reveal.scent_emission),)
 
 
 def require_same_transcript(
@@ -108,4 +122,27 @@ def require_same_transcript(
         if seen != told:
             raise TranscriptMismatchError(
                 f"the disclosed capture row for {told.cursor} is not the one observed",
+            )
+
+
+def require_same_scent(
+    observed: tuple[ScentRecord, ...], disclosed: tuple[ScentRecord, ...]
+) -> None:
+    """Refuse a scent disclosure that differs from the emissions we watched arrive.
+
+    The same ordered comparison the capture transcript uses, for the same reason:
+    a missing row, an extra row, a duplicated or reordered cursor, a row moved to
+    another turn and a rewritten emission are one failure, not six. Both sides
+    here are structurally valid - whether an emission is *physically* right is a
+    question this check never asks.
+    """
+    if len(observed) != len(disclosed):
+        raise TranscriptMismatchError(
+            f"the disclosed scent transcript has {len(disclosed)} rows,"
+            f" but {len(observed)} emissions were actually observed",
+        )
+    for seen, told in zip(observed, disclosed, strict=True):
+        if seen != told:
+            raise TranscriptMismatchError(
+                f"the disclosed scent row for {told.cursor} is not the one observed",
             )

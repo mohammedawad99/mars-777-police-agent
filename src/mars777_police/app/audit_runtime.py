@@ -5,21 +5,24 @@ open a commitment while three sealed members are secret, so Ch 5 §5.4 discloses
 logs and nonces at the end and recomputes SHA-256 here.
 
 **Live evidence outranks the document.** Every member also witnessed live -
-`commit`, `move`, `hint`, `role`, `step` - must agree exactly before anything is
-hashed, and that evidence is adopted turn by turn, before any nonce arrives. **The
-peer's verdict has no standing**: our annotations are derived here, sent nowhere."""
+`commit`, `move`, `hint`, `role`, `step`, and the never-sealed capture and scent
+rows - must agree exactly before anything is hashed, and that evidence is adopted
+turn by turn, before any nonce arrives. **The peer's verdict has no standing**:
+our annotations are derived here, sent nowhere."""
 
 from dataclasses import dataclass, field
 
 from .audit_capture import capture_rows
 from .audit_disclosure import turns
+from .audit_scent import scent_rows
 from .audit_values import AuditOutcome, AuditPhase, SubGameContext
 from .audit_verification import by_cursor, require_identity, verdict_for
-from .capture_transcript import CaptureRecord, require_same_transcript
+from .capture_transcript import CaptureRecord, require_same_scent, require_same_transcript
 from .peer_final_messages import FinalNonceReveal
 from .ports import CommitmentPort
 from .protocol_errors import StaleMessageError
 from .protocol_values import FinalAuditVerdict, NonceValue
+from .scent_records import ScentRecord
 from .semantic_values import CONSISTENT, SemanticFinding
 from .turn_cursor import TurnCursor
 from .turn_protocol_state import AckEvidence, TurnEvidence
@@ -69,6 +72,16 @@ class AuditRuntime:
         """The cursors this sub-game played, in step order."""
         return tuple(sorted((r.cursor for r in self.evidence), key=lambda c: c.step))
 
+    @property
+    def expected_scent(self) -> tuple[ScentRecord, ...]:
+        """The emissions the peer sent us, projected from the live evidence.
+
+        Derived rather than stored again, so no second history can drift from
+        `TurnEvidence.scent`. A pre-V2 turn carried none and adds no row."""
+        return tuple(
+            ScentRecord(one.cursor, one.scent) for one in self.evidence if one.scent is not None
+        )
+
     def accept_final_nonce_reveal(self, disclosure: FinalNonceReveal, sender_id: str) -> None:
         """Adopt the peer's batched nonce disclosure for this sub-game."""
         if self.phase is not AuditPhase.AWAITING_NONCES:
@@ -89,6 +102,7 @@ class AuditRuntime:
             raise StaleMessageError(f"a disclosure cannot arrive while {self.phase.value}")
         require_identity(document, self.context)
         require_same_transcript(self.capture, capture_rows(document))
+        require_same_scent(self.expected_scent, scent_rows(document))
         indexed = by_cursor(turns(document), self.expected)
         self.outcome = verdict_for(
             self.evidence, indexed, self.nonces, self.context.peer_role, self.commitments

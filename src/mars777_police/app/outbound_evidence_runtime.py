@@ -1,16 +1,13 @@
 """The application owner of our own commit-reveal evidence for one sub-game.
 
-Stage 5-R4 stopped here: the agent could verify a peer's commitment but could
-not make one of its own. `Commitment` and `FinalNonceReveal` were constructed
-nowhere in production except the inbound decoders, no nonce generator existed,
-and nothing retained the three sealed members that stay secret during play. This
-is the producer that closes all three.
+Stage 5-R4 stopped here: the agent could verify a peer's commitment but could not
+make one of its own, and nothing retained the three sealed members that stay
+secret during play.
 
-**It is not `TurnProtocolRuntime`, and must not become it.** That runtime owns
-the live cadence and deliberately holds no secret - Stage 5-R1 made `TurnEvidence`
-carry only what the audit needs about the *peer*. Our nonce, sealed state and
-intent are a different thing with a different lifetime, so they live here, behind
-a lifecycle that cannot hand them out early.
+**It is not `TurnProtocolRuntime`, and must not become it.** That runtime owns the
+live cadence, holds no secret, and is consumed after one turn - which is why the
+rows our own reveals leave behind, capture answers and the emissions they carried,
+accumulate here, in the owner whose lifetime is the sub-game being disclosed.
 
 **The nonce is the whole reason for the phases.** `OPEN` accepts new turns;
 sealing the final nonce reveal ends that, because a turn committed after the
@@ -18,8 +15,7 @@ opponent has our nonces is a turn we could have chosen knowing what they hold.
 After the disclosure the runtime is terminal - the next sub-game gets a new one.
 
 It computes no digest, opens no socket, reads no clock and touches no file: the
-hash comes from `CommitmentPort` and the nonce from `NonceSourcePort`.
-"""
+hash comes from `CommitmentPort` and the nonce from `NonceSourcePort`."""
 
 from dataclasses import dataclass, field
 
@@ -40,6 +36,7 @@ from .peer_final_messages import FinalNonceReveal, NonceRevealEntry
 from .peer_turn_messages import Commitment, Reveal
 from .ports import CommitmentPort
 from .protocol_errors import LocalDefectError, StaleMessageError
+from .scent_records import ScentRecord
 from .sealed_record_values import Intent, SealedState
 from .turn_cursor import TurnCursor
 
@@ -54,6 +51,7 @@ class OutboundEvidenceRuntime:
     phase: EvidencePhase = field(default=EvidencePhase.OPEN)
     records: tuple[SealedTurnRecord, ...] = field(default=())
     capture: tuple[CaptureRecord, ...] = field(default=())
+    scent: tuple[ScentRecord, ...] = field(default=())
 
     @property
     def ordered(self) -> tuple[SealedTurnRecord, ...]:
@@ -77,15 +75,11 @@ class OutboundEvidenceRuntime:
         the reveal, so the caller cannot disclose early even by mistake.
 
         *claim* is one of the two reveal members that are **not** sealed: it is a
-        question about a cell only the opponent knows, so there is nothing of
-        ours to commit to. It is checked against the same shape rule the
-        receiver applies, so we cannot send a declaration a peer must refuse.
-
-        *scent* is the other. It is **passed through, never computed here**: this
-        owner holds nonces and digests, not the board, and deriving an emission
-        would mean applying a game action inside the evidence owner. The runner
-        projects it from the same action and hands it in.
-        """
+        question about a cell only the opponent knows, so there is nothing of ours
+        to commit to, and it is checked against the same shape rule the receiver
+        applies. *scent* is the other, and is **passed through, never computed
+        here**: this owner holds nonces and digests, not the board, so the runner
+        projects it from the same action and hands it in."""
         if self.phase is not EvidencePhase.OPEN:
             raise StaleMessageError(f"no turn may be prepared while {self.phase.value}")
         self._require_cursor(cursor)
@@ -124,27 +118,33 @@ class OutboundEvidenceRuntime:
         """Disclose our nonces and close turn preparation for this sub-game.
 
         Rebuilt from the retained records every time, so a repeat call returns
-        the same associations rather than drawing anything new.
-        """
+        the same associations rather than drawing anything new."""
         if self.phase is EvidencePhase.OPEN:
             self.phase = EvidencePhase.NONCES_DISCLOSED
         return FinalNonceReveal(
             tuple(NonceRevealEntry(record.cursor, record.nonce) for record in self.ordered)
         )
 
-    def observe_capture(self, capture: tuple[CaptureRecord, ...]) -> None:
-        """Adopt what our own finished reveals asked and were answered."""
+    def observe_capture(
+        self, capture: tuple[CaptureRecord, ...], scent: tuple[ScentRecord, ...] = ()
+    ) -> None:
+        """Adopt what our own finished reveals asked, were answered and deposited.
+
+        *scent* is what the reveal already carried; a pre-V2 turn has none.
+        """
         if self.phase is EvidencePhase.COMPLETE:
             raise StaleMessageError("this sub-game's disclosure was already rendered")
         self.capture += capture
+        self.scent += scent
 
     def audit_disclosure(self) -> AuditDocument:
         """Render our disclosure core, once the nonces are already disclosed.
 
-        The capture rows are what our own reveals asked and were answered; the
-        peer checks them against the answers it actually gave.
+        The capture rows are what our reveals asked and were answered and the
+        scent rows are what they deposited; the peer checks both against what it
+        observed, so neither can be rewritten after the fact.
         """
         if self.phase is EvidencePhase.OPEN:
             raise StaleMessageError("the audit disclosure follows the final nonce reveal")
         self.phase = EvidencePhase.COMPLETE
-        return document(self.context, self.ordered, self.capture)
+        return document(self.context, self.ordered, self.capture, self.scent)
