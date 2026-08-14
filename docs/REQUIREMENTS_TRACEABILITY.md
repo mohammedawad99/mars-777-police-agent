@@ -5,8 +5,9 @@
 > Stage 1A statuses are one of: **EXTRACTED**, **REVIEW REQUIRED**, **CONFLICT**,
 > **NOT APPLICABLE**. Nothing is IMPLEMENTED or VERIFIED. Full details and
 > citations live in `docs/spec/REQUIREMENT_CATALOG.md`; conflicts in
-> `docs/CONFLICT_REGISTER.md` (**C-01…C-10**; C-10 added post-lock in
-> Stage 3B-FIX2 — scent state bound vs additive update). "Component" = planned PRD/area.
+> `docs/CONFLICT_REGISTER.md` (**C-01…C-14** currently; C-10 added post-lock in
+> Stage 3B-FIX2 — scent state bound vs additive update; C-14 added at Stage 5-R8 —
+> full scent-model agreement vs the three-scalar config). "Component" = planned PRD/area.
 
 | Requirement ID | Requirement | Source | Mandatory/Optional | Repository | Planned component | Planned verification | Planned evidence | Status | Notes |
 |---|---|---|---|---|---|---|---|---|---|
@@ -39,9 +40,9 @@
 | BAR-003 | Barrier on thief's cell = capture | PDF p.37,149 (E-46) | Mandatory | Police | PRD-01 | capture-by-barrier test | end log | EXTRACTED | Live answer `app.capture_rules`; recomputed at the semantic audit (5-R8) |
 | BAR-004 | Barrier placement rules (forgo move; own/adjacent; irreversible) | PDF p.37 | Mandatory | Police | PRD-01 | placement tests | validator | EXTRACTED | 5-R8 semantic audit also enforces the police-only half, which the domain cannot see: illegal placement → `ILLEGAL_ACTION` + `TECHNICAL_LOSS` 0/0 |
 | BAR-005 | Barrier quota (≥14 default) | PDF p.37,153 | Mandatory | Police | PRD-01 | quota test | config | EXTRACTED | — |
-| SCENT-001 | Crypto-lock scent model before series | PDF p.47,145 (E-23) | Mandatory | Both | PRD-04/06 | model-hash exchange | signed hash | EXTRACTED | H-13 |
+| SCENT-001 | Crypto-lock scent model before series | PDF p.47,145 (E-23) | Mandatory | Both | PRD-04/06 | model-hash exchange | signed hash | EXTRACTED | H-13; **pre-game contract implemented at Stage 5-R8** — model exchanged in full, agreed by three independent comparisons, `scent_model_sha256` bound into the authenticated `ConfigLockContext`, frozen for `g01…g06` and persisted in the config artifact. See the Stage 5-R8 section, C-14 and JDEC-017. Live emission/consumption is SCENT-002 / Reveal V2, not this row. |
 | SCENT-002 | Scent emission/decay per formula | PDF p.43,153 | Mandatory | Both | PRD-04 | formula unit tests | snapshots | EXTRACTED | H-13 |
-| SCENT-003 | Exchange full model + numeric example, verify, lock | PDF p.47 | Mandatory | Both | PRD-04 | pre-series exchange | model hash | EXTRACTED | — |
+| SCENT-003 | Exchange full model + numeric example, verify, lock | PDF p.47 | Mandatory | Both | PRD-04 | pre-series exchange | model hash | EXTRACTED | **Pre-series exchange, worked examples and verification implemented at Stage 5-R8**: the complete model plus both numeric examples travels on the existing `ConfigProposal`, is compared by values, canonical rendering and independently derived digest, and is then locked. Evidence: config artifact `scent_model_evidence` + `config_lock`. See C-14, JDEC-017. |
 | CRYPTO-001 | SHA-256 commit-reveal | PDF p.50,145 (E-17) | Mandatory | Both | PRD-06 | conformance test | commit hashes | EXTRACTED | H-03 |
 | CRYPTO-002 | Nonce secret until game end | PDF p.51,145 (E-18) | Mandatory | Both | PRD-06 | reveal-timing test | reveal order | EXTRACTED | H-03 |
 | CRYPTO-003 | DQ on hash mismatch (score 0) | PDF p.55,145 (E-19) | Mandatory | Both | PRD-06/07 | tamper-injection | replay verdict | EXTRACTED | H-03 |
@@ -1291,3 +1292,45 @@ anything `NegotiatedConfig` owns (a post-lock timeout must never be operator-ove
 opponent endpoint is optional at BOOT and required for counted readiness. The keyed-auth secret is
 **environment-only, required at BOOT, never persisted, never serialized, never logged**; the ngrok
 authtoken is operator-only and never enters project settings.
+
+## Stage 5-R8 — the scent pre-game model contract (implemented, evidenced, documented)
+
+**Status: CLOSED / COMMITTED / CI-GREEN for the pre-game half.** Seven checkpoints
+implemented what `SCENT-001` and `SCENT-003` ask for, each committed to both repositories
+and green on exact-SHA CI (Ubuntu 100.00% statements and branches; Windows ≥ 99.82%).
+The gap they close is recorded as **C-14** and the chosen representation is frozen as
+**JDEC-017**; the recurrence conflict **C-10** is unchanged and is consumed, not restated.
+
+**The matrix below is the audit trail** — every row is a clause of the two requirements,
+its production owner and the evidence that proves it, so the chain can be checked without
+reading commit history.
+
+| Pre-game step | Requirement clause | Production owner | Evidence |
+|---|---|---|---|
+| Full model definition | SCENT-003 "the full emission/decay model" | `domain/scent_model.py`, `domain/scent_kernel.py`, `domain/scent_model_default.py`, `domain/scent_model_examples.py` | `tests/domain/test_scent_model.py`, `tests/protocol/test_scent_model_digest.py` (30) · scent domain suites (88) |
+| Model identity | SCENT-001 "the agreed … model" is one identifiable thing | `protocol/scent_model.py` — canonical bytes + unkeyed `scent_model_sha256` | golden rendering **344 bytes**, golden digest `e587d487…7600`, asserted in both repos |
+| Full model exchange | SCENT-003 "exchange … before a series" | `transport/wire_scent_model.py`, `transport/codec_scent_model.py` on the existing `ConfigProposal` | `tests/transport/test_scent_model_codec.py` + `tests/app/test_peer_pregame_messages.py` (46) |
+| Concrete numeric example | SCENT-003 "with a concrete numeric example" | `ScentExample` rows executed against the real recurrence by `domain/scent_model_examples.py` | `τ=0.9, Δ=0 → 0.81` and `τ=0.9, Δ=0.9 → 0.9`; an untruthful example is refused at the boundary |
+| Verify identical interpretation | SCENT-003 "verify identical interpretation" | `app/scent_agreement.py`, `app/scent_model_identity.py`, `app/config_negotiation_runtime.py` via `ConfigDigestPort` | three independent comparisons (values, rendering, derived digest); `tests/session/test_scent_model_agreement.py` group (40) |
+| Cryptographic lock | SCENT-001 "cryptographically lock … before the game/series starts" | `scent_model_sha256` inside `ConfigLockContext`; `protocol/config_lock.py` keyed proof unchanged | crypto-lock group (74), including a valid proof over a different model still refused |
+| Series freeze | SCENT-001 "before the … series starts" for all six sub-games | `app/series_scent_freeze.py`, `app/pregame_session_runtime.py` | series-freeze group (23) — `g01` establishes, `g02…g06` must match, bilateral mid-series switch refused before play |
+| Artifact evidence | SCENT-001 evidence "signed scent-model hash"; SCENT-003 evidence "model+example hash" | `artifact_documents.py`, `transport/wire_artifacts.py`, `transport/codec_artifacts.py`, `artifact_verification.py` | artifact-evidence group (36): `config_<game_id>_g<NN>.json` carries the actual model, its digest, the lock context and the safe auth proof; read-back verifies both chains |
+
+**Not closed by the above, and not claimed:** live `ScentEmission` during gameplay,
+delivery or consumption of the opponent's scent, `Reveal` V2 (`Reveal` remains V1), a live
+scent transcript, and a semantic audit of emissions. Those belong to **Reveal V2 / live
+distributed scent** and to a later scent-audit surface. `SCENT-002` (the emission/decay
+computation itself) has its domain implementation and its own tests, and is **not** part of
+this closure statement.
+
+**Register effect.** `C-01…C-14` and `JDEC-001…JDEC-017`. Requirements remain **91**
+(76/9/4/2) — no requirement id was added, removed, reworded or re-modalised, and the Status
+column keeps its Stage-1A vocabulary throughout (see the note below).
+
+**Why no row says IMPLEMENTED.** This matrix has never used an implementation status: its
+header freezes the Stage-1A vocabulary (`EXTRACTED` / `REVIEW REQUIRED` / `CONFLICT` /
+`NOT APPLICABLE`) and every implemented requirement in this project — `ARCH-001`,
+`CRYPTO-001`, `GAME-003` and the rest — still reads `EXTRACTED` with its implementation
+recorded in the Notes column and in a stage section such as this one. Introducing a closure
+status for two rows alone would make the column mean two different things, so the scent rows
+follow the established practice instead.

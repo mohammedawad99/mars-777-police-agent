@@ -66,9 +66,9 @@ ref · **Conf** = conflict id in `CONFLICT_REGISTER.md` (— = none). "Verify" a
 
 | ID | Requirement | Mod | Scope | Source | E | F | Verify | Evidence | Sanction | Conf |
 |---|---|---|---|---|---|---|---|---|---|---|
-| SCENT-001 | Cryptographically lock the agreed scent emission+decay model before the game/series starts. | MUST | BOTH | PDF p.47,145 / book 31,129 | E-23 | Tbl 16 | hash-of-model exchange test | signed scent-model hash | Decay-formula deviation voids game | — |
+| SCENT-001 | Cryptographically lock the agreed scent emission+decay model before the game/series starts. | MUST | BOTH | PDF p.47,145 / book 31,129 | E-23 | Tbl 16 | hash-of-model exchange test | signed scent-model hash | Decay-formula deviation voids game | C-14 |
 | SCENT-002 | Compute scent per `τij(t+1)=max(0,(1−ρ)·τij(t)+Δτij)` with center=0.9, ρ=0.10, field 5×5, radial fall-off. | MUST | BOTH | PDF p.43,153 / book 27,137 | E-23(supp) | Tbl 16 | formula unit tests + numeric example | scent snapshots | (deviation voids game) | — |
-| SCENT-003 | Before a series, exchange the full emission/decay model with a concrete numeric example and verify identical interpretation, then lock it. | MUST | BOTH | PDF p.47 / book 31 | E-23(supp) | Tbl 16 | pre-series exchange log | model+example hash | — | — |
+| SCENT-003 | Before a series, exchange the full emission/decay model with a concrete numeric example and verify identical interpretation, then lock it. | MUST | BOTH | PDF p.47 / book 31 | E-23(supp) | Tbl 16 | pre-series exchange log | model+example hash | — | C-14 |
 
 ## CRYPTO — commit-reveal / integrity / hashing
 

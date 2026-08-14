@@ -13,7 +13,15 @@
 ## 2. Status
 
 **APPROVED — PHASE 2 LOCKED.** Approved after Stage 2-CLOSE supervising review.
-**Implementation status: NOT STARTED.** No code, no provider, no dependency.
+**Implementation status: PARTIAL.** `PRD04-FR-005` — the pre-series exchange,
+verification and locking of the agreed scent model — is **implemented and evidenced**
+at Stage 5-R8 (C-14, JDEC-017): the complete `ScentModelAgreement` travels on the
+existing `ConfigProposal`, is agreed by three independent comparisons, is bound into
+the authenticated `ConfigLockContext` by its own `scent_model_sha256`, is frozen for
+`g01…g06`, and is persisted in `config_<game_id>_g<NN>.json`. Everything else in this
+PRD — the hint channel, `infra.llm`, token/cost accounting, and the live scent
+observation/interpretation of `PRD04-FR-002/003/004` — remains **NOT STARTED**: no
+provider, no dependency, and no live scent is delivered or consumed yet.
 
 ## 3. Purpose
 

@@ -802,3 +802,22 @@ their semantic audits disagree on the same bytes:
 This is stated once in **JDEC-016 §4/§6** and repeated here because it is part
 of what selecting this profile promises. It adds no fifth profile value and no
 new decision id.
+
+
+## Stage 5-R8 — the agreed scent model is locked beside this core, never inside it
+
+Four things must not be conflated, and the lock binds two of them:
+
+| Thing | What it is | Digest |
+|---|---|---|
+| `NegotiatedConfig` | the **35-member** Appendix-B core, unchanged; `pheromones` carries exactly the three Appendix-F scalars (`center_intensity` 0.9, `decay` 0.10, `field_size` 5) | `config_sha256` — over this core **only** |
+| `ScentModelAgreement` | the **complete** agreed emission/decay model: model id, those same three values, all 25 kernel weights and the worked numeric examples | `scent_model_sha256` — over the model **only** |
+| `ConfigLockContext` | `game_id`, `game_uid`, `sub_game`, `config_sha256`, `profiles`, `scent_model_sha256` — **six** members | authenticated as a whole by the existing keyed proof |
+| `config_auth` | the keyed `AuthProof` over `b"config" + canonical_json_bytes(lock_context_core)` | unchanged framing |
+
+Two statements are therefore false and must never be written anywhere: that the scent
+model's fields are part of `NegotiatedConfig`, and that `config_sha256` covers the scent
+model. The model is a **separate** agreement with a **separate** identity; the single
+authenticated context binds both identities without merging them. The reasoning is
+recorded in **C-14** and the representation is frozen by **JDEC-017**; the recurrence
+itself remains **C-10**'s resolution and is not restated here.

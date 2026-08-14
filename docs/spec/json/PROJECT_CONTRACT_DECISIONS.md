@@ -23,8 +23,9 @@ simple, reversible representations are preferred.
 
 | **JDEC-015** | Terminal threshold admissibility: a counted configuration MUST satisfy `survival_threshold <= max_moves`; a violating configuration is refused before `CONFIG_LOCKED` | App F T15 #3/#4 fix only the two MINIMUM-35 floors and let both be raised **independently**; Ch 3 Table 2 defines exactly three end events (capture, prolonged survival, technical loss) and **no** outcome for a survival threshold the step ceiling can never reach | (a) invent a terminal for `max_moves` reached first (tie / survival / capture / technical loss) · (b) let the sub-game run past its own ceiling · (c) treat the combination as an inadmissible configuration | **(c) admissibility invariant `survival_threshold <= max_moves`** | Preserves every source-defined terminal outcome instead of inventing a fourth; keeps both MINIMUM-35 floors intact; the only alternative that adds no game rule | both peers must reject the same configurations before play; refusal happens pre-`CONFIG_LOCKED`, never mid-game | none (no key, hash or nonce involvement) | admissibility unit tests (35/35, 40/35, 40/40 accepted; 35/40 rejected) | low (validation-only; no artifact field, no numeric change) |
 | **JDEC-016** | Capture-resolution turn contract: `Reveal` gains a nullable `capture_claim` (one cell), and the operation carrying it answers with `TurnOutcome(accepted, capture)` where `CaptureAnswer` is exactly `NO_QUESTION` / `NOT_CAUGHT` / `CAUGHT`; the current strict counted-turn posture is `STRICT_COUNTED_MATCH_TURN_OUTCOME_V1` | The source requires capture by contact, by barrier and by trapping, and truthful capture declarations, but fixes no bytes for them; the previous legality-`bool` result was PROJECT-CONTRACT (C-12) and is corrected by C-13 | (a) a new peer family / wire kind / FastMCP tool for capture · (b) a control-channel adjunct · (c) an adjunct on the existing Reveal plus a typed operation result | **(c) adjunct on the existing Reveal, typed result** | Capture belongs to the turn that asks it; the lecturer reference likewise carries `capture_claim` on its turn message, so the request stays reference-compatible while the synchronous result removes the reference's deferred-answer ambiguity | both peers must agree the posture **before** `CONFIG_LOCKED`: `STRICT_COUNTED_MATCH` keeps its legacy legality-`bool` meaning and is **not** accepted for current counted play | none — `capture_claim` and `TurnOutcome` are outside `H_commit`; the sealed eight-member record is unchanged | codec round-trip, live runtime and two-agent real-FastMCP capture tests | low (no register growth: tools 4, families 8, kinds 9, ports 21, errors 22) |
+| **JDEC-017** | Scent pre-game model contract: the complete agreed emission/decay model is a separate semantic `ScentModelAgreement` (id, the three FIXED App-F values, 25 kernel weights, worked examples) carried in full by the existing `ConfigProposal`, agreed by exact three-way comparison, identified by an unkeyed `scent_model_sha256`, bound into `ConfigLockContext` under the existing keyed config-auth proof, frozen for `g01…g06`, and persisted with the config artifact | `SCENT-001`/`SCENT-003` require the full model to be exchanged, verified and locked, but the book fixes no representation for a scent model — no class, no key set, no canonical byte form and no digest — so the carrier and the bytes are open (C-14) | (a) widen `NegotiatedConfig` beyond its 35 members · (b) a new peer family / wire kind / FastMCP tool for the model · (c) a fifth artifact family or sidecar for the model · (d) a separate semantic model on the existing proposal + a separate digest in the existing lock context | **(d) separate model, existing carrier, separate digest in the existing context** | Keeps the Appendix-B core and `config_sha256` exactly as they were, adds no message and no file, and still makes the model as strongly bound as the config — the same keyed proof covers both identities because both digests sit in the one context it authenticates | both peers must exchange, compare and lock the **same complete model** before `CONFIG_LOCKED`; a missing or valid-but-different model refuses counted play with the existing `E-CONFIG-MISMATCH` | none — the model is public physics, the digest is unkeyed, and only `key_id` and a tag are ever persisted | strict agreement, crypto-lock differential, series-freeze and artifact tamper suites | low (no register growth: families 8, kinds 9, tools 4, ports 21, errors 22, artifact families 4) |
 
-### JDEC-016 amended in place (Stage 5-R8 semantic-audit checkpoint) — **no JDEC-017**
+### JDEC-016 amended in place (Stage 5-R8 semantic-audit checkpoint) — **no new decision id**
 
 The decision above fixed the live representation. What it deliberately left open
 was how a claim and an answer become *evidence*, since neither is a member of
@@ -68,7 +69,81 @@ settled here, inside the same decision, because it is the same contract:
    there is no interoperable semantic audit without this clause. It is stated in
    the profile tables themselves (`COMPATIBILITY_PROFILES.md`,
    `INTEROPERABILITY_NEGOTIATION.md`, `CONFIG_CONTRACT.md`); **no fifth profile
-   value and no JDEC-017 exist**.
+   value exists**, and that checkpoint created no decision id of its own.
+   (`JDEC-017` was created later, by the scent pre-game checkpoints, and
+   concerns the agreed scent model rather than the turn contract.)
+
+### JDEC-017 — the pre-game scent-model contract (Stage 5-R8)
+
+The row above names the decision; this section is the frozen contract, recorded
+once so a later reader does not have to reconstruct it from seven commits. It
+resolves **C-14** and consumes, without restating, the recurrence resolution of
+**C-10**.
+
+1. **Semantic model.** `ScentModelAgreement` is a separate domain value, not a
+   config section. **`NegotiatedConfig` remains exactly 35 members** and
+   `pheromones` keeps only the three Appendix-F scalars it always had.
+2. **Model id.** The current identifier is `BOUNDED_SATURATING_RADIAL_V1`. It is
+   **PROJECT-CONTRACT** wording: no source or Appendix-F row names a scent model
+   identifier, and none is claimed.
+3. **Fixed source parameters.** Centre intensity **0.9**, decay **0.10**, field
+   **5×5** are SOURCE/Appendix-F values (App F Table 16, Ch 4 §4.3) and are
+   carried unchanged inside the agreed model as well as in the config core.
+4. **Project default kernel.** The default 5×5 weight matrix is
+   `0.04 0.14 0.20 0.14 0.04 / 0.14 0.42 0.62 0.42 0.14 / 0.20 0.62 0.90 0.62
+   0.20 / 0.14 0.42 0.62 0.42 0.14 / 0.04 0.14 0.20 0.14 0.04`. It is a
+   **PROJECT DEFAULT derived from, and consistent with, the illustrative figure**
+   — it is **not** an Appendix-F mandatory 25-value matrix and **not** a
+   lecturer MUST. Another radial matrix is legal if both peers fully agree it and
+   the semantic validators accept it.
+5. **Recurrence.** The agreed evolution stays the C-10 resolution,
+   `τ_next = min(0.9, max(0, (1−ρ)·τ + Δτ))`. **The written source equation
+   contains the lower clamp only**; the upper saturation is the project's
+   documented resolution of the state-domain conflict, not a source formula.
+6. **Numerical examples.** The model carries the two worked numbers the source
+   asks for: `τ=0.9, Δ=0 → 0.81` (pure decay) and `τ=0.9, Δ=0.9 → 0.9`, the
+   second of which pins the saturation reading specifically. Both are executed
+   against the real recurrence before a model is accepted, so a model whose
+   stated numbers its own physics does not produce is refused as malformed.
+7. **Canonical identity.** The model has its own deterministic canonical
+   rendering under the existing canonicalization contract; the default model
+   renders to **344 bytes** and hashes to
+   `e587d487716a9cb67688fc8b51b2a895a0dd75a5c49ae0fc9b86683574257600`. Both
+   numbers are **PROJECT regression / interoperability vectors** — the source
+   supplies no digest and no length.
+8. **Exchange.** The complete model travels inside the existing `ConfigProposal`
+   family. **No new FastMCP tool, no new peer family, no new wire kind**, and no
+   peer-supplied digest is ever adopted: a digest travelling beside the model it
+   covers proves nothing about it.
+9. **Agreement.** Before the round may lock, the receiver requires the model to
+   be present and then compares it three independent ways — values, canonical
+   rendering, and a digest each side derives itself. A missing or valid-but-
+   different model is `E-CONFIG-MISMATCH`; a structurally invalid or untruthful
+   one is refused earlier by the existing malformed-message path.
+10. **Cryptographic lock.** `scent_model_sha256` is derived locally from the
+    agreed model and is the sixth member of `ConfigLockContext`. The keyed
+    framing is unchanged — `b"config" + canonical_json_bytes(lock_context_core)`
+    — so the model becomes authenticated purely by being inside the bytes the
+    existing proof already covered. **`config_sha256` keeps its prior meaning
+    over the 35-member core alone**; the two digests are never merged.
+11. **Local expectation.** A peer cannot substitute a model by computing a valid
+    proof over a different digest: the receiver compares the authenticated digest
+    against the identity **it** derived from the model it agreed, so a correct
+    proof over the wrong model is still refused.
+12. **Series freeze.** The first sub-game whose lock verified establishes the
+    series identity; `g02…g06` must present the same one. Even a **bilaterally
+    agreed and validly authenticated** mid-series switch is refused before play.
+    A fresh, independent series may legitimately agree a different valid model.
+13. **Artifact evidence.** The existing `config_<game_id>_g<NN>.json` persists
+    the 35-member core, the lock context and proof, the **actual** agreed model
+    in full, and its digest. Read-back proves `full model → scent_model_sha256 →
+    authenticated ConfigLockContext` and, independently, `35-member core →
+    config_sha256 → the same context`. **No fifth artifact family**, and no key
+    material is ever written.
+14. **Non-closure.** This decision covers the **pre-game / series model
+    contract** only. It does **not** claim Reveal V2, live `ScentEmission`
+    transport, consumption of the opponent's scent, a live scent transcript or a
+    final scent audit. Those remain later implementation surfaces.
 
 ## Stage 1D audit (KEEP / MODIFY / RETIRE) + JDEC-012/013 + Stage-2A-R2 JDEC-014
 
