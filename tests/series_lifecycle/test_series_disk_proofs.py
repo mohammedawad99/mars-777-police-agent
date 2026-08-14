@@ -82,9 +82,8 @@ def test_the_declaration_decodes_through_the_existing_semantic_boundary(played: 
 def test_each_config_decodes_and_matches_its_log_digest(played: Path) -> None:
     """INV-02 and INV-03, proven from bytes: gNN joins gNN, digest joins digest."""
     for sub_game in range(1, 7):
-        wire = NegotiatedConfigWire.model_validate(
-            read(played, f"config_{GAME_ID}_g0{sub_game}.json")
-        )
+        artifact = read(played, f"config_{GAME_ID}_g0{sub_game}.json")
+        wire = NegotiatedConfigWire.model_validate(artifact["config"])
         config = decode_config(wire)
         log = read(played, f"log_{GAME_ID}_g0{sub_game}.json")
         game_id, game_uid, logged_sub_game, digest = identity(log)

@@ -98,6 +98,17 @@ def open_config(series: SeriesRuntime, group_id: str, sub_game: int) -> None:
     pregame.adopt_config(CONFIG)
 
 
+def lock_round(a: SeriesRuntime, b: SeriesRuntime) -> None:
+    """Exchange and verify both sides' real lock evidence for the open round.
+
+    The config artifact reports a lock, so the lifecycle has to perform one:
+    each side verifies the other's evidence through its own production runtime.
+    """
+    ours, theirs = a.composition.pregame, b.composition.pregame
+    ours.accept_lock(theirs.prepare_lock())
+    theirs.accept_lock(ours.prepare_lock())
+
+
 def evidence_for(role: ActorRole, sub_game: int) -> OutboundEvidenceRuntime:
     """Our own evidence owner for one sub-game, over the production nonce source."""
     from mars777_police.protocol.secure_nonce import SecretsNonceSource

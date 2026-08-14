@@ -3,8 +3,8 @@
 Stage 5-R3 stopped on a real gap. `Step0Runtime.accept(local, exchange)` needs
 the declaration snapshot and **returns** a merged one somebody must retain;
 `ConfigNegotiationRuntime.accept` needs the round's `opening` and `seen`;
-`ConfigLockRuntime.accept` needs our own digest. No production module held any
-of it, so the three runtimes had no caller at all. This is that caller.
+`ConfigLockRuntime.accept` needs our own digest. Nothing held any of it, so the
+three runtimes had no caller at all. This is that caller.
 
 It **composes** them and owns nothing they already own: no keyed verification,
 digest algorithm, profile comparison, proposal construction or phase machine.
@@ -15,19 +15,17 @@ returns the `group_id` the keyed proof verified, only *after* it did, and
 `Step0Runtime.accept` refuses a peer authoring our own subtree: no self-naming.
 
 **One instance per authenticated series, one round at a time.** The declaration
-and the verified peer are series facts outliving every sub-game; the two round
-runtimes, `opening`, `seen` and the config are sub-game facts, replaced together
-by `open_round`.
+and the verified peer outlive every sub-game; the two round runtimes, `opening`,
+`seen`, the config and the verified lock are sub-game facts `open_round` replaces.
 
 **The lock digest is ours, never theirs.** `adopt_config` registers the config
 this side agreed and the digest comes from that, through the port
-`ConfigLockRuntime` holds. Digesting the peer's proposal would compare their
-evidence against their own bytes - as unsound as deriving a sender from payload.
+`ConfigLockRuntime` holds; digesting the peer's proposal would compare their
+evidence against their own bytes.
 
 **The agreed scent model is a series fact too** (SCENT-001): `scent_freeze` is
-established by the first sub-game whose lock verified, then required unchanged
-by every later one - and `open_round` leaves it alone, being exactly where a
-switch would otherwise slip in.
+established by the first sub-game whose lock verified, then required unchanged by
+every later one - and `open_round` leaves it alone, being where a switch would slip in.
 """
 
 from dataclasses import dataclass, field
@@ -57,11 +55,13 @@ class PregameSessionRuntime:
     scent_freeze: SeriesScentFreeze = field(default=SeriesScentFreeze())
     """This series' agreed model identity - unset until its first lock verified."""
 
+    locked_evidence: ConfigLockEvidence | None = field(default=None)
+    """The evidence this round verified - the only thing an artifact may report."""
+
     def accept_step0(self, exchange: Step0DeclarationExchange) -> str:
         """Verify Step-0, retain the merge, and return the peer's identity.
 
-        Nothing is retained until `Step0Runtime.accept` verified the keyed proof.
-        """
+        Nothing is retained until `Step0Runtime.accept` verified the proof."""
         if self.peer is not None:
             raise StaleMessageError("this session already completed Step-0")
         merged = self.step0.accept(self.declaration, exchange)
@@ -73,15 +73,15 @@ class PregameSessionRuntime:
     def open_round(self, negotiation: ConfigNegotiationRuntime, lock: ConfigLockRuntime) -> None:
         """Adopt a new authoritative config round, discarding the previous one.
 
-        The series survives; the round does not. The declaration, the verified
-        peer and the frozen scent model are series facts and are kept, while
-        `opening`, `seen` and the config belonged to one sub-game: carrying
-        `seen` into `g02` would refuse the opponent's legitimate opening
-        proposal, and carrying `opening` would disable the proposer rule.
+        The series survives; the round does not. The declaration, the peer and
+        the frozen scent model are kept, while `opening`, `seen`, the config and
+        the lock this round verified belonged to one sub-game: carrying `seen`
+        would refuse the opponent's legitimate `g02` opening, carrying `opening`
+        would disable the proposer rule, and carrying the evidence would let
+        `g02`'s artifact report `g01`'s lock.
 
         **The round comes from the caller**, already built, so nothing here
-        derives, increments or guesses a `sub_game`. Validation happens before
-        any assignment, so a rejected pair leaves the round exactly as it was.
+        guesses a `sub_game`; validation precedes every assignment.
         """
         if negotiation.sub_game != lock.sub_game:
             raise LocalDefectError(
@@ -93,13 +93,13 @@ class PregameSessionRuntime:
         self.opening = True
         self.seen = frozenset()
         self.config = None
+        self.locked_evidence = None
 
     def accept_proposal(self, proposal: ConfigProposal, sender_id: str) -> bool:
         """Validate the peer's proposal for this round and advance the round.
 
-        *sender_id* is the **authenticated** identity supplied by the caller,
-        never read out of *proposal* - which is what makes the runtime's
-        participant and initial-proposer guards mean anything.
+        *sender_id* is the **authenticated** identity supplied by the caller and
+        never read out of *proposal* - which is what makes the guards mean anything.
         """
         converges = self.negotiation.accept(
             proposal, sender_id, opening=self.opening, seen=self.seen
@@ -113,10 +113,9 @@ class PregameSessionRuntime:
 
         The round state has to move for a proposal we send, not only for one we
         receive: otherwise `opening` would still be true after we opened the
-        exchange - judging the peer's reply against the initial-proposer rule
-        twice - and nothing would stop this side proposing twice. Our identity
-        comes from the negotiation runtime, never from a message, and `propose`
-        runs first: a refused proposal leaves the round untouched.
+        exchange - judging the peer's reply against the proposer rule twice. Our
+        identity comes from the negotiation runtime, and `propose` runs first: a
+        refused proposal leaves the round untouched.
         """
         us = self.negotiation.group_id
         if us in self.seen:
@@ -148,3 +147,4 @@ class PregameSessionRuntime:
             raise StaleMessageError("lock evidence arrived before this side agreed a config")
         self.lock.accept(evidence, self.lock.digester.digest(config))
         self.scent_freeze = self.scent_freeze.established(evidence.context.scent_model_sha256)
+        self.locked_evidence = evidence

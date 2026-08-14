@@ -61,6 +61,8 @@ async def play_sub_game(a: SeriesRuntime, b: SeriesRuntime, sub_game: int, tampe
     """One whole sub-game: config lock, two real turns, and the final audit."""
     for series, group in zip((a, b), (GROUP_A, GROUP_B), strict=True):
         r7.open_config(series, group, sub_game)
+    r7.lock_round(a, b)
+    for series in (a, b):
         series.lock_config(r7.CONFIG)
     for series, (role, _), peer in zip(
         (a, b), SIDES, ((ActorRole.THIEF, GROUP_B), (ActorRole.POLICE, GROUP_A)), strict=True

@@ -56,6 +56,8 @@ async def play(a: SeriesRuntime, b: SeriesRuntime, steps: tuple[Step, ...]) -> l
     async with live.started(a, b):
         for series, group in ((a, GROUP_A), (b, GROUP_B)):
             r7.open_config(series, group, 1)
+        r7.lock_round(a, b)
+        for series in (a, b):
             series.lock_config(r7.CONFIG)
         a.open_sub_game(r7.evidence_for(POLICE, 1), r7.audit_for(THIEF, GROUP_B, 1))
         b.open_sub_game(r7.evidence_for(THIEF, 1), r7.audit_for(POLICE, GROUP_A, 1))

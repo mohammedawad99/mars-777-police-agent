@@ -7,9 +7,8 @@ score in `domain.scoring`, the verdicts in `SeriesAuditGate`, the digest in
 `ResultExchange`, the bytes in the artifact store.
 
 **Every artifact waits for the fact it reports** - the declaration for a merged
-Step-0, a config for its lock, a log for its verdict, and the result for six
-sub-games, a complete series audit and a mutual agreement. No placeholder is
-written, and choosing moves still belongs to a later stage.
+Step-0, a config for the lock this side verified, a log for its verdict, and the
+result for six sub-games, an audit and a mutual agreement. No placeholder.
 """
 
 from dataclasses import dataclass, field
@@ -77,19 +76,20 @@ class SeriesRuntime:
         """Record the config this sub-game locked, once the lock actually happened.
 
         The phase machine negotiates once per series - no edge returns from
-        `READY` - so only the first sub-game moves it.
+        `READY` - so only the first sub-game moves it, and the document is built
+        first: a sub-game with no verified lock leaves the phase where it was.
         """
         pregame = self.composition.pregame
         if pregame.config is None:
             raise LocalDefectError("a config artifact needs a config this side agreed")
         if pregame.config != config:
             raise LocalDefectError("the config offered for the record is not the locked one")
+        document = config_document(config, pregame)
         if self.orchestrator.machine.phase is ProtocolPhase.STEP0_NEGOTIATION:
             self._advance(
                 ProtocolPhase.CONFIG_NEGOTIATION, ProtocolPhase.CONFIG_LOCKED, ProtocolPhase.READY
             )
-        name = artifacts.config_name(self.game_id, self.sub_game)
-        return self.store.store(name, config_document(config))
+        return self.store.store(artifacts.config_name(self.game_id, self.sub_game), document)
 
     def open_sub_game(self, evidence: OutboundEvidenceRuntime, audit: AuditRuntime) -> None:
         """Bind this sub-game's evidence and audit owners, for both directions."""
