@@ -1,15 +1,14 @@
 """How one line of the official log is written.
 
 Every event here is a *projection* of evidence some other owner already holds -
-a sealed record, a disclosed turn, an acknowledgement, a released nonce - into
-the frozen `LOG_CONTRACT.md` shape. Nothing is computed, verified or decided:
-`log_document` decides which events exist and in what order, and these decide
-only how each one is spelled.
+a sealed record, a disclosed turn, an acknowledgement, a released nonce, the
+emission a reveal carried - into the frozen `LOG_CONTRACT.md` shape. Nothing is
+computed, verified or decided: `log_document` decides which events exist and in
+what order, and these decide only how each one is spelled.
 
-The shared audit core is reused field for field through
-`audit_disclosure_writer`, so a commit event and the disclosure the peer
-receives cannot drift into two spellings of one fact.
-"""
+The shared cores are reused field for field - `audit_disclosure_writer` for the
+sealed entry, `scent_json` for the deposits - so an event and the disclosure the
+peer receives cannot drift into two spellings of one fact."""
 
 from .audit_disclosure import DisclosedTurn
 from .audit_disclosure_writer import action_value, entry_value, state_value
@@ -17,6 +16,7 @@ from .audit_runtime import AuditRuntime
 from .capture_transcript import CaptureRecord
 from .outbound_evidence_values import SealedTurnRecord
 from .protocol_values import Sha256Digest
+from .scent_json import Emission, scent_fields
 from .sealed_record_values import ActorRole, SealedState
 from .turn_protocol_state import AckEvidence
 
@@ -34,11 +34,9 @@ def own_commit(record: SealedTurnRecord, role: ActorRole) -> dict[str, object]:
 def capture_fields(row: CaptureRecord | None) -> dict[str, object]:
     """What this reveal asked about capture and what came back.
 
-    A turn that was sealed but never revealed produced no answer at all, and
-    says so with nulls rather than borrowing `NO_QUESTION` - that token means
-    "the reveal asked nothing", which is a different fact from "there was no
-    reveal".
-    """
+    A turn that was sealed but never revealed produced no answer at all, and says
+    so with nulls rather than borrowing `NO_QUESTION` - that token means "the
+    reveal asked nothing", a different fact from "there was no reveal"."""
     if row is None:
         return {"capture_claim": None, "capture_answer": None}
     claim = row.claim
@@ -49,7 +47,7 @@ def capture_fields(row: CaptureRecord | None) -> dict[str, object]:
 
 
 def own_reveal(
-    record: SealedTurnRecord, role: ActorRole, row: CaptureRecord | None
+    record: SealedTurnRecord, role: ActorRole, row: CaptureRecord | None, scent: Emission
 ) -> dict[str, object]:
     """What we revealed for that turn: the action, the sentence and the answer."""
     return {
@@ -60,6 +58,7 @@ def own_reveal(
         "move": action_value(record.action),
         "hint": record.hint,
         **capture_fields(row),
+        **scent_fields(scent),
     }
 
 
@@ -88,8 +87,13 @@ def peer_commit(turn: DisclosedTurn, verified: bool | None) -> dict[str, object]
     }
 
 
-def peer_reveal(turn: DisclosedTurn, row: CaptureRecord | None) -> dict[str, object]:
-    """The peer's revealed action and sentence, with the answer we gave it."""
+def peer_reveal(
+    turn: DisclosedTurn, row: CaptureRecord | None, scent: Emission
+) -> dict[str, object]:
+    """The peer's revealed action and sentence, with the answer we gave it.
+
+    *scent* is what the reveal really carried live, never what the disclosure
+    says - the two were proved identical before this document exists."""
     return {
         "phase": REVEAL,
         "sub_game": turn.sub_game,
@@ -98,6 +102,7 @@ def peer_reveal(turn: DisclosedTurn, row: CaptureRecord | None) -> dict[str, obj
         "move": action_value(turn.move),
         "hint": turn.hint,
         **capture_fields(row),
+        **scent_fields(scent),
     }
 
 

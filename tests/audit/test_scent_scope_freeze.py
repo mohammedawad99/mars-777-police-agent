@@ -34,10 +34,19 @@ def test_a_capture_lie_still_fails_as_a_capture_lie() -> None:
         audited(v2_runtime(), forged)
 
 
-def test_the_log_documents_are_untouched_by_this_checkpoint() -> None:
-    """Part 1B owns the log; nothing here persists a single emission to one."""
+def test_the_log_persists_the_history_and_recomputes_none_of_it() -> None:
+    """Part 1B took the log surface; the truthfulness question stayed shut.
+
+    The guard that used to say "the log knows nothing of scent" retired when the
+    log legitimately learned to persist it. What must never enter these modules
+    is the physics - a log that recomputed its own evidence would agree with
+    itself whatever was played.
+    """
     for module in (log_events, log_document):
-        assert "scent" not in inspect.getsource(module).lower()
+        source = inspect.getsource(module)
+        assert "deposits_value" in source or "scent" in source
+        for forbidden in ("emission_of", "default_scent_model", "kernel", "apply_move"):
+            assert forbidden not in source
 
 
 def test_the_semantic_vocabulary_is_unchanged() -> None:

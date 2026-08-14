@@ -27,8 +27,8 @@ no standing to make. The receiver derives them itself.
 from ..domain.actions import BarrierAction, MoveAction, PhysicalAction
 from ..domain.board import Position
 from .capture_transcript import CaptureRecord
-from .decimal_text import text_from_decimal
 from .outbound_evidence_values import LocalEvidenceContext, SealedTurnRecord
+from .scent_json import deposits_value
 from .scent_records import ScentRecord
 from .sealed_record_values import SealedState
 
@@ -88,17 +88,11 @@ def capture_value(record: CaptureRecord) -> dict[str, object]:
 def scent_value(record: ScentRecord) -> dict[str, object]:
     """One scent row: the turn it belongs to, and exactly what it deposited.
 
-    Intensities are rendered as canonical decimal text through the one shared
-    authority, so a trailing zero survives the round trip and no binary float is
-    ever written into a document.
+    The deposits come from `scent_json`, the one spelling this document and the
+    official log share, so a trailing zero survives the round trip, no binary
+    float is ever written, and the two artifacts cannot drift apart.
     """
-    return {
-        "step": record.cursor.step,
-        "emission": [
-            {"cell": _point(deposit.cell), "intensity": text_from_decimal(deposit.intensity)}
-            for deposit in record.emission.deposits
-        ],
-    }
+    return {"step": record.cursor.step, "emission": deposits_value(record.emission)}
 
 
 def document(

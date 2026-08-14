@@ -7,10 +7,10 @@ released and the verdict **we** computed. No second schema exists - the shared
 core is reused field for field, and only the local-derived annotations are added.
 
 **Both sides appear, each from its own evidence.** Our turns come from the
-records `OutboundEvidenceRuntime` sealed; the peer's come from the disclosure it
-sent and the turns we witnessed. Every audited commitment therefore arrives with
-its eight sealed members and its nonce, which is exactly what a replayer needs to
-recompute `H_commit` and compare.
+records `OutboundEvidenceRuntime` sealed and the emissions it retained; the
+peer's come from the disclosure it sent and the turns we witnessed live. Every
+audited commitment therefore arrives with its eight sealed members and its nonce,
+exactly what a replayer needs to recompute `H_commit` and compare.
 
 **`verified` is only ever claimed where it was measured.** `AuditRuntime` stops
 at the first step that fails, so steps after it read `null` rather than a guess;
@@ -19,9 +19,9 @@ claim about `audit.result` is never accepted as evidence.
 
 Acknowledgements are events of their own, in protocol order: commit, then the
 acknowledgement of that commitment, then the reveal. `by_role` is attribution
-this side derived from the config-locked roles - never a transmitted field.
-"""
+this side derived from the config-locked roles - never a transmitted field."""
 
+from ..domain.scent_emission import ScentEmission
 from .audit_disclosure import turns
 from .audit_disclosure_writer import AuditDocument
 from .audit_runtime import AuditRuntime
@@ -37,6 +37,7 @@ from .log_events import (
 )
 from .outbound_evidence_runtime import OutboundEvidenceRuntime
 from .protocol_errors import LocalDefectError
+from .scent_records import ScentRecord
 from .sealed_record_values import ActorRole
 from .semantic_values import SemanticFinding
 from .turn_protocol_state import AckEvidence
@@ -55,10 +56,9 @@ def _side(role: ActorRole | None) -> str | None:
 def semantic_value(finding: SemanticFinding) -> dict[str, object]:
     """The replay's finding, in the four fields the audit block records it as.
 
-    `also_at_fault` is written on every finding - `null` for the unilateral ones
-    - so a reader never has to decide whether an absent key means "nobody else"
-    or "an older writer".
-    """
+    `also_at_fault` is written on every finding - `null` for the unilateral ones -
+    so a reader never has to decide whether an absent key means "nobody else" or
+    "an older writer"."""
     return {
         "verdict": finding.verdict.value,
         "step": finding.step,
@@ -70,6 +70,34 @@ def semantic_value(finding: SemanticFinding) -> dict[str, object]:
 def _rows(capture: tuple[CaptureRecord, ...]) -> dict[int, CaptureRecord]:
     """One direction's capture transcript, addressed by the step it belongs to."""
     return {row.cursor.step: row for row in capture}
+
+
+def _scent(history: tuple[ScentRecord, ...]) -> dict[int, ScentRecord]:
+    """One direction's scent history, addressed by the step it belongs to.
+
+    Bound by cursor, never by position in a list: a reveal must receive its own
+    emission or none. Two rows for one step would make that ambiguous, so it is
+    refused rather than resolved to whichever arrived last."""
+    rows = {row.cursor.step: row for row in history}
+    if len(rows) != len(history):
+        raise LocalDefectError("a retained scent history names one step twice")
+    return rows
+
+
+def _emission(
+    history: dict[int, ScentRecord], step: int, revealed: bool, counted: bool
+) -> ScentEmission | None:
+    """The emission that reveal really carried, or `None` where it carried none.
+
+    *counted* says this sub-game was played under the scent-carrying contract,
+    which the retained histories themselves establish: a session that negotiated
+    it emitted on every reveal, one that did not emitted nowhere. Under it a
+    reveal that completed - the signal the capture row already uses - must still
+    have its history, so the log is refused rather than holed."""
+    found = history.get(step)
+    if found is None and revealed and counted:
+        raise LocalDefectError(f"step {step} completed a counted reveal with no retained scent")
+    return None if found is None else found.emission
 
 
 def finalized_log(evidence: OutboundEvidenceRuntime, audit: AuditRuntime) -> AuditDocument:
@@ -90,6 +118,8 @@ def finalized_log(evidence: OutboundEvidenceRuntime, audit: AuditRuntime) -> Aud
     theirs = {turn.step: turn for turn in disclosed}
     acks = {(ack.cursor.step, ack.by_role): ack for ack in audit.acks}
     asked, answered = _rows(evidence.capture), _rows(audit.capture)
+    sent, received = _scent(evidence.scent), _scent(audit.expected_scent)
+    counted = bool(sent) or bool(received)
     role, peer_role = context.role, audit.context.peer_role
     entries: list[dict[str, object]] = []
     for step in sorted(set(ours) | set(theirs)):
@@ -97,12 +127,14 @@ def finalized_log(evidence: OutboundEvidenceRuntime, audit: AuditRuntime) -> Aud
         if record is not None:
             entries.append(own_commit(record, role))
             entries += _acked(acks.get((step, peer_role)), context.sub_game)
-            entries.append(own_reveal(record, role, asked.get(step)))
+            ours_at = _emission(sent, step, asked.get(step) is not None, counted)
+            entries.append(own_reveal(record, role, asked.get(step), ours_at))
         turn = theirs.get(step)
         if turn is not None:
             entries.append(peer_commit(turn, verified_at(step, outcome.tampered_step)))
             entries += _acked(acks.get((step, role)), context.sub_game)
-            entries.append(peer_reveal(turn, answered.get(step)))
+            theirs_at = _emission(received, step, answered.get(step) is not None, counted)
+            entries.append(peer_reveal(turn, answered.get(step), theirs_at))
     return {
         "game_id": context.game_id,
         "game_uid": context.game_uid,
