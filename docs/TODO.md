@@ -165,9 +165,15 @@ tracked once, under Pending.
 - [x] **Stage 5-R8 — scent pre-game traceability closure** — documentation/requirements only, **0 Python**. `SCENT-001` and `SCENT-003` re-audited clause by clause against the catalog wording; evidence recorded in `REQUIREMENTS_TRACEABILITY.md` (Notes + a pre-game closure matrix); `C-14` and `JDEC-017` added; `CONFIG_CONTRACT.md`, `ARTIFACT_LIFECYCLE.md` and the `PRD-04` status corrected where they had gone stale. No requirement id, modality or count changed.
 - [ ] **Next implementation surface — Reveal V2 / live distributed scent.** **NOT STARTED.** Live `ScentEmission` on the turn, delivery and consumption of the opponent's scent map, the fifth compatibility posture that would name it, the live scent transcript and the scent audit. `SCENT-002`'s domain physics exists; nothing live consumes it yet.
 - [ ] Collaborator (Rawey7) access - pending explicit instruction.
+- [x] **Stage 5-R8 Part 2A-R1 — repository reconciliation + JDEC-018 lock + documentation truth pass** — documentation only, **0 Python**. Resolved the pre-existing uncommitted Police draft; locked **JDEC-018** (`DISHONEST_SCENT_EMISSION`, PROJECT-DERIVED, **not** TAMPERING, scored through the existing technical-loss path) as an **authorized Part-2B contract, not shipped code**; corrected the README status, `PRD-01`/`PRD-02`/`PRD-05`/`PRD-06` status lines and the stale current-tense JDEC ranges. `C-01…C-14` unchanged, **no C-15**. Production still `SemanticVerdict` 8 / `TAMPERING` 5 / `SCORED_AS_TECHNICAL_LOSS` 3.
 
 _Phases 1 and 2 are specification and requirements only; all seven PRDs remain
-APPROVED — PHASE 2 LOCKED. Phase 3 implementation has begun with the Stage-3A
-domain foundation (grid config, coordinates, board geometry, move vocabulary,
-movement legality). No JSON schema, protocol, networking, cryptography,
-strategy, GUI or reporting code has been implemented._
+APPROVED — PHASE 2 LOCKED. Phase 3 implementation is well advanced: the
+deterministic domain, the protocol state machine, Commit-Reveal cryptography,
+the FastMCP peer transport, the runtime composition, the capture and semantic
+audit, the scent model/lock/Reveal-V2/audit/log chain and the four artifact
+families are all implemented and tested. **Autonomous strategy, a production
+game owner, belief modelling, the Replay Viewer, the GUI and Gmail reporting
+remain unimplemented**, and public-network play is implemented but not yet
+demonstrated end to end — see the README's *Implementation status* section for
+the exact boundary._

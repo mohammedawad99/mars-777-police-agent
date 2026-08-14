@@ -128,7 +128,7 @@ runtime-VERIFIED**.
 | GAME-006 scoring incl. technical_loss | `json/CONFIG_CONTRACT.md`, `json/RESULT_CONTRACT.md` | CONTRACT-DEFINED (technical_loss provenance C-07 preserved) |
 
 Cross-artifact invariants: `json/CROSS_ARTIFACT_INVARIANTS.md` (INV-01…INV-15).
-Project decisions: `json/PROJECT_CONTRACT_DECISIONS.md` (**JDEC-001…JDEC-015**;
+Project decisions: `json/PROJECT_CONTRACT_DECISIONS.md` (**JDEC-001…JDEC-018**;
 JDEC-015 added in Stage 3B-FIX1 — terminal threshold admissibility).
 
 **Baseline after Stage 2A-R2** *(superseded — see the note below)***:** field matrix **75** rows — declaration 16,

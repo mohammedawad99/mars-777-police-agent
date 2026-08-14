@@ -453,6 +453,17 @@ reached, never one accepted from a peer, exactly like `audit.result` and
 `FALSE_CAPTURE_CLAIM`, `DISHONEST_CAPTURE_ANSWER`, `FALSE_CLAIM_AFFIRMED`.
 `step` and `at_fault` are `null` only when the verdict is `CONSISTENT`.
 
+**Reserved for Part 2B — not yet emitted.** `DISHONEST_SCENT_EMISSION`
+(**JDEC-018**, PROJECT-DERIVED — the source names no such verdict) is the ninth
+member this vocabulary **will** gain. It **will be** written when a counted
+reveal's historically retained `ScentEmission` does not equal the emission
+recomputed from that emitter's own reconstructed post-action position, its
+emitter-correct board and the locked scent model. It is deliberately **not** a
+`TAMPERED` condition: the hashes and the historical disclosure can both be
+perfect, because scent is not a member of the sealed eight. **The current
+implementation emits the eight verdicts listed above and no others**; a reader
+of a log written today will never encounter the ninth.
+
 `also_at_fault` is always present and is `null` for every verdict except
 `FALSE_CLAIM_AFFIRMED`, the one event with a fault on each side: the claimant
 declared a capture that never happened (`CRYPTO-005`) and the answerer confirmed
@@ -462,6 +473,7 @@ game has exactly two sides.
 A disqualifying finding also drives `audit.result` to `TAMPERED` at that step,
 so the file and the series gate cannot disagree. A **scored** finding
 (`ILLEGAL_ACTION`, `FALSE_CAPTURE_CLAIM`, and the claimant's half of
-`FALSE_CLAIM_AFFIRMED`) leaves `audit.result` at `Verified OK` and changes the
-sub-game's end event to `TECHNICAL_LOSS` instead — an honest record of illegal
+`FALSE_CLAIM_AFFIRMED` — and, from Part 2B, `DISHONEST_SCENT_EMISSION`) leaves
+`audit.result` at `Verified OK` and changes the sub-game's end event to
+`TECHNICAL_LOSS` instead — an honest record of illegal or physically impossible
 play is not a forgery.

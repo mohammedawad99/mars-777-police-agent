@@ -4,11 +4,53 @@
 
 - **Group code:** `MaRs-777`
 - **Repository role:** **POLICE**
-- **Status:** Foundation only - no game implementation exists yet.
+- **Status:** **Protocol and evidence stack implemented; autonomous play not yet
+  implemented.** See *Implementation status* below for the exact boundary.
 
 This repository is the **POLICE** agent. Its sibling, the **THIEF** agent,
 lives in a separate, independent repository (see *Paired repository* below). The
 two repositories never share live state.
+
+## Implementation status
+
+Stated precisely, because "done" and "not done" are both misleading here. The
+agent is a complete, authenticated **responder**: it boots, serves its four
+FastMCP tools and answers a peer correctly. It does **not** yet start or play a
+game of its own accord.
+
+**Implemented and covered by tests**
+
+- deterministic domain / game mechanics — board, orthogonal movement, `STAY`,
+  barriers and quota, capture, scoring, terminal conditions
+- protocol state machine, transition evidence and the sub-game cursor
+- Commit-Reveal cryptography over SHA-256 — sealed eight-member record, secure
+  nonce, keyed Step-0 / config authentication, final nonce reveal, commitment
+  recomputation, `TAMPERED` on hash mismatch, golden vectors
+- FastMCP peer transport — four tools, nine wire kinds, eight peer families,
+  strict DTOs, real two-agent localhost runs
+- runtime composition and the agent lifecycle (serve / connect / stop)
+- series lifecycle **services** (`SeriesRuntime`, orchestrator, audit gate)
+- capture claim/answer, live transcript retention and the semantic replay audit
+- scent: model agreement, cryptographic model lock, series freeze, Reveal V2
+  live emission transport, historical audit correspondence and log persistence
+- the four official artifact families and the fourteen files a complete
+  six-sub-game series produces
+
+**Not yet implemented**
+
+- autonomous strategy for either role (no action is chosen by the agent)
+- a production game owner — nothing drives Step-0, turns or the six sub-games;
+  the series services above are exercised by tests, not by the executable
+- belief / uncertainty modelling over the opponent's scent
+- the natural-language hint channel (the field is sealed; nothing writes it)
+- physical scent truthfulness — historical correspondence is proven, physics is
+  not re-verified (authorized as **JDEC-018**, scheduled for Part 2B)
+- accumulated scent-field evolution and full-turn decay
+- a user-facing Replay Viewer, the live GUI, and Gmail result reporting
+- public-network play is implemented but **not yet demonstrated end-to-end**;
+  its live tests are skipped unless explicitly enabled
+
+The project is therefore neither "foundation only" nor "complete".
 
 ## Paired repository (active)
 

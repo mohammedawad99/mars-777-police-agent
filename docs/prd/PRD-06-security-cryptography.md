@@ -13,7 +13,19 @@
 ## 2. Status
 
 **APPROVED — PHASE 2 LOCKED.** Approved after Stage 2-CLOSE supervising review.
-**Implementation status: NOT STARTED.** No code, **no crypto package added**.
+**Implementation status: IMPLEMENTED-E2E.** The cryptographic chain this PRD
+owns is implemented and covered end to end: canonical hashed bytes
+(`protocol/canonical.py`, kept separate from the wire/artifact decimal spelling
+authority), the sealed **eight**-member record, SHA-256 commitment
+(`protocol/commitment.py`) and its recomputation
+(`protocol/audit_commitment.py`), a CSPRNG nonce source
+(`protocol/secure_nonce.py`) held secret until the final nonce reveal, keyed
+Step-0 and config authentication (`protocol/keyed_auth.py`,
+`protocol/config_lock.py`), `TAMPERED` on any recomputed-hash mismatch, and the
+`config_sha256` / `scent_model_sha256` digest binding — all pinned by golden
+vectors. No third-party crypto dependency was added; the standard library
+provides SHA-256 and HMAC. **Physical scent truthfulness is deliberately not
+part of this status** — it is authorized as JDEC-018 and scheduled for Part 2B.
 
 ## 3. Purpose
 

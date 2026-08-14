@@ -15,7 +15,11 @@
 **APPROVED — PHASE 2 LOCKED.** Approved after Stage 2-CLOSE supervising review.
 The requirements below are unchanged by implementation progress.
 
-**Implementation status: IN PROGRESS.**
+**Implementation status: LOCAL FASTMCP / TWO-AGENT TRANSPORT IMPLEMENTED-E2E.**
+The four tools, nine wire kinds, strict DTOs, inbound routing, outbound client
+and typed error mapping are implemented and exercised by real two-agent
+localhost runs. Driving a full autonomous game over that transport is **outside
+this PRD** and is not yet implemented anywhere.
 
 **Completed implementation slice:** Stage 3C — Local Application / Turn
 Orchestration Foundation: `LocalTruth` (board, own position, completed steps);

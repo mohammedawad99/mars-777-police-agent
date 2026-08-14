@@ -16,7 +16,14 @@
 **APPROVED — PHASE 2 LOCKED.** Approved after Stage 2-CLOSE supervising review.
 The requirements below are unchanged by implementation progress.
 
-**Implementation status: IN PROGRESS.**
+**Implementation status: GAME MECHANICS IMPLEMENTED-INTEGRATED; PRODUCTION
+AUTONOMOUS GAME LOOP NOT YET IMPLEMENTED.** The deterministic mechanics this PRD
+owns — board geometry, orthogonal movement and `STAY`, barriers and quota,
+capture, scoring and the terminal conditions — are implemented in `domain/` and
+covered by tests. What does **not** exist is a production driver that selects
+actions and plays a sub-game: no strategy chooses a move, and the executable
+serves without playing. Terminal outcomes are supplied by test harnesses today,
+not reached by play.
 
 **Completed implementation slice:** Stage 3A — deterministic domain foundation:
 `GridConfig` (grid geometry policy), `Position`, policy-free `Board` geometry with

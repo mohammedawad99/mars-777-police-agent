@@ -24,6 +24,7 @@ simple, reversible representations are preferred.
 | **JDEC-015** | Terminal threshold admissibility: a counted configuration MUST satisfy `survival_threshold <= max_moves`; a violating configuration is refused before `CONFIG_LOCKED` | App F T15 #3/#4 fix only the two MINIMUM-35 floors and let both be raised **independently**; Ch 3 Table 2 defines exactly three end events (capture, prolonged survival, technical loss) and **no** outcome for a survival threshold the step ceiling can never reach | (a) invent a terminal for `max_moves` reached first (tie / survival / capture / technical loss) · (b) let the sub-game run past its own ceiling · (c) treat the combination as an inadmissible configuration | **(c) admissibility invariant `survival_threshold <= max_moves`** | Preserves every source-defined terminal outcome instead of inventing a fourth; keeps both MINIMUM-35 floors intact; the only alternative that adds no game rule | both peers must reject the same configurations before play; refusal happens pre-`CONFIG_LOCKED`, never mid-game | none (no key, hash or nonce involvement) | admissibility unit tests (35/35, 40/35, 40/40 accepted; 35/40 rejected) | low (validation-only; no artifact field, no numeric change) |
 | **JDEC-016** | Capture-resolution turn contract: `Reveal` gains a nullable `capture_claim` (one cell), and the operation carrying it answers with `TurnOutcome(accepted, capture)` where `CaptureAnswer` is exactly `NO_QUESTION` / `NOT_CAUGHT` / `CAUGHT`; the current strict counted-turn posture is `STRICT_COUNTED_MATCH_TURN_OUTCOME_V1` | The source requires capture by contact, by barrier and by trapping, and truthful capture declarations, but fixes no bytes for them; the previous legality-`bool` result was PROJECT-CONTRACT (C-12) and is corrected by C-13 | (a) a new peer family / wire kind / FastMCP tool for capture · (b) a control-channel adjunct · (c) an adjunct on the existing Reveal plus a typed operation result | **(c) adjunct on the existing Reveal, typed result** | Capture belongs to the turn that asks it; the lecturer reference likewise carries `capture_claim` on its turn message, so the request stays reference-compatible while the synchronous result removes the reference's deferred-answer ambiguity | both peers must agree the posture **before** `CONFIG_LOCKED`: `STRICT_COUNTED_MATCH` keeps its legacy legality-`bool` meaning and is **not** accepted for current counted play | none — `capture_claim` and `TurnOutcome` are outside `H_commit`; the sealed eight-member record is unchanged | codec round-trip, live runtime and two-agent real-FastMCP capture tests | low (no register growth: tools 4, families 8, kinds 9, ports 21, errors 22) |
 | **JDEC-017** | Scent pre-game model contract: the complete agreed emission/decay model is a separate semantic `ScentModelAgreement` (id, the three FIXED App-F values, 25 kernel weights, worked examples) carried in full by the existing `ConfigProposal`, agreed by exact three-way comparison, identified by an unkeyed `scent_model_sha256`, bound into `ConfigLockContext` under the existing keyed config-auth proof, frozen for `g01…g06`, and persisted with the config artifact | `SCENT-001`/`SCENT-003` require the full model to be exchanged, verified and locked, but the book fixes no representation for a scent model — no class, no key set, no canonical byte form and no digest — so the carrier and the bytes are open (C-14) | (a) widen `NegotiatedConfig` beyond its 35 members · (b) a new peer family / wire kind / FastMCP tool for the model · (c) a fifth artifact family or sidecar for the model · (d) a separate semantic model on the existing proposal + a separate digest in the existing lock context | **(d) separate model, existing carrier, separate digest in the existing context** | Keeps the Appendix-B core and `config_sha256` exactly as they were, adds no message and no file, and still makes the model as strongly bound as the config — the same keyed proof covers both identities because both digests sit in the one context it authenticates | both peers must exchange, compare and lock the **same complete model** before `CONFIG_LOCKED`; a missing or valid-but-different model refuses counted play with the existing `E-CONFIG-MISMATCH` | none — the model is public physics, the digest is unkeyed, and only `key_id` and a tag are ever persisted | strict agreement, crypto-lock differential, series-freeze and artifact tamper suites | low (no register growth: families 8, kinds 9, tools 4, ports 21, errors 22, artifact families 4) |
+| **JDEC-018** | *(Authorized contract for **Part 2B**; **not yet implemented** — production is still `SemanticVerdict` 8 / `TAMPERING` 5 / `SCORED_AS_TECHNICAL_LOSS` 3 and carries no such member.)* Final scent truthfulness failure classification: a historically genuine `ScentEmission` that does **not** equal the deterministic emission recomputed from the emitter's own reconstructed post-action trajectory, the emitter-correct board and the locked `ScentModelAgreement` **will be** the semantic finding `DISHONEST_SCENT_EMISSION`, which **will NOT** be added to `TAMPERING` and **will** be added to `SCORED_AS_TECHNICAL_LOSS` | Ch 4 §4.4 asserts the scent map "cannot lie … is not forgeable" because in the book's shared environment it is emitted by the movement mechanism itself; two isolated peers share no environment, so C-14 / JDEC-017 already required the emission to travel. The source therefore never classifies a *transmitted* emission that contradicts its own emitter — the enforcement case is under-specified, not contradicted | (a) treat it as `TAMPERING` · (b) leave it undetected / unclassified · (c) reuse an existing scored verdict such as `ILLEGAL_ACTION` · (d) a new peer-visible verdict message or error identity · (e) a new scored semantic finding consumed locally | **(e) new scored semantic finding, existing technical-loss lifecycle** | (a) is wrong because Ch 5 §5.4, Ch 7 §7.4 and E-19 bind "Tampering" to a recomputed-hash mismatch, and this case can have perfect hashes and perfectly faithful historical disclosure; (b) would leave a deterministic exploit inside a mandatory mechanism and make the book's own unforgeability premise false in this architecture; (c) would mislabel a physics fault as an illegal action; (d) would grow the peer surface for a finding the source never requires to be transmitted | none — no wire, tool, family, kind or profile changes; the finding is derived locally by each side from material already exchanged at the final audit | none — scent stays outside `H_commit`, the sealed eight are unchanged, and no key, nonce or digest handling moves | honest move / STAY / police-barrier emitter-board timing, wrong-centre, wrong-intensity, wrong-model, V1 absence, privacy and sealed-eight regressions | low (one closed-vocabulary member and one frozenset entry; no register growth: tools 4, families 8, kinds 9, ports 21, errors 22, artifact families 4) |
 
 ### JDEC-016 amended in place (Stage 5-R8 semantic-audit checkpoint) — **no new decision id**
 
@@ -145,6 +146,102 @@ resolves **C-14** and consumes, without restating, the recurrence resolution of
     transport, consumption of the opponent's scent, a live scent transcript or a
     final scent audit. Those remain later implementation surfaces.
 
+### JDEC-018 — final scent truthfulness classification (Stage 5-R8 Part 2A-R1)
+
+The row above names the decision; this section is the frozen contract. It closes
+the one question the Part-2A discovery could not answer from the source, and it
+is recorded here rather than in the Conflict Register because it resolves an
+**under-specification**, not a contradiction — `C-01…C-14` are unchanged and
+**no `C-15` exists**.
+
+> **Implementation status at the time this decision was locked.** This is an
+> **authorized future contract**, not a description of shipped code. The
+> committed production tree still has `SemanticVerdict` = **8**, `TAMPERING` =
+> **5**, `SCORED_AS_TECHNICAL_LOSS` = **3**, and **no**
+> `DISHONEST_SCENT_EMISSION` member; `tests/audit/test_scent_scope_freeze.py`
+> actively asserts that absence and is correct until Part 2B retires it through
+> RED TDD. Every "will" below is deliberate: Part 2B implements this contract,
+> and **Part 2B has not started**.
+
+1. **What the source does and does not say.** Ch 4 §4.3 makes the emission a
+   consequence of movement, centred on the cell the emitter occupies **after**
+   moving or staying. Ch 4 §4.4 then asserts that the scent map *"cannot lie …
+   is not forgeable"*, because in the book's shared environment it is emitted by
+   the movement mechanism itself; the cheat the book analyses there is a **false
+   verbal hint**, whose remedy is explicitly strategic (the reader lowers the
+   weight it gives to declarations) and which Ch 5 §5.3.1 legalises outright via
+   the sealed `intent` flag. Ch 4 §4.5 and App E #23 require the model to be
+   cryptographically locked before counted play *"so that any future deviation
+   in the mechanism's behaviour is detected immediately"*, and App F Table 16
+   fixes centre `0.9`, decay `0.10` and window `5×5`. **No source rule names a
+   sanction for a transmitted emission that is internally well-formed, faithfully
+   disclosed, and inconsistent with its own emitter.** In the book's model that
+   case cannot arise; in two isolated processes it can, because C-14 / JDEC-017
+   already established that the emission must travel.
+2. **The finding.** `SemanticVerdict.DISHONEST_SCENT_EMISSION` **will be** raised
+   when, for an accepted counted reveal, the historically retained
+   `ScentEmission` is not equal to the emission recomputed deterministically from
+   evidence the verifier anchors independently. **Classification: PROJECT-DERIVED.** The
+   lecturer does not name this verdict, does not call a wrong-centred emission
+   "TAMPERED", and Appendix F does not give this case an explicit sanction. Only
+   the *obligation to lock the model so deviation is detectable* is source-borne
+   (App E #23, MUST).
+3. **Expected emission.** `emission_of(emitter_correct_board, locked.kernel,
+   reconstructed_post_action_position, locked.params)`.
+4. **Position.** Post-action, from the existing `semantic_replay.Replay`
+   authority: a move resolves to its destination, `STAY` leaves the cell
+   unchanged, a police `BarrierAction` does **not** move the police, and a thief
+   placement is already `ILLEGAL_ACTION` under the role contract. The position is
+   **never** inferred from the emission being checked, and no opponent truth is
+   created or persisted — the reconstruction lives for one review call.
+5. **Board.** The board at the start of the step **plus that emitter's own
+   action effect**, never the opponent's same-step placement: both step-`k`
+   commitments are sealed before either step-`k` reveal (JDEC-016 §4), so an
+   emitter could not have seen the other side's step-`k` barrier.
+6. **Model.** The authenticated `ScentModelAgreement` carried by the verified
+   `ConfigLockContext` and frozen for `g01…g06` (JDEC-017 §10/§12). **Never
+   `default_scent_model()`**, and never a model inferred from the emission under
+   test.
+7. **Comparison.** Semantic `ScentEmission` equality. Ordering, uniqueness,
+   board clipping and positivity are already enforced by the domain constructor;
+   intensities compare as `Decimal` numbers, so `Decimal("0.90")` and
+   `Decimal("0.9")` are one value at this boundary. The canonical **spelling**
+   authority for wire and artifact bytes remains `app/decimal_text.py` and is
+   untouched — no float, and no string-based physical comparison.
+8. **Scope.** V2 counted reveals only; a V1 sub-game carries no emission and is
+   not checked. Decay is **not** part of this check: §4.3 applies decay at the
+   end of a **full** turn, after both sides have moved, and this audit verifies
+   the isolated per-action `Δτ`. No accumulated `ScentField` replay, no half-turn
+   consumption — those belong to a later belief/consumption surface.
+9. **Not TAMPERING.** Ch 5 §5.4, Ch 7 §7.4 and App E #19 bind "Tampering" and
+   its no-appeal disqualification to a **recomputed commitment-hash mismatch**.
+   This case can occur with every hash verifying and with Part-1A/1B historical
+   correspondence perfectly intact, because scent is not a member of the sealed
+   eight. Calling it Tampering would extend a cryptographic term to a physics
+   fault. **`DISHONEST_SCENT_EMISSION` is therefore to be excluded from
+   `TAMPERING`, which stays at five members.**
+10. **Scored as a technical loss.** It **will join** `SCORED_AS_TECHNICAL_LOSS`,
+    so the sub-game ends `Outcome.TECHNICAL_LOSS` and `domain.scoring` already scores it
+    **0/0** (Ch 3 Table 2, App E #48, C-07). No new scoring system, no
+    asymmetric custom score, no new terminal phase. This reuses the lifecycle
+    C-13 already established for an honest record of bad play.
+11. **Why not silence.** Leaving the case unclassified would leave a
+    deterministic, repeatable exploit inside a mandatory mechanism: a peer could
+    lock the correct model, produce valid hashes, send a deliberately misleading
+    emission every turn, disclose that same emission faithfully, and pass every
+    Part-1A and Part-1B check. The book's own premise that the scent map cannot
+    lie would then be false in this implementation. This decision closes exactly
+    that gap and nothing wider.
+12. **Surface cost.** The finding is derived **locally** by each side from
+    material the final audit already exchanges, and is recorded in the existing
+    `audit.semantic` block. **No** FastMCP tool, peer family, wire kind,
+    compatibility profile, artifact family, port or protocol error identity is
+    added, and the sealed commitment remains exactly eight members. The verifier
+    is deterministic and LLM-free.
+13. **Predicted implementation counts (Part 2B, not yet code).**
+    `SemanticVerdict` **8 → 9**; `SCORED_AS_TECHNICAL_LOSS` **3 → 4**;
+    `TAMPERING` **stays 5**; errors stay **22**; every other register unchanged.
+
 ## Stage 1D audit (KEEP / MODIFY / RETIRE) + JDEC-012/013 + Stage-2A-R2 JDEC-014
 
 | JDEC | Action | Change |
@@ -164,7 +261,7 @@ resolves **C-14** and consumes, without restating, the recurrence resolution of
 | **JDEC-013** | **NEW (Stage 1D.1)** | **Keyed authentication default = HMAC-SHA256** over `context ‖ canonical_payload`, `context ∈ {"step0","config"}`, key referenced by `key_id` (no key material anywhere). **Source requirement = keyed authentication with a pre-supplied key (Ch 5 p.55–56; App B p.128); the algorithm is our choice, not lecturer-specified.** Out-of-band key provisioning; `auth_tag`/`auth_alg`/`key_id` envelope is non-self-referential. No compatible key/mechanism pre-match ⇒ **refuse counted play**. |
 | **JDEC-014** | **NEW (Stage 2A-R2)** | **Result references the declaration instead of duplicating static metadata.** The emitted `result_<game_id>.json` carries a `declaration_ref` join (via `game_id`/`game_uid`/`group_id`) plus the explicitly-mandatory report fields (four GitHub links, per-sub-game `github_commit`, total tokens, scores, cumulative, timestamp, mutual agreement, `result_sha256`). FastMCP/MCP endpoints, full hardware specifications, `hardware_auth`, member lists and the token cap are **declaration-owned** (Ch 9 p.78 four-file list; App F Table 20) and are **not repeated** in the result. Self-containment is a property of the **four-artifact set**. Corrects the Stage-1D.1 K3 over-read of §9.3.3. Compatibility profiles may inline them if a grader parser is shown to require it. |
 
-**No JDEC retired.** JDEC-001…015 active, unique. Negotiated items are tracked as
+**No JDEC retired.** JDEC-001…018 active, unique. Negotiated items are tracked as
 NDEC-001…007 in `INTEROPERABILITY_NEGOTIATION.md`.
 
 ### JDEC-013 key handling (security)
@@ -186,6 +283,10 @@ specifically; an asymmetric signature is an allowed alternative if both peers ag
 - JDEC-002, JDEC-010, JDEC-012 are the interop/security-relevant ones (hashing
   determinism, non-self-referential hash storage, sealed `state`); each has a
   PROJECT-LOCKED default confirmed via an NDEC.
-- IDs are unique JDEC-001…JDEC-016; no duplicates. `game_uid` is **not** invented —
+- **JDEC-018 (Stage 5-R8 Part 2A-R1)** is a PROJECT-DERIVED classification of an
+  enforcement case the source leaves open, **not** a lecturer-named verdict, not
+  an Appendix-F sanction and not a new reading of "Tampering". It adds no
+  register member outside the semantic vocabulary it defines.
+- IDs are unique JDEC-001…JDEC-018; no duplicates. `game_uid` is **not** invented —
   it is source-named (D3). JDEC-013 (keyed authentication) fixes only the **primitive**;
   the **requirement** (keyed auth with a pre-supplied key) is SOURCE, not a JDEC.

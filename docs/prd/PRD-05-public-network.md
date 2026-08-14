@@ -13,7 +13,16 @@
 ## 2. Status
 
 **APPROVED — PHASE 2 LOCKED.** Approved after Stage 2-CLOSE supervising review.
-**Implementation status: NOT STARTED.** No code, no dependency, no provider chosen.
+**Implementation status: IMPLEMENTED-INTEGRATED / LIVE E2E PROOF PENDING.**
+The public-ingress path exists and is unit- and integration-tested:
+`infra/ngrok_ingress.py`, `infra/ngrok_process.py`, `infra/agent_api.py`
+(strict parsing measured against the installed agent), `app/public_ingress.py`,
+`app/public_endpoint_binding.py`, `app/public_readiness_gate.py` and
+`app/public_network_workflow.py`, behind the provider-neutral
+`PublicIngressPort`. **No remote end-to-end run has been demonstrated:** the
+live suite is skipped unless `MARS777_RUN_LIVE_NGROK=1` is set and the agent is
+installed, which is why all 13 of those tests are reported as skipped. Public
+network play must not be claimed as proven until that suite runs green.
 
 ## 3. Purpose
 

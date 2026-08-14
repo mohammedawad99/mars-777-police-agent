@@ -57,7 +57,7 @@
   itself must carry FastMCP endpoints and signed hardware declarations — was later
   **superseded by Stage 2A-R2/JDEC-014**: that static metadata is declaration-owned and the
   result references it.)* Registers **at that stage**: NDEC-001…007, JDEC-001…013,
-  INV-01…15; **current: JDEC-001…015**. The crypto taxonomy is kept precise
+  INV-01…15; **current: JDEC-001…018**. The crypto taxonomy is kept precise
   (HASH ≠ MAC ≠ PKI signature ≠ mutual acknowledgement); **no key material** in any
   artifact. Specification-only; no code/schema/sibling access; **reviewed and LOCKED**
   (committed at Stage 1-CLOSE; status relabel at Stage 1-CLOSE.1).
