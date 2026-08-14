@@ -13,13 +13,31 @@ decimals therefore cross as **canonical text** and are rebuilt with
 `Decimal(text)` directly: no float is ever constructed on the path.
 """
 
-from decimal import Decimal
 from typing import Annotated
 
 from pydantic import StringConstraints
 
-CANONICAL_DECIMAL = r"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$"
-"""Plain positional decimal text - no exponent, no `+`, no leading zeros."""
+from ..app.decimal_text import CANONICAL_DECIMAL, decimal_from_text, text_from_decimal
+
+__all__ = [
+    "CANONICAL_DECIMAL",
+    "CommitText",
+    "DecimalText",
+    "DigestText",
+    "KeyIdText",
+    "NonEmptyText",
+    "NonceText",
+    "ProofText",
+    "TimestampText",
+    "decimal_from_text",
+    "text_from_decimal",
+]
+"""The scalar spellings this adapter publishes, including the two it re-exports.
+
+`decimal_from_text`/`text_from_decimal` and the pattern they belong to are
+**not implemented here**: `app.decimal_text` owns the one canonical rule, and
+this module re-exports it so every existing transport import keeps working while
+the application layer consumes exactly the same authority."""
 
 DecimalText = Annotated[str, StringConstraints(pattern=CANONICAL_DECIMAL)]
 """A semantic `Decimal` on the wire. Never a JSON number."""
@@ -44,23 +62,3 @@ NonEmptyText = Annotated[str, StringConstraints(min_length=1)]
 
 ProofText = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]+$")]
 """An `AuthProof` value; its exact width is checked by the semantic type."""
-
-
-def decimal_from_text(text: str) -> Decimal:
-    """Rebuild a semantic `Decimal` from its canonical wire text.
-
-    Direct construction from the string. There is deliberately no `float` in
-    this function, and no rounding, quantizing or normalising: `Decimal("0.10")`
-    and `Decimal("0.1")` are the same *number* and different *canonical text*,
-    and only the text - hence the digest - distinguishes them.
-    """
-    return Decimal(text)
-
-
-def text_from_decimal(value: Decimal) -> str:
-    """Render a semantic `Decimal` as canonical wire text.
-
-    Uses fixed-point formatting so an exponent form can never reach the wire,
-    and preserves trailing zeros because they are part of the canonical text.
-    """
-    return format(value, "f")
