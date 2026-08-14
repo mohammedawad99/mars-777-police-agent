@@ -1,33 +1,33 @@
 """The application owner of one peer session's pregame protocol state.
 
 Stage 5-R3 stopped on a real gap. `Step0Runtime.accept(local, exchange)` needs
-the current declaration snapshot and **returns** a merged one somebody must
-retain; `ConfigNegotiationRuntime.accept` needs the round's `opening` and `seen`;
-`ConfigLockRuntime.accept` needs our own authoritative digest. No production
-module held any of it, so the three runtimes had no production caller at all.
-This is that caller.
+the declaration snapshot and **returns** a merged one somebody must retain;
+`ConfigNegotiationRuntime.accept` needs the round's `opening` and `seen`;
+`ConfigLockRuntime.accept` needs our own digest. No production module held any
+of it, so the three runtimes had no caller at all. This is that caller.
 
-It **composes** them and owns nothing they already own: no keyed verification, no
-digest algorithm, no profile comparison, no proposal construction, no phase
-machine. Every refusal below is raised by the runtime it delegates to.
+It **composes** them and owns nothing they already own: no keyed verification,
+digest algorithm, profile comparison, proposal construction or phase machine.
+Every refusal below is raised by the runtime it delegates to.
 
 **The authenticated peer identity is an output, never an input.** `accept_step0`
-returns the `group_id` whose Step-0 subtree the keyed proof actually verified -
-`Step0Runtime.accept` calls `auth.verify(peer, peer_team.group_id, exchange.auth)`
-and refuses a peer authoring our own subtree, so a caller cannot name itself. It
-is returned only *after* that verification succeeds, and only the transport
-decides what to do with it: nothing here knows a session exists.
+returns the `group_id` the keyed proof verified, only *after* it did, and
+`Step0Runtime.accept` refuses a peer authoring our own subtree: no self-naming.
 
 **One instance per authenticated series, one round at a time.** The declaration
-and the verified peer are series facts and outlive every sub-game; the two round
-runtimes, `opening`, `seen` and the adopted config are sub-game facts and are
-replaced together by `open_round`.
+and the verified peer are series facts outliving every sub-game; the two round
+runtimes, `opening`, `seen` and the config are sub-game facts, replaced together
+by `open_round`.
 
 **The lock digest is ours, never theirs.** `adopt_config` registers the config
-this side agreed, and the local digest is derived from that through the digest
-port `ConfigLockRuntime` already holds. Digesting the peer's proposal instead
-would compare their evidence against their own bytes, which is the same defect
-as deriving a sender from the payload it authenticates.
+this side agreed and the digest comes from that, through the port
+`ConfigLockRuntime` holds. Digesting the peer's proposal would compare their
+evidence against their own bytes - as unsound as deriving a sender from payload.
+
+**The agreed scent model is a series fact too** (SCENT-001): `scent_freeze` is
+established by the first sub-game whose lock verified, then required unchanged
+by every later one - and `open_round` leaves it alone, being exactly where a
+switch would otherwise slip in.
 """
 
 from dataclasses import dataclass, field
@@ -38,6 +38,7 @@ from .config_negotiation_runtime import ConfigNegotiationRuntime
 from .declaration_values import Declaration
 from .peer_pregame_messages import ConfigLockEvidence, ConfigProposal, Step0DeclarationExchange
 from .protocol_errors import LocalDefectError, StaleMessageError
+from .series_scent_freeze import SeriesScentFreeze
 from .step0_runtime import Step0Runtime, sole_subtree
 
 
@@ -53,12 +54,13 @@ class PregameSessionRuntime:
     opening: bool = field(default=True)
     seen: frozenset[str] = field(default=frozenset())
     config: NegotiatedConfig | None = field(default=None)
+    scent_freeze: SeriesScentFreeze = field(default=SeriesScentFreeze())
+    """This series' agreed model identity - unset until its first lock verified."""
 
     def accept_step0(self, exchange: Step0DeclarationExchange) -> str:
-        """Verify the peer's Step-0, retain the merge, and return its identity.
+        """Verify Step-0, retain the merge, and return the peer's identity.
 
-        The order is the point: nothing is retained and no identity is returned
-        until `Step0Runtime.accept` has verified the keyed proof.
+        Nothing is retained until `Step0Runtime.accept` verified the keyed proof.
         """
         if self.peer is not None:
             raise StaleMessageError("this session already completed Step-0")
@@ -71,18 +73,15 @@ class PregameSessionRuntime:
     def open_round(self, negotiation: ConfigNegotiationRuntime, lock: ConfigLockRuntime) -> None:
         """Adopt a new authoritative config round, discarding the previous one.
 
-        The series survives; the round does not. `Declaration` and the verified
-        peer are what Step-0 established for the whole series, so they are kept -
-        while `opening`, `seen` and the adopted config belonged to one sub-game
-        and would be a lie in the next. Carrying `seen` into `g02` would refuse
-        the opponent's legitimate opening proposal as a duplicate, and carrying
-        `opening` would stop the initial-proposer rule applying at all.
+        The series survives; the round does not. The declaration, the verified
+        peer and the frozen scent model are series facts and are kept, while
+        `opening`, `seen` and the config belonged to one sub-game: carrying
+        `seen` into `g02` would refuse the opponent's legitimate opening
+        proposal, and carrying `opening` would disable the proposer rule.
 
-        **The round comes from the caller.** Both runtimes are supplied already
-        built, so nothing here derives, increments or guesses a `sub_game`; the
-        future runner owns when a round opens and which one it is. Validation
-        happens before any assignment, so a rejected pair leaves the current
-        round exactly as it was.
+        **The round comes from the caller**, already built, so nothing here
+        derives, increments or guesses a `sub_game`. Validation happens before
+        any assignment, so a rejected pair leaves the round exactly as it was.
         """
         if negotiation.sub_game != lock.sub_game:
             raise LocalDefectError(
@@ -98,9 +97,9 @@ class PregameSessionRuntime:
     def accept_proposal(self, proposal: ConfigProposal, sender_id: str) -> bool:
         """Validate the peer's proposal for this round and advance the round.
 
-        *sender_id* is the **authenticated** identity supplied by the caller; it
-        is never read out of *proposal*, which is exactly what makes the
-        runtime's participant and initial-proposer guards mean anything.
+        *sender_id* is the **authenticated** identity supplied by the caller,
+        never read out of *proposal* - which is what makes the runtime's
+        participant and initial-proposer guards mean anything.
         """
         converges = self.negotiation.accept(
             proposal, sender_id, opening=self.opening, seen=self.seen
@@ -113,14 +112,11 @@ class PregameSessionRuntime:
         """Build **our** proposal for this round and record that we made it.
 
         The round state has to move for a proposal we send, not only for one we
-        receive. Otherwise `opening` would still be true after we opened the
-        exchange - so the peer's reply would be judged against the
-        initial-proposer rule a second time - and nothing would stop this side
-        proposing twice in one round.
-
-        Our identity comes from the negotiation runtime we were built with, never
-        from a message. `propose` still owns the participant and initial-proposer
-        rules, and it runs first: a refused proposal leaves the round untouched.
+        receive: otherwise `opening` would still be true after we opened the
+        exchange - judging the peer's reply against the initial-proposer rule
+        twice - and nothing would stop this side proposing twice. Our identity
+        comes from the negotiation runtime, never from a message, and `propose`
+        runs first: a refused proposal leaves the round untouched.
         """
         us = self.negotiation.group_id
         if us in self.seen:
@@ -142,8 +138,13 @@ class PregameSessionRuntime:
         self.config = config
 
     def accept_lock(self, evidence: ConfigLockEvidence) -> None:
-        """Check the peer's lock evidence against our own recomputed digest."""
+        """Verify the peer's lock evidence, then hold the series to one model.
+
+        The freeze runs **after** `ConfigLockRuntime.accept` returned: a mutually
+        verified lock over a model this side agreed, never a proposed one.
+        """
         config = self.config
         if config is None:
             raise StaleMessageError("lock evidence arrived before this side agreed a config")
         self.lock.accept(evidence, self.lock.digester.digest(config))
+        self.scent_freeze = self.scent_freeze.established(evidence.context.scent_model_sha256)
