@@ -1,30 +1,27 @@
 """The outbound half of the protocol: cadence, and nothing else.
 
 The inbound path has had a production owner since Stage 5-R3R. This is the side
-that speaks first, and it is deliberately the thinnest thing that can be - every
-value it sends is built by the owner that already owns it, and every decision it
-would otherwise have to make is one somebody else already made.
+that speaks first, and it is deliberately the thinnest thing that can be: every
+value it sends is built by the owner that already owns it.
 
 **It sends what owners produced.** `Step0Runtime` builds the exchange, the
 pregame runtime builds our proposal and lock evidence, `OutboundEvidenceRuntime`
-seals the commitment and reveal, and `ResultExchange` owns the entire result
-cadence. The runner never constructs a semantic value, never hashes, never draws
-a nonce, never touches a rule and never reads a document it forwards.
+seals the commitment and reveal, and `ResultExchange` owns the result cadence.
+The runner never hashes, never draws a nonce and never decides a rule; the one
+value it assembles is this turn's emission, and it asks two owners for it.
 
 **Commit, acknowledge and reveal are three operations, not one call.**
 `send_commitment` returning means the request was delivered - not that the peer
-agreed. The acknowledgement comes back later through *our* inbound server, so
-the runner cannot know it has arrived except by asking the turn runtime that
-recorded it. That is why the reveal is a separate method with a gate rather than
-the second half of a single `perform_turn`, and why nothing here sleeps or polls.
+agreed. The acknowledgement comes back later through *our* inbound server, so the
+runner learns of it only by asking the turn runtime that recorded it. Hence a
+separate, gated reveal method, and nothing here sleeps or polls.
 
 **Lifecycle-scoped owners are resolved per call.** A turn runtime is consumed and
 an evidence runtime is per sub-game, so both arrive as providers and neither is
 captured. `ResultExchange` is a provider for a different reason: it is assembled
-*from* six completed sub-games, so at the moment this runner is built it does not
-truthfully exist yet. Only the two result methods resolve it, which is why an
-agent can play its whole series before the result owner appears. The series audit
-gate is series-scoped from the start, so it is held directly.
+*from* six completed sub-games, so it does not truthfully exist when this runner
+is built, and only the two result methods resolve it. The series audit gate is
+series-scoped from the start, so it is held directly.
 """
 
 from collections.abc import Callable
@@ -41,6 +38,7 @@ from .peer_transport import PeerTransportPort
 from .pregame_session_runtime import PregameSessionRuntime
 from .protocol_errors import StaleMessageError
 from .result_exchange import ResultExchange
+from .scent_turn_projection import emission_for
 from .sealed_record_values import Intent, SealedState
 from .series_audit_gate import SeriesAuditGate
 from .step0_runtime import Step0Runtime
@@ -85,14 +83,26 @@ class PeerRunner:
         """Seal our turn, register the commitment locally, then send it.
 
         Registering before sending is the safe order: an acknowledgement that
-        races back finds a commitment already recorded. The prepared turn is
-        returned rather than kept - the caller holds it until the reveal, and it
-        carries no nonce, state or intent to leak.
+        races back finds a commitment already recorded. The prepared turn carries
+        no nonce, state or intent to leak.
+
+        The emission is projected **first**, from the same `action` this turn
+        seals and the turn runtime's own truth, so an action our rules refuse
+        raises before anything is registered or sent. No caller supplies one. The
+        projector is built from the live owners, which a locked config creates.
         """
+        turn = self.turns()
+        emission = emission_for(turn, self.pregame.lock.scent_model, action)
         prepared = self.evidence().prepare_turn(
-            state=state, action=action, intent=intent, hint=hint, cursor=cursor, claim=claim
+            state=state,
+            action=action,
+            intent=intent,
+            hint=hint,
+            cursor=cursor,
+            claim=claim,
+            scent=emission,
         )
-        self.turns().register_local_commitment(prepared.commitment)
+        turn.register_local_commitment(prepared.commitment)
         await self.transport.send_commitment(prepared.commitment)
         return prepared
 

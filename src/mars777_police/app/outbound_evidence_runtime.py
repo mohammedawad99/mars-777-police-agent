@@ -24,6 +24,7 @@ hash comes from `CommitmentPort` and the nonce from `NonceSourcePort`.
 from dataclasses import dataclass, field
 
 from ..domain.actions import PhysicalAction
+from ..domain.scent_emission import ScentEmission
 from .audit_disclosure_writer import AuditDocument, document
 from .capture_observation import require_claim_shape
 from .capture_transcript import CaptureRecord
@@ -68,21 +69,27 @@ class OutboundEvidenceRuntime:
         hint: str,
         cursor: TurnCursor,
         claim: CaptureClaim | None = None,
+        scent: ScentEmission | None = None,
     ) -> PreparedTurn:
         """Seal one turn of ours and return only what a peer may receive.
 
         The nonce is drawn, used and kept; what comes back is the commitment and
         the reveal, so the caller cannot disclose early even by mistake.
 
-        *claim* is the one member of the reveal that is **not** sealed: it is a
+        *claim* is one of the two reveal members that are **not** sealed: it is a
         question about a cell only the opponent knows, so there is nothing of
         ours to commit to. It is checked against the same shape rule the
         receiver applies, so we cannot send a declaration a peer must refuse.
+
+        *scent* is the other. It is **passed through, never computed here**: this
+        owner holds nonces and digests, not the board, and deriving an emission
+        would mean applying a game action inside the evidence owner. The runner
+        projects it from the same action and hands it in.
         """
         if self.phase is not EvidencePhase.OPEN:
             raise StaleMessageError(f"no turn may be prepared while {self.phase.value}")
         self._require_cursor(cursor)
-        reveal = Reveal(cursor, action, hint, claim)
+        reveal = Reveal(cursor, action, hint, claim, scent)
         require_claim_shape(reveal, self.context.role, LocalDefectError)
         if state.role is not self.context.role:
             raise LocalDefectError(

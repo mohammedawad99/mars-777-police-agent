@@ -7,6 +7,7 @@ acceptance plus the capture answer, and the peer's action never moves our piece.
 """
 
 import pytest
+import turn_builders
 from turn_builders import (
     START,
     advanced,
@@ -105,8 +106,11 @@ def test_the_hint_is_carried_but_decides_nothing() -> None:
     first = advanced(runtime())
     second = advanced(runtime())
     action = legal_reveal().action
-    assert first.accept_reveal(Reveal(START, action, "north, honestly")).accepted is True
-    assert second.accept_reveal(Reveal(START, action, "south, dishonestly")).accepted is True
+    emission = turn_builders.emission()
+    assert first.accept_reveal(Reveal(START, action, "north, honestly", None, emission)).accepted
+    assert second.accept_reveal(
+        Reveal(START, action, "south, dishonestly", None, emission)
+    ).accepted
     assert first.evidence[0].hint != second.evidence[0].hint
 
 

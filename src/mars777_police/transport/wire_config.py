@@ -61,6 +61,7 @@ class InteropProfileSetWire(BaseModel):
     compatibility_profile: Literal[
         "STRICT_COUNTED_MATCH",
         "STRICT_COUNTED_MATCH_TURN_OUTCOME_V1",
+        "STRICT_COUNTED_MATCH_TURN_OUTCOME_SCENT_V2",
         "LECTURER_REFERENCE_COMPATIBILITY",
         "LECTURER_ATTACHMENT_COMPATIBILITY",
     ]

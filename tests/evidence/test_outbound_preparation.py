@@ -30,7 +30,7 @@ def test_the_prepared_value_exposes_no_secret_member() -> None:
     """A runner holding this cannot leak the nonce, the state or the intent."""
     turn = prepare(producer(), 1)
     exposed = {f.name for f in dataclasses.fields(turn.reveal)}
-    assert exposed == {"cursor", "action", "hint", "capture_claim"}
+    assert exposed == {"cursor", "action", "hint", "capture_claim", "scent_emission"}
     assert not hasattr(turn, "nonce") and not hasattr(turn, "state")
     assert not hasattr(turn.reveal, "nonce") and not hasattr(turn.reveal, "intent")
 

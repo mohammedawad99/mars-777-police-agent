@@ -81,7 +81,7 @@ def profiles(**over: object) -> InteropProfileSet:
         "key_id": KEY,
         "commitment_codec": CommitmentCodec.STRICT_PROJECT_COMMITMENT,
         "result_profile": ResultProfile.STRICT_PROJECT_RESULT,
-        "compatibility_profile": CompatibilityProfile.STRICT_COUNTED_MATCH_TURN_OUTCOME_V1,
+        "compatibility_profile": CompatibilityProfile.STRICT_COUNTED_MATCH_TURN_OUTCOME_SCENT_V2,
         "tool_name_profile": ToolNameProfile.PROJECT_LOGICAL_OPERATIONS,
         "canonicalization_profile": CanonicalizationProfile.CANONICAL_JSON_V1,
         "sealed_record_profile": SealedRecordProfile.SEALED_RECORD_V1,

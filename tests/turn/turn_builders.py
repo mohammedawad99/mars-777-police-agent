@@ -16,6 +16,9 @@ from mars777_police.domain.actions import MoveAction
 from mars777_police.domain.barriers import BarrierQuota
 from mars777_police.domain.board import Board, Position
 from mars777_police.domain.rules import Move
+from mars777_police.domain.scent_emission import ScentEmission
+from mars777_police.domain.scent_model_default import default_scent_model
+from mars777_police.domain.scent_observation import emission_of
 from mars777_police.domain.truth import LocalTruth
 
 PEER_DIGEST = Sha256Digest("a" * 64)
@@ -60,14 +63,20 @@ def acknowledgement(
     return Acknowledgement(cursor, digest)
 
 
+def emission(cell: Position | None = None) -> ScentEmission:
+    """What the agreed model really deposits around *cell* - never a fixture."""
+    model = default_scent_model()
+    return emission_of(board(), model.kernel, cell or CENTRE, model.params)
+
+
 def legal_reveal(cursor: TurnCursor = START) -> Reveal:
     """A move the real rules accept: north, onto an empty square."""
-    return Reveal(cursor, MoveAction(Move.N), "heading north")
+    return Reveal(cursor, MoveAction(Move.N), "heading north", None, emission())
 
 
 def illegal_reveal(cursor: TurnCursor = START) -> Reveal:
     """A move the real rules refuse: south, into the blocked square."""
-    return Reveal(cursor, MoveAction(Move.S), "heading south")
+    return Reveal(cursor, MoveAction(Move.S), "heading south", None, emission())
 
 
 def advanced(runtime_under_test: TurnProtocolRuntime) -> TurnProtocolRuntime:

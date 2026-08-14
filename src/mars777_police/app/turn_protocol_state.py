@@ -21,6 +21,7 @@ during live play and are not represented here.
 from dataclasses import dataclass
 from enum import StrEnum
 
+from ..domain.scent_emission import ScentEmission
 from .protocol_values import Sha256Digest
 from .sealed_record_values import ActorRole
 from .turn_cursor import TurnCursor
@@ -78,3 +79,9 @@ class TurnEvidence:
     action: object
     hint: str
     legal: bool
+    scent: ScentEmission | None = None
+    """What the peer said this turn deposited - an observation, not a verdict.
+
+    Retained exactly as received and never recomputed here: the receiver cannot
+    know where the sender stood, so live code holds the claim and the final audit
+    re-renders it from the disclosed trajectory. Ours is never stored here."""

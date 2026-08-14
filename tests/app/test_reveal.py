@@ -30,15 +30,17 @@ ACTION = MoveAction(Move.N)
 HINT = "circling near the north gate"
 
 
-def test_the_reveal_carries_the_core_three_plus_the_optional_capture_claim() -> None:
-    """R8 added one nullable adjunct; the sealed core is untouched."""
+def test_the_reveal_carries_the_core_three_plus_two_unsealed_adjuncts() -> None:
+    """R8 added one nullable adjunct and V2 a second; the sealed core is untouched."""
     assert tuple(f.name for f in dataclasses.fields(Reveal)) == (
         "cursor",
         "action",
         "hint",
         "capture_claim",
+        "scent_emission",
     )
     assert Reveal(CURSOR, ACTION, HINT).capture_claim is None
+    assert Reveal(CURSOR, ACTION, HINT).scent_emission is None, "V1 still constructs"
     with pytest.raises(ValueError, match="capture_claim must be a CaptureClaim"):
         Reveal(CURSOR, ACTION, HINT, (1, 1))  # type: ignore[arg-type]
 
@@ -58,7 +60,7 @@ def test_the_reveal_is_frozen_slotted_and_value_equal() -> None:
     reveal = Reveal(CURSOR, ACTION, HINT)
     with pytest.raises(dataclasses.FrozenInstanceError):
         reveal.hint = "other"  # type: ignore[misc]
-    assert Reveal.__slots__ == ("cursor", "action", "hint", "capture_claim")
+    assert Reveal.__slots__ == ("cursor", "action", "hint", "capture_claim", "scent_emission")
     assert reveal == Reveal(CURSOR, ACTION, HINT)
     assert reveal != Reveal(TurnCursor(2, 1), ACTION, HINT)
     assert reveal != Reveal(CURSOR, MoveAction(Move.S), HINT)

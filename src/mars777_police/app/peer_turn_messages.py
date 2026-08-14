@@ -14,6 +14,7 @@ error type is defined.
 from dataclasses import dataclass
 
 from ..domain.actions import BarrierAction, MoveAction, PhysicalAction
+from ..domain.scent_emission import ScentEmission
 from .capture_values import CaptureClaim
 from .protocol_values import Sha256Digest
 from .turn_cursor import TurnCursor
@@ -100,6 +101,16 @@ class Reveal:
     capture_claim: CaptureClaim | None = None
     """The police's optional same-cell declaration; never sealed, never a nonce."""
 
+    scent_emission: ScentEmission | None = None
+    """What this action deposited, for the peer to observe (`..._SCENT_V2`).
+
+    Structurally optional so a V1 reveal still constructs and still parses; the
+    negotiated posture, not this value, decides whether absence is legal. It
+    carries no centre, no source cell and no role - only the deposits the locked
+    model produces - and it is **not** sealed: the commitment stays eight
+    members, and the final audit re-renders the emission from the disclosed
+    trajectory rather than trusting this copy."""
+
     def __post_init__(self) -> None:
         if type(self.cursor) is not TurnCursor:
             raise ValueError(f"cursor must be a TurnCursor, got {type(self.cursor).__name__}")
@@ -112,4 +123,8 @@ class Reveal:
         if self.capture_claim is not None and type(self.capture_claim) is not CaptureClaim:
             raise ValueError(
                 f"capture_claim must be a CaptureClaim, got {type(self.capture_claim).__name__}",
+            )
+        if self.scent_emission is not None and type(self.scent_emission) is not ScentEmission:
+            raise ValueError(
+                f"scent_emission must be a ScentEmission, got {type(self.scent_emission).__name__}",
             )

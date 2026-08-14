@@ -44,14 +44,16 @@ def test_there_are_ten_closed_profile_types() -> None:
     assert len(CLOSED_TYPES) == 10
 
 
-def test_there_are_eighteen_enum_member_memberships() -> None:
-    assert sum(len(profile_type) for profile_type in CLOSED_TYPES) == 18
+def test_there_are_nineteen_enum_member_memberships() -> None:
+    """Eighteen, plus the fifth compatibility posture V2 added."""
+    assert sum(len(profile_type) for profile_type in CLOSED_TYPES) == 19
 
 
-def test_there_are_seventeen_unique_serialized_tokens() -> None:
+def test_there_are_eighteen_unique_serialized_tokens() -> None:
     tokens = {member.value for profile_type in CLOSED_TYPES for member in profile_type}
-    assert len(tokens) == 17
-    assert "STRICT_COUNTED_MATCH_TURN_OUTCOME_V1" in tokens
+    assert len(tokens) == 18
+    assert "STRICT_COUNTED_MATCH_TURN_OUTCOME_V1" in tokens, "the legacy token survives"
+    assert "STRICT_COUNTED_MATCH_TURN_OUTCOME_SCENT_V2" in tokens
 
 
 def test_the_duplicate_token_is_attachment_compatibility() -> None:
@@ -87,6 +89,7 @@ def test_every_serialized_value_equals_its_identifier() -> None:
             [
                 "STRICT_COUNTED_MATCH",
                 "STRICT_COUNTED_MATCH_TURN_OUTCOME_V1",
+                "STRICT_COUNTED_MATCH_TURN_OUTCOME_SCENT_V2",
                 "LECTURER_REFERENCE_COMPATIBILITY",
                 "LECTURER_ATTACHMENT_COMPATIBILITY",
             ],
@@ -122,7 +125,7 @@ def test_profile_set_is_immutable_and_has_eleven_members() -> None:
         ("key_id", "match-key_1.0"),
         ("commitment_codec", "STRICT_PROJECT_COMMITMENT"),
         ("result_profile", "STRICT_PROJECT_RESULT"),
-        ("compatibility_profile", "STRICT_COUNTED_MATCH_TURN_OUTCOME_V1"),
+        ("compatibility_profile", "STRICT_COUNTED_MATCH_TURN_OUTCOME_SCENT_V2"),
         ("tool_name_profile", "PROJECT_LOGICAL_OPERATIONS"),
         ("canonicalization_profile", "CANONICAL_JSON_V1"),
         ("sealed_record_profile", "SEALED_RECORD_V1"),

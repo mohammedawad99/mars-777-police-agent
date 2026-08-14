@@ -13,12 +13,14 @@ from ..app.peer_final_messages import FinalNonceReveal, NonceRevealEntry, Result
 from ..app.protocol_values import NonceValue
 from ..app.result_values import ResultContribution, ResultContributionEntry
 from ..app.turn_cursor import TurnCursor
-from .wire_turn import (
+from .wire_final import (
     FinalNonceRevealWire,
     NonceRevealEntryWire,
     ResultAgreementWire,
     ResultContributionEntryWire,
     ResultContributionWire,
+)
+from .wire_turn import (
     TurnCursorWire,
 )
 

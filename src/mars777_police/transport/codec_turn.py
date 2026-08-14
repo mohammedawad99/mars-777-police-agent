@@ -17,6 +17,7 @@ from ..app.turn_cursor import TurnCursor
 from ..domain.actions import BarrierAction, MoveAction, PhysicalAction
 from ..domain.board import Position
 from ..domain.rules import Move
+from .codec_scent_turn import decode_emission, encode_emission
 from .wire_turn import (
     AcknowledgementWire,
     ActionWire,
@@ -81,17 +82,19 @@ def decode_reveal(wire: RevealWire) -> Reveal:
         decode_action(wire.action),
         wire.hint,
         _claim(wire.capture_claim),
+        decode_emission(wire.scent_emission),
     )
 
 
 def encode_reveal(value: Reveal) -> RevealWire:
-    """Render a reveal, with the claim only when one was actually made."""
-    claim = value.capture_claim
+    """Render a reveal, with each unsealed adjunct only when one exists."""
+    claim, scent = value.capture_claim, value.scent_emission
     return RevealWire(
         cursor=_cursor_wire(value.cursor),
         action=encode_action(value.action),
         hint=value.hint,
         capture_claim=None if claim is None else [claim.cell.row, claim.cell.col],
+        scent_emission=None if scent is None else encode_emission(scent),
     )
 
 

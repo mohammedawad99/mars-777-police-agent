@@ -51,13 +51,19 @@ async def declare(a: object, b: object, reveal_of: object) -> object:
 def move_claiming(cell: Position) -> object:
     """A police movement reveal that declares *cell* holds the thief."""
     return lambda prepared: Reveal(
-        CURSOR, prepared.reveal.action, prepared.reveal.hint, CaptureClaim(cell)
+        CURSOR,
+        prepared.reveal.action,
+        prepared.reveal.hint,
+        CaptureClaim(cell),
+        prepared.reveal.scent_emission,
     )
 
 
 def barrier_on(cell: Position) -> object:
     """A police barrier reveal whose public target is *cell*."""
-    return lambda prepared: Reveal(CURSOR, BarrierAction(cell), prepared.reveal.hint)
+    return lambda prepared: Reveal(
+        CURSOR, BarrierAction(cell), prepared.reveal.hint, None, prepared.reveal.scent_emission
+    )
 
 
 def test_a_true_same_cell_claim_answers_caught_over_the_real_wire(pair: tuple) -> None:

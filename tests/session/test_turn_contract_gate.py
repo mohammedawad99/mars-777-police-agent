@@ -19,7 +19,8 @@ from mars777_police.app.turn_contract_gate import require_counted_turn_contract
 from mars777_police.domain.scent_model_default import default_scent_model
 
 LEGACY = CompatibilityProfile.STRICT_COUNTED_MATCH
-CURRENT = CompatibilityProfile.STRICT_COUNTED_MATCH_TURN_OUTCOME_V1
+LEGACY_V1 = CompatibilityProfile.STRICT_COUNTED_MATCH_TURN_OUTCOME_V1
+CURRENT = CompatibilityProfile.STRICT_COUNTED_MATCH_TURN_OUTCOME_SCENT_V2
 
 
 def posture(profile: CompatibilityProfile) -> object:
@@ -37,6 +38,7 @@ def test_the_current_counted_posture_passes_the_gate() -> None:
     "profile",
     [
         LEGACY,
+        LEGACY_V1,
         CompatibilityProfile.LECTURER_REFERENCE_COMPATIBILITY,
         CompatibilityProfile.LECTURER_ATTACHMENT_COMPATIBILITY,
     ],

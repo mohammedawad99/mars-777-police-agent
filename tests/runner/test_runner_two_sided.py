@@ -17,6 +17,7 @@ from r16_builders import GROUP_A, GROUP_B
 from mars777_police.app.protocol_errors import AuthFailureError, StaleMessageError
 from mars777_police.app.sealed_record_values import ActorRole, Intent, SealedState
 from mars777_police.app.turn_cursor import TurnCursor
+from mars777_police.app.turn_service import InvalidActionError
 from mars777_police.transport.client import PeerClient
 from mars777_police.transport.peer_transport import FastMcpPeerTransport
 
@@ -72,24 +73,25 @@ def test_a_full_callback_turn_completes_across_two_real_sessions(pair: tuple) ->
     assert b.turn.evidence and b.turn.evidence[0].legal is True
 
 
-def test_a_game_illegal_reveal_returns_false_over_the_real_path(pair: tuple) -> None:
-    """Protocol fine, move illegal: `False`, never an exception."""
+def test_a_game_illegal_action_is_refused_before_anything_is_sent(pair: tuple) -> None:
+    """The sender validates its own action now: nothing is sealed and nothing sent."""
     a, b = pair
 
-    async def run() -> bool:
+    async def run() -> None:
         a_to_b = await step0_on(a, b.url)
-        b_to_a = await step0_on(b, a.url)
-        prepared = await a.runner(a_to_b).open_turn(
-            state=sealed(ActorRole.POLICE),
-            action=turn_builders.illegal_reveal().action,
-            intent=Intent.TRUTH,
-            hint="heading south",
-            cursor=CURSOR,
-        )
-        await b.runner(b_to_a).acknowledge_peer_turn()
-        return await a.runner(a_to_b).reveal_turn(prepared)
+        await step0_on(b, a.url)
+        with pytest.raises(InvalidActionError, match="rejected move"):
+            await a.runner(a_to_b).open_turn(
+                state=sealed(ActorRole.POLICE),
+                action=turn_builders.illegal_reveal().action,
+                intent=Intent.TRUTH,
+                hint="heading south",
+                cursor=CURSOR,
+            )
 
-    assert asyncio.run(run()).accepted is True  # the receiver cannot judge it live
+    asyncio.run(run())
+    assert a.turn.local_commitment is None, "no commitment was registered"
+    assert b.turn.peer_commitment is None, "and none reached the peer"
 
 
 def test_a_reveal_before_the_peer_acknowledged_is_refused(pair: tuple) -> None:

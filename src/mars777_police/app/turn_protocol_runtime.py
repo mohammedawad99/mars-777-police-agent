@@ -5,43 +5,43 @@ Stage 4E-R18-R1-CR2 established that `Commitment`, `Acknowledgement` and
 transport. This is that owner.
 
 **It does not open the commitment, and cannot.** The sealed record has eight
-members; at reveal time three of them are still secret - the `nonce` until the
-final nonce reveal, and `state` and `intent` until the audit material. So there
-is nothing to hash here, and `compute_commitment`/`commitment_matches` are not
-called. Ch 5 §5.3.2 / Figure 6 and Ch 5 §5.4 put the recomputation at the final
-audit, which is exactly what makes the scheme work: a peer may reveal
-inconsistent material during live play and the proof arrives later. What this
-runtime does instead is **correlate** - this reveal belongs to the cursor whose
-commitment and acknowledgement it already recorded - and enforce ordering.
+members; at reveal time three are still secret - the `nonce` until the final
+nonce reveal, `state` and `intent` until the audit material - so there is nothing
+to hash here. Ch 5 §5.3.2 / Figure 6 and §5.4 put the recomputation at the final
+audit, which is what makes the scheme work: a peer may reveal inconsistent
+material live and the proof arrives later. This runtime **correlates** instead -
+this reveal belongs to the cursor whose commitment it recorded - and orders.
 
 **An outcome is not a refusal.** `TurnOutcome` reports what a public fact
 allowed and what the capture question answered; every protocol failure - wrong
-phase, wrong cursor, wrong role, no commitment, a duplicate - raises instead.
-Returning one for the other would tell a caller "you played illegally" when the
-truth is "you are out of order", and `E-HASH-MISMATCH` is unreachable here.
+phase, cursor, role, missing commitment, duplicate - raises instead, and
+`E-HASH-MISMATCH` is unreachable here.
 
 **It owns no game rule and no step counter.** Legality and truth belong to
 `LocalTurnService` and `domain.truth`; the cursor advances from the
-`completed_step` that service reports, so there is no second source of truth.
+`completed_step` that service reports.
 
 **Acknowledgements are retained, not re-validated.** Both directions append one
-`AckEvidence` *after* the existing checks pass, so a stale, duplicated or
-mismatched acknowledgement - which raises above - can never leave a log event
-behind. Nothing is added to the wire message: the acking role is this runtime's
-own locked role, or its complement.
-"""
+`AckEvidence` *after* the existing checks pass, so a stale or mismatched
+acknowledgement can never leave a log event behind.
 
-from dataclasses import dataclass, field
+**The posture is part of the contract.** `..._SCENT_V2` reveals carry one
+emission and pre-V2 reveals carry none; `require_scent_shape` refuses either
+violation as malformed, and what arrives is retained, never recomputed."""
+
+from dataclasses import dataclass, field, replace
 
 from ..domain.truth import LocalTruth
 from .capture_observation import observe_reveal, require_claim_shape
 from .capture_transcript import TurnTranscript
 from .capture_values import TurnOutcome
+from .interop_profiles import CompatibilityProfile
 from .peer_turn_messages import Acknowledgement, Commitment, Reveal
 from .protocol_errors import StaleMessageError
 from .sealed_record_values import ActorRole
 from .turn_cursor import TurnCursor
 from .turn_protocol_state import AckEvidence, PendingCommitment, TurnEvidence, TurnPhase
+from .turn_scent_contract import SCENT_POSTURE, require_scent_shape
 from .turn_service import LocalTurnService
 
 
@@ -64,6 +64,8 @@ class TurnProtocolRuntime:
     evidence: tuple[TurnEvidence, ...] = field(default=())
     acks: tuple[AckEvidence, ...] = field(default=())
     capture: TurnTranscript = field(default_factory=TurnTranscript)
+    posture: CompatibilityProfile = field(default=SCENT_POSTURE)
+    """The negotiated turn contract this session speaks; V2 requires scent."""
 
     @property
     def peer_role(self) -> ActorRole:
@@ -114,23 +116,22 @@ class TurnProtocolRuntime:
     def accept_reveal(self, reveal: Reveal) -> TurnOutcome:
         """Observe the peer's reveal and answer what we can honestly know.
 
-        Two things this deliberately does **not** do. It never applies the
-        peer's action to our own truth - their move is theirs, and moving our
-        piece with it was the defect R8 removed. And it never claims their
-        action was spatially legal: their pre-action cell is sealed until the
-        final audit, so `accepted` reports public facts only.
+        Two things this deliberately does **not** do. It never applies the peer's
+        action to our own truth - moving our piece with it was the defect R8
+        removed - and it never claims their action was spatially legal: their
+        pre-action cell is sealed until the final audit.
         """
         pending = self.peer_commitment
         if self.phase is not TurnPhase.AWAITING_REVEAL or pending is None:
             raise _refuse(f"a reveal cannot arrive while {self.phase.value}")
         self._require_cursor(reveal.cursor, "reveal")
         require_claim_shape(reveal, self.peer_role, _refuse)
+        require_scent_shape(reveal, self.posture)
         outcome, self.truth = observe_reveal(reveal, self.truth)
-        self.evidence += (
-            TurnEvidence(
-                pending.cursor, pending.h_commit, reveal.action, reveal.hint, outcome.accepted
-            ),
+        witnessed = TurnEvidence(
+            pending.cursor, pending.h_commit, reveal.action, reveal.hint, outcome.accepted
         )
+        self.evidence += (replace(witnessed, scent=reveal.scent_emission),)
         self.capture.observe_inbound(reveal, outcome)
         self.phase = TurnPhase.CONSUMED
         return outcome

@@ -6,6 +6,7 @@ piece - the three capture routes are the only things a reveal can change.
 """
 
 import pytest
+import turn_builders
 from turn_builders import CENTRE, advanced, commitment, legal_reveal, runtime
 
 from mars777_police.app.capture_values import CaptureAnswer, CaptureClaim
@@ -27,7 +28,13 @@ def thief() -> object:
 def reveal_with(claim: Position | None = None, target: Position | None = None) -> Reveal:
     """A peer reveal: a movement with an optional claim, or a barrier."""
     action = BarrierAction(target) if target is not None else legal_reveal().action
-    return Reveal(START, action, "closing in", None if claim is None else CaptureClaim(claim))
+    return Reveal(
+        START,
+        action,
+        "closing in",
+        None if claim is None else CaptureClaim(claim),
+        turn_builders.emission(),
+    )
 
 
 def test_a_claim_on_our_cell_answers_caught() -> None:

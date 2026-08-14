@@ -65,7 +65,7 @@ PROFILES = InteropProfileSet(
     KEY_ID,
     CommitmentCodec.STRICT_PROJECT_COMMITMENT,
     ResultProfile.STRICT_PROJECT_RESULT,
-    CompatibilityProfile.STRICT_COUNTED_MATCH_TURN_OUTCOME_V1,
+    CompatibilityProfile.STRICT_COUNTED_MATCH_TURN_OUTCOME_SCENT_V2,
     ToolNameProfile.PROJECT_LOGICAL_OPERATIONS,
     CanonicalizationProfile.CANONICAL_JSON_V1,
     SealedRecordProfile.SEALED_RECORD_V1,

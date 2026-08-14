@@ -110,7 +110,7 @@ def test_reveal_round_trips_and_never_carries_a_nonce() -> None:
     assert rebuilt == original
     wire = encode_reveal(original).model_dump(mode="json")
     assert "nonce" not in str(wire)
-    assert set(wire) == {"cursor", "action", "hint", "capture_claim"}
+    assert set(wire) == {"cursor", "action", "hint", "capture_claim", "scent_emission"}
     assert wire["capture_claim"] is None
 
 

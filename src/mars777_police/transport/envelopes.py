@@ -22,11 +22,13 @@ from pydantic import BaseModel, Field
 from .wire_config import ConfigLockEvidenceWire, ConfigProposalWire
 from .wire_config_sections import WIRE
 from .wire_declaration import Step0ExchangeWire
+from .wire_final import (
+    FinalNonceRevealWire,
+    ResultAgreementWire,
+)
 from .wire_turn import (
     AcknowledgementWire,
     CommitmentWire,
-    FinalNonceRevealWire,
-    ResultAgreementWire,
     RevealWire,
 )
 

@@ -1,13 +1,10 @@
-"""Wire DTOs for the turn families and the end-of-series families.
+"""Wire DTOs for the three turn families and the result of a revealed turn.
 
-`Reveal` carries the cursor, the action and the hint - **and no nonce**. That is
-not an oversight to be fixed later: Ch 5 §5.3.2 withholds the nonce until final
-audit, so a nonce member here would break commit-reveal itself. The nonces travel
-exactly once, in `final_nonce_reveal`.
-
-The action is a tagged union with the same two-key shape the sealed record uses,
-so a movement token and a barrier cell are never told apart by guessing which
-field happens to be present.
+`Reveal` carries the cursor, the action and the hint - **and no nonce**: Ch 5
+§5.3.2 withholds it until final audit, so a nonce member here would break
+commit-reveal itself, and nonces travel exactly once in `final_nonce_reveal`. The
+action is a tagged union with the sealed record's two-key shape, so a movement
+token and a barrier cell are never told apart by guessing.
 """
 
 from typing import Literal
@@ -15,7 +12,8 @@ from typing import Literal
 from pydantic import BaseModel
 
 from .wire_config_sections import WIRE
-from .wire_scalars import DigestText, NonceText, NonEmptyText, TimestampText
+from .wire_scalars import DigestText, NonEmptyText
+from .wire_scent_turn import ScentEmissionWire
 
 
 class TurnCursorWire(BaseModel):
@@ -71,10 +69,12 @@ class AcknowledgementWire(BaseModel):
 
 
 class RevealWire(BaseModel):
-    """`Reveal(cursor, action, hint)` plus the optional capture claim.
+    """`Reveal(cursor, action, hint)` plus the two unsealed adjuncts.
 
     No nonce: the outcome is the *operation result*, never a request member.
     `capture_claim` follows the reference's `[row, col]`; `null` means no claim.
+    `scent_emission` is `null` before `..._SCENT_V2` and present under it - which
+    is legal is the runtime's decision, not this schema's.
     """
 
     model_config = WIRE
@@ -83,6 +83,7 @@ class RevealWire(BaseModel):
     action: ActionWire
     hint: str
     capture_claim: list[int] | None = None
+    scent_emission: ScentEmissionWire | None = None
 
 
 class TurnOutcomeWire(BaseModel):
@@ -96,55 +97,3 @@ class TurnOutcomeWire(BaseModel):
 
     accepted: bool
     capture: str
-
-
-class NonceRevealEntryWire(BaseModel):
-    """One disclosed nonce, bound to the turn it belongs to."""
-
-    model_config = WIRE
-
-    cursor: TurnCursorWire
-    nonce: NonceText
-
-
-class FinalNonceRevealWire(BaseModel):
-    """The batched end-of-sub-game nonce disclosure."""
-
-    model_config = WIRE
-
-    entries: list[NonceRevealEntryWire]
-
-
-class ResultContributionEntryWire(BaseModel):
-    """One sub-game of a participant's sender-owned contribution."""
-
-    model_config = WIRE
-
-    sub_game: int
-    github_commit: str
-    tokens: int
-
-
-class ResultContributionWire(BaseModel):
-    """Everything one participant owns that the opponent cannot derive."""
-
-    model_config = WIRE
-
-    group_id: NonEmptyText
-    entries: list[ResultContributionEntryWire]
-
-
-class ResultAgreementWire(BaseModel):
-    """Identity, the shared timestamp, then the sender's own contribution.
-
-    No `result_sha256`: the common digest cannot exist until a peer holds the
-    opponent's contribution, so it is the operation's *response*.
-    """
-
-    model_config = WIRE
-
-    game_id: NonEmptyText
-    game_uid: NonEmptyText
-    declaration_ref: NonEmptyText
-    timestamp: TimestampText
-    contribution: ResultContributionWire

@@ -34,6 +34,7 @@ from mars777_police.domain.config_model import GridConfig, SeriesConfig
 from mars777_police.domain.config_sections import BoardAndAgentsTerms
 from mars777_police.domain.rules import Move, destination_of
 from mars777_police.domain.scent_model_default import default_scent_model
+from mars777_police.domain.scent_observation import emission_of
 from mars777_police.domain.truth import LocalTruth
 from mars777_police.infra.artifacts import JsonArtifactStore
 from mars777_police.protocol.audit_commitment import CommitmentRecomputer
@@ -164,6 +165,23 @@ def placed(walls: tuple[Position, ...], action: PhysicalAction) -> tuple[Positio
     return walls
 
 
+def own_truth(cell: Position, walls: tuple[Position, ...]) -> LocalTruth:
+    """This side's own truth after the steps it has actually played.
+
+    The harness carries it because nothing in production does yet: an agent that
+    adopts a turn's result is the game owner a later checkpoint will build. Until
+    then a caller playing more than one step has to hand the next turn the cell
+    and the barriers its own earlier actions produced, or the sender would
+    validate this step against where it started.
+    """
+    terms = CONFIG.board_and_agents
+    empty = GridConfig.from_grid_size(terms.grid_size, terms.axis_start_index).to_board()
+    return LocalTruth(
+        board=Board(rows=empty.rows, cols=empty.cols, blocked=frozenset(walls)),
+        own_position=cell,
+    )
+
+
 async def one_turn(
     mover: SeriesRuntime,
     waiter: SeriesRuntime,
@@ -190,6 +208,43 @@ async def one_turn(
     )
     await waiter.composition.peer_runner.acknowledge_peer_turn()
     return await mover.composition.peer_runner.reveal_turn(prepared)
+
+
+async def one_unvalidated_turn(
+    mover: SeriesRuntime,
+    waiter: SeriesRuntime,
+    role: ActorRole,
+    cursor: TurnCursor,
+    action: PhysicalAction,
+    cell: Position | None = None,
+    barriers: tuple[Position, ...] = (),
+) -> TurnOutcome:
+    """One turn from a peer that does **not** validate its own action first.
+
+    `PeerRunner.open_turn` projects this turn's scent before it seals anything,
+    so an agent running the production path can no longer send an action its own
+    rules refuse - which is the point of that guard. A misbehaving opponent is
+    still possible, and the semantic audit exists for exactly that peer, so this
+    harness reaches past the runner: it seals through the real evidence owner,
+    registers and sends the real commitment, and reveals over the real transport
+    with the emission the sender's pre-action cell would produce.
+    """
+    composition = mover.composition
+    model = composition.pregame.lock.scent_model
+    source = cell or POSITIONS[role]
+    emission = emission_of(board(), model.kernel, source, model.params)
+    prepared = composition.runtime_context.current_evidence().prepare_turn(
+        state=SealedState(DIGEST, source, barriers, cursor.step, role),
+        action=action,
+        intent=Intent.TRUTH,
+        hint=HINT,
+        cursor=cursor,
+        scent=emission,
+    )
+    composition.runtime_context.current_turn().register_local_commitment(prepared.commitment)
+    await composition.peer_transport.send_commitment(prepared.commitment)
+    await waiter.composition.peer_runner.acknowledge_peer_turn()
+    return await composition.peer_runner.reveal_turn(prepared)
 
 
 def agents(port_a: int, port_b: int) -> tuple[AgentRuntime, AgentRuntime]:

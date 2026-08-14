@@ -104,6 +104,7 @@ def test_an_ack_is_a_frozen_value_that_carries_only_its_three_facts() -> None:
         "action",
         "hint",
         "legal",
+        "scent",
     ]
 
 
