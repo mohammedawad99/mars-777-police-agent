@@ -1,19 +1,17 @@
 """Making the composed agent live, and putting it away again.
 
-Stage 5-R5 built the object graph and started nothing. This starts it: the server
-listens, the composed `PeerClient` holds its session, both undone in reverse.
-
-**Readiness is a bound socket, not a delay.** We bind it ourselves and hand it to
-`run_http_async`, so "address already in use" raises in *this* frame, and a peer
-connecting the instant `serve` returns is queued by the kernel. One scheduling
-turn - not a sleep - then lets a server that dies in its first step say so,
-instead of `SERVING` being reported over a corpse.
+Stage 5-R5 built the object graph and started nothing. This starts it: the
+server listens, the `PeerClient` holds its session, both undone in reverse.
+**Readiness is a bound socket, not a delay.** We bind it ourselves and hand it
+to `run_http_async`, so "address already in use" raises in *this* frame, a peer
+connecting the instant `serve` returns is queued by the kernel, and one
+scheduling turn lets a server that dies in its first step say so.
 
 **Serving and connecting are separate, because the API made them so.**
 `PeerClient.__aenter__` opens a real connection, so it cannot succeed until the
 opponent is listening - welded together, two agents could never boot each other.
-No Step-0 is sent; and if the client fails, the server stops before it escapes.
-"""
+`connect` keeps its one-shot contract; `connect_until_ready` is the startup
+variant, and reopens only the session."""
 
 import asyncio
 import socket
@@ -23,26 +21,11 @@ from enum import StrEnum
 
 from .app.protocol_errors import LocalDefectError
 from .composition_values import AgentComposition
+from .ingress_release import release
+from .startup_budget import StartupBudget
 
 BACKLOG = 128
 """Pending connections the kernel holds before the server accepts them."""
-
-
-async def release(task: asyncio.Task[None] | None, listener: socket.socket | None) -> None:
-    """Stop a served ingress, tolerating a partially-started one.
-
-    Either may be absent: cleanup must be callable from every point a startup can
-    fail at. The socket closes in a `finally` - uvicorn never closes one it was
-    handed - and only `CancelledError` is swallowed, so a task that died of
-    anything else still raises here."""
-    try:
-        if task is not None:
-            task.cancel()
-            with suppress(asyncio.CancelledError):
-                await task
-    finally:
-        if listener is not None:
-            listener.close()
 
 
 class RuntimeState(StrEnum):
@@ -78,8 +61,8 @@ class AgentRuntime:
         return sock
 
     async def serve(self) -> None:
-        """Bring up our inbound ingress, or fail with the reason it did not: one
-        `asyncio.wait(timeout=0)` turn is all a doomed server needs to have died."""
+        """Bring up our inbound ingress: one `asyncio.wait(timeout=0)` turn is all a
+        doomed server needs to have died in."""
         if self.state is not RuntimeState.NEW:
             raise LocalDefectError(f"an agent runtime cannot serve while {self.state.value}")
         listener = self._listen()
@@ -94,12 +77,29 @@ class AgentRuntime:
             raise LocalDefectError("the inbound server stopped before it served")
         self.server_task, self.listener, self.state = task, listener, RuntimeState.SERVING
 
+    async def _open_session(self) -> None:
+        """The one call that establishes the outbound session, and nothing else."""
+        await self.composition.peer_client.__aenter__()
+
     async def connect(self) -> None:
-        """Hold one persistent outbound session open to the opponent."""
+        """Hold one persistent outbound session open to the opponent - one attempt."""
         if self.state is not RuntimeState.SERVING:
             raise LocalDefectError(f"an agent runtime cannot connect while {self.state.value}")
         try:
-            await self.composition.peer_client.__aenter__()
+            await self._open_session()
+        except BaseException:
+            await self.stop()
+            raise
+        self.state = RuntimeState.RUNNING
+
+    async def connect_until_ready(self, budget: StartupBudget) -> None:
+        """Connect, tolerating a peer that has not started listening **yet**. The
+        failure path is deliberately `connect`'s: stopped, and the last failure
+        escapes."""
+        if self.state is not RuntimeState.SERVING:
+            raise LocalDefectError(f"an agent runtime cannot connect while {self.state.value}")
+        try:
+            await budget.keep_trying(self._open_session)
         except BaseException:
             await self.stop()
             raise
@@ -111,8 +111,8 @@ class AgentRuntime:
         await self.connect()
 
     async def wait_closed(self) -> None:
-        """Wait until the served ingress ends - a Ctrl-C makes the server, which
-        installs its own interrupt handling, return normally and shut down quietly."""
+        """Wait until the served ingress ends - the server installs its own
+        interrupt handling, so a Ctrl-C returns normally here."""
         task = self.server_task
         if task is None:
             raise LocalDefectError("the runtime is not serving")
@@ -134,7 +134,7 @@ class AgentRuntime:
 
     @property
     def address(self) -> str:
-        """The ingress this runtime is serving, once it is bound."""
+        """The ingress this runtime serves, once bound."""
         if self.listener is None:
             raise LocalDefectError("the runtime is not serving")
         host, port = self.listener.getsockname()[:2]

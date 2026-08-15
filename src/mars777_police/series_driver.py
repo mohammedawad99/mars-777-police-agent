@@ -42,7 +42,7 @@ from .app import artifact_store as artifacts
 from .app.audit_runtime import AuditRuntime
 from .app.config_rules import limits_of, opening_truth, rules_of
 from .app.outbound_evidence_runtime import OutboundEvidenceRuntime
-from .app.pregame_rounds import open_next_round
+from .app.round_opening import open_round_for
 from .app.sealed_record_values import ActorRole
 from .app.series_agreements import agree_config, agree_result
 from .app.state_machine import ProtocolPhase
@@ -83,10 +83,14 @@ class SeriesDriver:
         adoption and both sides refused each other. The config is this series'
         boot input, so the round can hold it from the moment it exists - the
         convergence check still happens through the proposal exchange.
+
+        **Opening the round we are already on does nothing**, because two real
+        processes cannot agree who opens first: the peer may have proposed for
+        `gNN` before we got here, and re-opening would discard the proposal it
+        will never send again. `open_round_for` owns that decision, so no guard
+        and no reset rule had to change to make either order safe.
         """
-        pregame = self.series.composition.pregame
-        open_next_round(pregame, self.series.sub_game)
-        pregame.adopt_config(self.config)
+        open_round_for(self.series.composition.pregame, self.series.sub_game, self.config)
 
     async def play_series(self) -> artifacts.StoredArtifact:
         """Play six sub-games and return the stored official result."""
@@ -109,6 +113,8 @@ class SeriesDriver:
         outcome = await self._play_rounds(evidence, sub_game)
         await runner.send_final_nonce_reveal()
         await runner.send_audit_disclosure()
+        # the review replays the peer's own disclosed play: sending ours proves nothing
+        await self._await(audit.milestones.complete)
         self.series.close_sub_game(outcome)
         if self.series.orchestrator.machine.phase is not ProtocolPhase.SERIES_COMPLETE:
             self.open()

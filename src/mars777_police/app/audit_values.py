@@ -18,6 +18,7 @@ from enum import StrEnum
 
 from .protocol_values import FinalAuditVerdict, Sha256Digest
 from .sealed_record_values import ActorRole
+from .turn_protocol_state import TurnEvidence
 
 
 class AuditPhase(StrEnum):
@@ -69,3 +70,17 @@ class AuditOutcome:
     def verified(self) -> bool:
         """Whether this sub-game may proceed to result agreement."""
         return self.verdict is FinalAuditVerdict.VERIFIED_OK
+
+
+def require_aggregate(evidence: tuple[TurnEvidence, ...], sub_game: int) -> None:
+    """Refuse an evidence aggregate that repeats a cursor or leaves its sub-game.
+
+    A value rule, not an audit decision: it is the same check whether the
+    aggregate is being built at construction or grown turn by turn, and both
+    callers must apply it identically.
+    """
+    seen = [record.cursor for record in evidence]
+    if len(set(seen)) != len(seen):
+        raise ValueError("the evidence aggregate carries a duplicate cursor")
+    if any(cursor.sub_game != sub_game for cursor in seen):
+        raise ValueError("every evidence cursor must belong to this sub-game")

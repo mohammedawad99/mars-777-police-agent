@@ -140,3 +140,25 @@ def test_boot_binds_no_game_runtime_and_no_result() -> None:
             await runtime.stop()
 
     asyncio.run(run())
+
+
+def test_waiting_on_a_served_ingress_returns_when_it_ends() -> None:
+    """`wait_closed` parks on the server task and returns once it is over.
+
+    Boot no longer parks here - it plays a series and stops - but the operation
+    is still the lifecycle owner's way to hand a process to the server, so the
+    path that actually awaits is exercised rather than left to a caller.
+    """
+    runtime = build.runtime_for(build.agent())
+
+    async def serve_then_end() -> None:
+        await runtime.serve()
+        try:
+            task = runtime.server_task
+            assert task is not None
+            task.cancel()
+            await runtime.wait_closed()
+        finally:
+            await runtime.stop()
+
+    asyncio.run(serve_then_end())

@@ -4,8 +4,9 @@
 
 - **Group code:** `MaRs-777`
 - **Repository role:** **POLICE**
-- **Status:** **Protocol, evidence stack and a complete six-sub-game autonomous
-  series implemented; the permanent CLI autonomous boot is not.** See
+- **Status:** **A permanent autonomous agent: `python -m …` boots, plays a
+  complete six-sub-game series against a real peer process and exits.** What is
+  still missing is a counted match against another group's agent. See
   *Implementation status* below for the exact boundary.
 
 This repository is the **POLICE** agent. Its sibling, the **THIEF** agent,
@@ -15,9 +16,9 @@ two repositories never share live state.
 ## Implementation status
 
 Stated precisely, because "done" and "not done" are both misleading here. The
-agent is a complete, authenticated **responder**: it boots, serves its four
-FastMCP tools and answers a peer correctly. It does **not** yet start or play a
-game of its own accord.
+agent is autonomous: it boots, serves its four FastMCP tools, reaches its
+configured opponent, plays a whole series and stops. What it has **not** done is
+play a counted match against another group's real agent.
 
 **Implemented and covered by tests**
 
@@ -51,12 +52,25 @@ game of its own accord.
   the peer and persists it — exactly `g01`…`g06`, six natural outcomes and the
   fourteen official files, with no fixture supplying an action, an outcome or a
   lifecycle call
+- **permanent autonomous boot** (Stage 6C-C2): `python -m …` serves, opens a
+  bounded outbound session to the configured opponent - retrying only while the
+  peer is not listening yet - exchanges Step-0, invokes exactly one
+  `SeriesDriver`, and stops when the series ends. The boot document carries this
+  side's opening `NegotiatedConfig` candidate and `MARS777_ARTIFACT_ROOT` says
+  where its own official files go; neither crosses the wire as anything new.
+  **Proved as real OS processes**: the shipped CLI plays a full `g01`…`g06`
+  series over FastMCP against a separate process, writes its fourteen artifacts
+  and exits 0, and a legal-but-different boot config is still refused by the
+  existing config lock
 
 **Not yet implemented**
 
-- the **permanent CLI** that would run the series as a real process: the series
-  driver is production code and is exercised in-process, but `python -m …` still
-  only serves and waits, and the two-OS-process proof is Stage 6C-C2
+- a **counted match against another group's agent**. The process proof above
+  uses a *synthetic distinct-group non-counted integration opponent*: our own
+  Police and Thief repositories are two roles of **MaRs-777**, and Step-0
+  correctly refuses a peer that authors our own participant subtree, so they
+  cannot play each other. A counted result needs an externally supplied
+  different-group counterparty
 - belief / uncertainty modelling over the opponent's scent
 - the natural-language hint channel (the field is sealed; nothing writes it)
 - accumulated scent-field evolution and full-turn decay

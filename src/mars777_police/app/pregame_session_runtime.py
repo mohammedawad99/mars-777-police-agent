@@ -7,16 +7,16 @@ profile comparison, proposal construction or phase machine - so every refusal
 below is raised by the runtime it delegates to.
 
 **The authenticated peer identity is an output, never an input.** `accept_step0`
-returns the `group_id` the keyed proof verified, only *after* it did.
+returns the `group_id` the keyed proof verified, only *after* it did - and
+signals `step0_seen` only after that identity is installed, so a coordinator
+that wakes reads a merged declaration rather than a promise of one.
 
 **One instance per authenticated series, one round at a time.** The declaration
-and the verified peer outlive every sub-game; the two round runtimes, `opening`,
-`seen`, the config, the verified lock and the round's milestones are sub-game
-facts `open_round` replaces.
+and the verified peer outlive every sub-game; the round runtimes, `opening`,
+`seen`, the config, the lock and the milestones are what `open_round` replaces.
 
 **The lock digest is ours, never theirs.** `adopt_config` registers the config
-this side agreed and the digest comes from that, through the port
-`ConfigLockRuntime` holds.
+this side agreed and the digest comes from that, through `ConfigLockRuntime`.
 
 **The agreed scent model is a series fact too** (SCENT-001): `scent_freeze` is
 established by the first sub-game whose lock verified, then required unchanged
@@ -65,6 +65,7 @@ class PregameSessionRuntime:
         _, team = sole_subtree(exchange.declaration)
         self.declaration = merged
         self.peer = team.group_id
+        self.milestones.step0_seen.set()
         return team.group_id
 
     def open_round(self, negotiation: ConfigNegotiationRuntime, lock: ConfigLockRuntime) -> None:
@@ -72,10 +73,10 @@ class PregameSessionRuntime:
 
         The series survives; the round does not. The declaration, the peer and
         the frozen scent model are kept, while `opening`, `seen`, the config and
-        the lock this round verified belonged to one sub-game: carrying `seen`
-        would refuse the opponent's legitimate `g02` opening, carrying `opening`
-        would disable the proposer rule, and carrying the evidence would let
-        `g02`'s artifact report `g01`'s lock.
+        the lock belonged to one sub-game: carrying `seen` would refuse the
+        opponent's legitimate `g02` opening, carrying `opening` would disable the
+        proposer rule, and carrying the evidence would let `g02`'s artifact
+        report `g01`'s lock.
 
         **The round comes from the caller**, already built, so nothing here
         guesses a `sub_game`; validation precedes every assignment.
@@ -112,9 +113,8 @@ class PregameSessionRuntime:
 
         The round state has to move for a proposal we send, not only for one we
         receive: otherwise `opening` would still be true after we opened the
-        exchange - judging the peer's reply against the proposer rule twice. Our
-        identity comes from the negotiation runtime, and `propose` runs first: a
-        refused proposal leaves the round untouched.
+        exchange - judging the peer's reply against the proposer rule twice.
+        `propose` runs first, so a refused proposal leaves the round untouched.
         """
         us = self.negotiation.group_id
         if us in self.seen:

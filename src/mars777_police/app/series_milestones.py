@@ -24,7 +24,14 @@ from dataclasses import dataclass, field
 
 @dataclass(slots=True)
 class PregameMilestones:
-    """One config round's two inbound arrivals: a proposal, then a lock."""
+    """The pregame arrivals a coordinator waits for: Step-0, a proposal, a lock."""
+
+    step0_seen: asyncio.Event = field(default_factory=asyncio.Event)
+    """The peer's Step-0 verified - so the merged declaration names both sides.
+
+    Series-scoped, unlike the two below, and it is reset with them only because
+    the round holds them together. Nothing re-waits on it: `accept_step0`
+    refuses a second Step-0 outright, so a later round could not set it again."""
 
     proposal_seen: asyncio.Event = field(default_factory=asyncio.Event)
     """The peer proposed for this round - so `opening` is settled and we may too."""

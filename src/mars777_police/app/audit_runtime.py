@@ -14,8 +14,9 @@ from dataclasses import dataclass, field
 
 from .audit_capture import capture_rows
 from .audit_disclosure import turns
+from .audit_milestones import AuditMilestones
 from .audit_scent import scent_rows
-from .audit_values import AuditOutcome, AuditPhase, SubGameContext
+from .audit_values import AuditOutcome, AuditPhase, SubGameContext, require_aggregate
 from .audit_verification import by_cursor, require_identity, verdict_for
 from .capture_transcript import CaptureRecord, require_same_scent, require_same_transcript
 from .peer_final_messages import FinalNonceReveal
@@ -42,16 +43,10 @@ class AuditRuntime:
     acks: tuple[AckEvidence, ...] = field(default=())  # log attribution, never audited
     capture: tuple[CaptureRecord, ...] = field(default=())  # what we watched happen
     semantic: SemanticFinding = field(default=CONSISTENT)  # the replay's finding
+    milestones: AuditMilestones = field(default_factory=AuditMilestones)  # set last, never truth
 
     def __post_init__(self) -> None:
-        self._require_aggregate(self.evidence)
-
-    def _require_aggregate(self, evidence: tuple[TurnEvidence, ...]) -> None:
-        seen = [record.cursor for record in evidence]
-        if len(set(seen)) != len(seen):
-            raise ValueError("the evidence aggregate carries a duplicate cursor")
-        if any(cursor.sub_game != self.context.sub_game for cursor in seen):
-            raise ValueError("every evidence cursor must belong to this sub-game")
+        require_aggregate(self.evidence, self.context.sub_game)
 
     def observe(
         self,
@@ -62,7 +57,7 @@ class AuditRuntime:
         """Adopt a finished turn's evidence, its acks and what it asked about capture."""
         if self.phase is not AuditPhase.AWAITING_NONCES:
             raise StaleMessageError(f"a turn cannot be observed while {self.phase.value}")
-        self._require_aggregate(self.evidence + evidence)
+        require_aggregate(self.evidence + evidence, self.context.sub_game)
         self.evidence += evidence
         self.acks += acks
         self.capture += capture
@@ -82,18 +77,18 @@ class AuditRuntime:
             ScentRecord(one.cursor, one.scent) for one in self.evidence if one.scent is not None
         )
 
-    def accept_final_nonce_reveal(self, disclosure: FinalNonceReveal, sender_id: str) -> None:
+    def accept_final_nonce_reveal(self, reveal: FinalNonceReveal, sender_id: str) -> None:
         """Adopt the peer's batched nonce disclosure for this sub-game."""
         if self.phase is not AuditPhase.AWAITING_NONCES:
             raise StaleMessageError(f"a nonce batch cannot arrive while {self.phase.value}")
         if sender_id != self.context.peer_group_id:
             raise StaleMessageError("the nonce batch did not come from the expected peer")
-        cursors = [entry.cursor for entry in disclosure.entries]
+        cursors = [entry.cursor for entry in reveal.entries]
         if len(set(cursors)) != len(cursors):
             raise StaleMessageError("the nonce batch repeats a cursor")
         if tuple(sorted(cursors, key=lambda c: c.step)) != self.expected:
             raise StaleMessageError("the nonce batch does not match the played turns")
-        self.nonces = {entry.cursor: entry.nonce for entry in disclosure.entries}
+        self.nonces = {entry.cursor: entry.nonce for entry in reveal.entries}
         self.phase = AuditPhase.AWAITING_DISCLOSURE
 
     def accept_audit_disclosure(self, document: dict[str, object]) -> None:
@@ -109,6 +104,7 @@ class AuditRuntime:
         )
         self.disclosure = dict(document)
         self.phase = AuditPhase.COMPLETE
+        self.milestones.complete.set()
 
     def adopt_semantic(self, finding: SemanticFinding) -> None:
         """Adopt the replay's finding about the log this audit just verified.
@@ -140,7 +136,7 @@ class AuditRuntime:
 
     @property
     def verdict(self) -> FinalAuditVerdict | None:
-        """The local verdict, or `None` until the audit completes."""
+        """The local verdict, `None` until the audit completes."""
         return None if self.outcome is None else self.recorded_outcome.verdict
 
     @property

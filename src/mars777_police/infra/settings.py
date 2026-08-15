@@ -6,27 +6,22 @@
 `CONFIG_ARCHITECTURE.md` fixes the precedence: secrets are **environment only**,
 and a missing required secret refuses the process rather than defaulting.
 `STATE_MACHINE.md` makes BOOT's entry condition exactly "settings loaded, key
-present", with "abort cleanly" on failure - which is why every refusal below
-happens at load time and none of it is deferred.
+present", with "abort cleanly" on failure, so every refusal happens at load
+time. The artifact root joins that row: local, required, never sent.
 
 **Reading the environment stops here.** `DEPENDENCY_RULES.md` D3 injects concrete
-values inward, so no `app`, `domain` or `protocol` module ever consults
-`os.environ`; they receive already-validated values. There is no global cache,
-no singleton and no service locator - `load` returns a frozen value and the
-caller owns it.
+values inward, so no `app`, `domain` or `protocol` module consults `os.environ`.
 
 **The variable names are a project implementation choice, not a source contract.**
-No current document freezes an operator vocabulary, and none of these names
-crosses the wire, enters a declaration or is negotiated, so a narrow `MARS777_`
-prefix (matching the existing live-test switch) introduces no external ambiguity.
-
+None crosses the wire, enters a declaration or is negotiated, so the narrow
+`MARS777_` prefix introduces no external ambiguity.
 **Identity that is already frozen is not an operator input.** `GROUP_CODE` is
-fixed in the package and `role` is checked against the role this repository *is*,
-so no environment value can boot the Police package as a Thief.
-"""
+fixed in the package and `role` is checked against this repository's own, so no
+environment value can boot the Police package as a Thief."""
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from ..app.auth_values import KeyId
 from ..app.public_endpoint_values import LocalPeerEndpoint, OpponentPublicPeerEndpoint
@@ -38,15 +33,15 @@ BIND_PORT = "MARS777_BIND_PORT"
 OPPONENT_ENDPOINT = "MARS777_OPPONENT_ENDPOINT"
 KEY_IDENTIFIER = "MARS777_KEY_ID"
 AUTH_SECRET = "MARS777_AUTH_SECRET"
+ARTIFACT_ROOT = "MARS777_ARTIFACT_ROOT"
 
 
 class SettingsError(Exception):
     """A local BOOT refusal: the operator environment cannot start this process.
 
-    Deliberately **not** a `PeerProtocolError`: no peer is involved, nothing
-    crosses `ToolError`, and it adds no identity to the frozen error register.
-    Its message names the **variable**, never the value, so a malformed secret
-    cannot be reconstructed from a stack trace.
+    Deliberately **not** a `PeerProtocolError`: no peer is involved and it adds
+    no identity to the frozen register. Its message names the **variable**, never
+    the value, so a secret cannot be rebuilt from a stack trace.
     """
 
 
@@ -55,9 +50,8 @@ class AuthSecret:
     """Pre-shared keyed-auth key material, wrapped so it cannot be printed.
 
     `repr` and `str` are overridden because a frozen dataclass would otherwise
-    render the key into any log line, exception or debugger frame that touched
-    the settings object. `reveal()` is the single deliberate escape hatch, used
-    once by composition to build the auth provider.
+    render the key into any log line or debugger frame that touched it.
+    `reveal()` is the single escape hatch, used once by composition.
     """
 
     _value: bytes = field(repr=False)
@@ -81,10 +75,10 @@ class AuthSecret:
 class RuntimeSettings:
     """Everything BOOT needs from the operator, validated and immutable.
 
-    Deliberately absent: `game_id`/`game_uid` (series identity, established at
-    Step-0, not a process input), anything owned by `NegotiatedConfig` (a
-    post-lock timeout must never be operator-overridable), and our **own public
-    endpoint** (discovered from the ingress, never trusted from the environment).
+    Deliberately absent: `game_id`/`game_uid` (established at Step-0), anything
+    owned by `NegotiatedConfig` (a post-lock timeout must never be operator
+    overridable), our **own public endpoint** (discovered from the ingress) and
+    `group_id`, which the package fixes and no environment may override.
     """
 
     role: ActorRole
@@ -92,6 +86,12 @@ class RuntimeSettings:
     key_id: KeyId
     secret: AuthSecret = field(repr=False)
     opponent: OpponentPublicPeerEndpoint | None = None
+    artifact_root: Path = field(default=Path())
+    """Where this process writes **its own** official files, and nothing else.
+
+    Local filesystem config: never negotiated, hashed, declared or sent. It is
+    required by the loader rather than defaulted, because a default would
+    scatter a series' official files into whichever directory we started in."""
 
 
 def _required(env: Mapping[str, str], name: str) -> str:
@@ -122,9 +122,8 @@ def _role(env: Mapping[str, str], expected: ActorRole) -> ActorRole:
 def load_runtime_settings(env: Mapping[str, str], *, expected_role: ActorRole) -> RuntimeSettings:
     """Load and validate the operator environment for **this** repository.
 
-    *env* is injected so tests never touch the real process environment, and so
-    nothing here is a hidden global. Unknown variables are ignored rather than
-    copied: the result carries only what BOOT asked for.
+    *env* is injected so tests never touch the real process environment. Unknown
+    variables are ignored: the result carries only what BOOT asked for.
     """
     role = _role(env, expected_role)
     try:
@@ -134,6 +133,7 @@ def load_runtime_settings(env: Mapping[str, str], *, expected_role: ActorRole) -
         raise
     except Exception:
         raise SettingsError(f"{BIND_HOST}/{BIND_PORT}/{KEY_IDENTIFIER} are not valid") from None
+    root = Path(_required(env, ARTIFACT_ROOT))
     advertised = env.get(OPPONENT_ENDPOINT)
     opponent = (
         OpponentPublicPeerEndpoint(advertised.strip())
@@ -141,5 +141,10 @@ def load_runtime_settings(env: Mapping[str, str], *, expected_role: ActorRole) -
         else None
     )
     return RuntimeSettings(
-        role, local, key_id, AuthSecret(_required(env, AUTH_SECRET).encode()), opponent
+        role,
+        local,
+        key_id,
+        AuthSecret(_required(env, AUTH_SECRET).encode()),
+        opponent,
+        artifact_root=root,
     )

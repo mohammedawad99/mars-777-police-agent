@@ -12,6 +12,7 @@ is the only thing that needs them written to disk and exported.
 import http.client
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -19,11 +20,13 @@ import time
 from pathlib import Path
 
 import composed_builders as compose
+import r7_builders as r7
 from boot_builders import HOST, SECRET, free_port
 from r16_builders import GROUP_A
 
 from mars777_police import __main__ as entry
 from mars777_police.transport.codec_auth import encode_profiles
+from mars777_police.transport.codec_config import encode_config
 from mars777_police.transport.codec_declaration import encode_declaration
 
 MCP_PATH = "/mcp"
@@ -63,6 +66,32 @@ def spawn(package: str, launch: Path, environ: dict[str, str]) -> "subprocess.Po
     )
 
 
+def spawn_opponent(
+    role: str, port: int, opponent_url: str, root: Path, variant: str = "same"
+) -> "subprocess.Popen[str]":
+    """Start the **synthetic, non-counted** distinct-group opponent process.
+
+    A separate OS process with its own memory, its own artifact root and its own
+    `SeriesDriver`. It is not a league participant and its result is not match
+    evidence; it exists so the shipped CLI has a lawful counterparty to boot
+    against without weakening anti-self-play.
+    """
+    script = Path(__file__).with_name("opponent_entrypoint.py")
+    return subprocess.Popen(
+        [sys.executable, str(script), role, str(port), opponent_url, str(root), variant],
+        env={**os.environ},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        creationflags=GROUP_FLAG,
+    )
+
+
+def official(root: Path) -> list[str]:
+    """The official file names a finished side left behind, sorted."""
+    return sorted(path.name for path in root.iterdir()) if root.exists() else []
+
+
 def await_application(child: "subprocess.Popen[str]", port: int) -> int:
     """Return the status of the first HTTP response the **application** produced.
 
@@ -86,6 +115,43 @@ def await_application(child: "subprocess.Popen[str]", port: int) -> int:
     raise AssertionError("the agent never answered an HTTP request")
 
 
+CONNECTION_REPORT = (
+    "mars777_police.transport.wire_errors.TransportFailureError",
+    "httpx.ConnectError",
+    "RuntimeError: Client failed to connect",
+    "ConnectionRefusedError",
+    "OSError",
+    "asyncio.exceptions.CancelledError",
+    "anyio.WouldBlock",
+    "ExceptionGroup",
+    "BaseExceptionGroup",
+)
+"""The exception names one *failed connection attempt* prints, and no others.
+
+A process that starts before its opponent fails to connect on purpose and
+retries; the FastMCP client logs each attempt in full, chained down to the
+`E-TRANSPORT` this repository translates it into. Those lines are the peer's
+absence being reported, so `crashed` names them explicitly rather than matching
+the word "Traceback" - which appears in both a report and a real crash.
+
+**Only the startup tests may use this.** `assert_clean_operator_stop` keeps the
+stricter rule, because an operator's Ctrl-C is not supposed to produce any
+traceback at all and weakening that would hide a real one.
+"""
+
+FAILURE = re.compile(r"^(?:\s*\+?\s*)([A-Za-z_][\w.]*(?:Error|Exception|Group))\b")
+"""The name at the head of an exception line, indented inside a group or not."""
+
+
+def crashed(err: str) -> bool:
+    """True when *err* names an exception that is not a connection report."""
+    for line in err.splitlines():
+        found = FAILURE.match(line)
+        if found and not any(known in line for known in CONNECTION_REPORT):
+            return True
+    return False
+
+
 def assert_clean_operator_stop(status: int, out: str, err: str, windows: bool = WINDOWS) -> None:
     """Assert the stop was clean under *this platform's* contract.
 
@@ -105,11 +171,14 @@ def assert_clean_operator_stop(status: int, out: str, err: str, windows: bool = 
     assert not missing, f"status {status} without a complete shutdown, missing {missing}: {err}"
 
 
-def environment(port: int = 0) -> dict[str, str]:
+def environment(
+    port: int = 0, root: Path | None = None, opponent: str | None = None
+) -> dict[str, str]:
     """A synthetic operator environment; never the real one.
 
     The role comes from the entrypoint this repository ships, so the one file
-    serves both repositories without naming a side.
+    serves both repositories without naming a side. The artifact root is local
+    filesystem config and each process is given its own.
     """
     return {
         "MARS777_ROLE": entry.ROLE.value,
@@ -117,18 +186,24 @@ def environment(port: int = 0) -> dict[str, str]:
         "MARS777_BIND_PORT": str(port or free_port()),
         "MARS777_KEY_ID": "mars777-k1",
         "MARS777_AUTH_SECRET": SECRET,
-        "MARS777_OPPONENT_ENDPOINT": f"http://{HOST}:{free_port()}{MCP_PATH}",
+        "MARS777_ARTIFACT_ROOT": str(root if root is not None else Path.cwd()),
+        "MARS777_OPPONENT_ENDPOINT": opponent or f"http://{HOST}:{free_port()}{MCP_PATH}",
     }
 
 
 def launch_document(group_id: str = GROUP_A, slot: str = "group_a") -> str:
-    """A launch document in the exact frozen wire shapes, from real values."""
+    """A launch document in the exact frozen wire shapes, from real values.
+
+    `config` is this side's opening candidate, in the same `NegotiatedConfigWire`
+    the peer transport carries - the peer still has to converge on it.
+    """
     identity = compose.identity_for(group_id, slot)
     declared = encode_declaration(identity.declaration)
     return json.dumps(
         {
             "declaration": declared.model_dump(mode="json", exclude_none=True),
             "profiles": encode_profiles(identity.profiles).model_dump(mode="json"),
+            "config": encode_config(r7.CONFIG).model_dump(mode="json"),
             "first_sub_game": identity.first_sub_game,
         }
     )

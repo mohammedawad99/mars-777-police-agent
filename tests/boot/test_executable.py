@@ -20,15 +20,15 @@ from mars777_police.launch_input import (
 
 
 def test_the_launch_document_uses_only_frozen_wire_shapes() -> None:
-    """`declaration` and `profiles` are the contracts the transport already owns."""
+    """`declaration`, `profiles` and `config` are contracts the transport owns."""
     document = json.loads(process.launch_document())
-    assert set(document) == {"declaration", "profiles", "first_sub_game"}
+    assert set(document) == {"declaration", "profiles", "config", "first_sub_game"}
     assert {"game_id", "game_uid", "token_budget_per_series"} <= set(document["declaration"])
 
 
 def test_the_series_identity_is_derived_not_restated() -> None:
     """Nothing is supplied twice and risked disagreeing."""
-    identity = parse_launch_document(process.launch_document())
+    identity = parse_launch_document(process.launch_document()).identity
     assert identity.game_id == identity.declaration.game_id
     assert identity.game_uid == identity.declaration.game_uid
     assert identity.token_budget_per_series == identity.declaration.token_budget_per_series
@@ -146,3 +146,31 @@ def test_an_interrupt_during_the_run_exits_zero(monkeypatch: pytest.MonkeyPatch)
 
     monkeypatch.setattr(entry.asyncio, "run", interrupted)
     assert entry.main(["--launch", "unused.json"]) == 0
+
+
+def test_a_peer_protocol_refusal_exits_with_its_own_identity(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A refusal from a peer that is really there is reported, never retried."""
+    from mars777_police.app.protocol_errors import ConfigMismatchError
+
+    def refuse(coro: Coroutine[object, object, object]) -> None:
+        coro.close()
+        raise ConfigMismatchError(ConfigMismatchError.error_id)
+
+    monkeypatch.setattr(entry.asyncio, "run", refuse)
+    assert entry.main(["--launch", "unused.json"]) == 5
+    assert "E-CONFIG-MISMATCH" in capsys.readouterr().err
+
+
+def test_a_local_defect_keeps_its_traceback(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A bug is not translated into "the peer was unreachable"."""
+    from mars777_police.app.protocol_errors import LocalDefectError
+
+    def defect(coro: Coroutine[object, object, object]) -> None:
+        coro.close()
+        raise LocalDefectError("a defect")
+
+    monkeypatch.setattr(entry.asyncio, "run", defect)
+    with pytest.raises(LocalDefectError):
+        entry.main(["--launch", "unused.json"])

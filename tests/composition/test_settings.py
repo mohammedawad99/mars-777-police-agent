@@ -14,6 +14,7 @@ from mars777_police.app.auth_values import KeyId
 from mars777_police.app.public_endpoint_values import LocalPeerEndpoint, OpponentPublicPeerEndpoint
 from mars777_police.app.sealed_record_values import ActorRole
 from mars777_police.infra.settings import (
+    ARTIFACT_ROOT,
     AUTH_SECRET,
     BIND_HOST,
     BIND_PORT,
@@ -32,6 +33,7 @@ OPPONENT = "https://opponent.example/mcp"
 
 NAMES = {
     "ROLE": ROLE,
+    "ARTIFACT_ROOT": ARTIFACT_ROOT,
     "BIND_HOST": BIND_HOST,
     "BIND_PORT": BIND_PORT,
     "KEY_IDENTIFIER": KEY_IDENTIFIER,
@@ -47,6 +49,7 @@ def env(**overrides: str | None) -> dict[str, str]:
         BIND_PORT: "8801",
         KEY_IDENTIFIER: "mars777-k1",
         AUTH_SECRET: SECRET_PLACEHOLDER,
+        ARTIFACT_ROOT: "/tmp/mars777-artifacts",
     }
     for name, value in overrides.items():
         key = NAMES[name]
@@ -75,7 +78,9 @@ def test_an_opponent_endpoint_is_adopted_when_supplied() -> None:
     assert settings.opponent == OpponentPublicPeerEndpoint(OPPONENT)
 
 
-@pytest.mark.parametrize("name", ["ROLE", "BIND_HOST", "BIND_PORT", "KEY_IDENTIFIER"])
+@pytest.mark.parametrize(
+    "name", ["ROLE", "BIND_HOST", "BIND_PORT", "KEY_IDENTIFIER", "ARTIFACT_ROOT"]
+)
 def test_every_required_non_secret_refuses_when_absent_or_blank(name: str) -> None:
     for value in (None, "   "):
         with pytest.raises(SettingsError, match=NAMES[name]):

@@ -246,6 +246,11 @@ Consequences, recorded so no later stage mistakes one for the other:
   the port is called exactly once per own turn across all six sub-games. **The register
   stays 21** - the series driver introduces no port, and every collaborator it uses is an
   existing runtime owner.
+- **The permanent CLI reaches the same port at Stage 6C-C2.** `AutonomousBoot`
+  builds the one `SeriesDriver` a process runs, so a real `python -m …` process calls
+  `StrategyPort` once per own turn for six sub-games. **The register stays 21**: boot
+  adds no port, and `ArtifactStorePort` and `TokenAccountingPort` were already
+  registered - it merely supplies their production implementations.
 
 **O-note (Stage 4E-R12) — profile provisioning is not an operation.** No `O8` is
 created and **O1-O7 are unchanged**. Two clarifications to the existing text:

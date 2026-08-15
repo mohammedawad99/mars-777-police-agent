@@ -6,10 +6,16 @@ real process has to be told them. This is the only place that reads that file,
 and it invents nothing.
 
 **No new schema.** The `declaration` object is exactly `DeclarationWire`, the
-frozen JSON contract the peer transport already validates and decodes, and
-`profiles` is exactly `InteropProfileSetWire`. Validation belongs to those
-models and to the semantic constructors behind `decode_declaration` /
-`decode_profiles`; repeating it here would be a second opinion that can drift.
+frozen JSON contract the peer transport already validates and decodes,
+`profiles` is exactly `InteropProfileSetWire`, and `config` is exactly
+`NegotiatedConfigWire`. Validation belongs to those models and to the semantic
+constructors behind `decode_declaration` / `decode_profiles` / `decode_config`;
+repeating it here would be a second opinion that can drift.
+
+**The config is a candidate, not an agreement.** It is what this process opens
+the negotiation with; the peer still has to converge, and `ConfigLockRuntime`
+still refuses a digest that differs from the one we recomputed. Handing a
+process its own opening terms is operator input, not a gameplay decision.
 
 **Everything derivable is derived.** `game_id`, `game_uid` and the token budget
 are members of the declaration itself, so they are read from it rather than
@@ -19,14 +25,18 @@ declaration does not record.
 """
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 from pydantic import BaseModel, ValidationError
 
 from .composition_values import SeriesIdentity
+from .domain.errors import DomainError
+from .domain.negotiated_config import NegotiatedConfig
 from .transport.codec_auth import decode_profiles
+from .transport.codec_config import decode_config
 from .transport.codec_declaration import decode_declaration
-from .transport.wire_config import InteropProfileSetWire
+from .transport.wire_config import InteropProfileSetWire, NegotiatedConfigWire
 from .transport.wire_config_sections import WIRE
 from .transport.wire_declaration import DeclarationWire
 
@@ -41,16 +51,35 @@ class LaunchInputError(ValueError):
 
 
 class LaunchDocumentWire(BaseModel):
-    """The exact launch document: two frozen wire objects and one scalar."""
+    """The exact launch document: three frozen wire objects and one scalar."""
 
     model_config = WIRE
     declaration: DeclarationWire
     profiles: InteropProfileSetWire
+    config: NegotiatedConfigWire
     first_sub_game: int
 
 
-def parse_launch_document(text: str) -> SeriesIdentity:
-    """Build the series identity from *text*, or refuse with a local error."""
+@dataclass(frozen=True, slots=True)
+class LaunchDocument:
+    """What one operator document tells a process: who it is, and what to open with.
+
+    Two values rather than one, because they belong to different owners:
+    `SeriesIdentity` is what composition needs, and the config candidate is what
+    the boot coordinator hands to the series it starts.
+    """
+
+    identity: SeriesIdentity
+    config: NegotiatedConfig
+
+
+def parse_launch_document(text: str) -> LaunchDocument:
+    """Build the launch facts from *text*, or refuse with a local error.
+
+    The semantic constructors refuse too - a grid below the Appendix-F floor is
+    a `DomainError` from the section that owns it, not a wire problem - so both
+    refusals are reported as the one local error a process can act on.
+    """
     try:
         wire = LaunchDocumentWire.model_validate_json(text)
     except ValidationError as failure:
@@ -58,17 +87,24 @@ def parse_launch_document(text: str) -> SeriesIdentity:
             f"the launch document is not valid: {failure.error_count()} problem(s)"
         ) from None
     declaration = decode_declaration(wire.declaration)
-    return SeriesIdentity(
-        declaration.game_id,
-        declaration.game_uid,
-        wire.first_sub_game,
-        declaration,
-        decode_profiles(wire.profiles),
-        declaration.token_budget_per_series,
+    try:
+        config = decode_config(wire.config)
+    except (ValueError, DomainError) as failure:
+        raise LaunchInputError(f"the launch config is not a valid agreement: {failure}") from None
+    return LaunchDocument(
+        SeriesIdentity(
+            declaration.game_id,
+            declaration.game_uid,
+            wire.first_sub_game,
+            declaration,
+            decode_profiles(wire.profiles),
+            declaration.token_budget_per_series,
+        ),
+        config,
     )
 
 
-def read_launch_document(path: Path) -> SeriesIdentity:
+def read_launch_document(path: Path) -> LaunchDocument:
     """Read and parse the launch document at *path*."""
     try:
         text = path.read_text(encoding="utf-8")
