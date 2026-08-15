@@ -213,6 +213,16 @@ Consequences, recorded so no later stage mistakes one for the other:
   `BeliefPort`) documents the call boundary; wrapping it in a Protocol adds
   indirection without substitutability. Injection is required for the
   non-deterministic ports named in **P3**.
+- **`StrategyPort` gained a Python `Protocol` at Stage 6B** (`app.strategy_api`),
+  and the register is **still 21** — an existing row acquiring a callable form is
+  not a new port identity. It is also the one row this section's rule *positively*
+  justifies wrapping: a `Protocol` earns its indirection when implementations are
+  genuinely interchangeable, which is exactly what a baseline that must later be
+  replaced by a competitive policy means. `BeliefPort`, `ScoringPort` and
+  `GameRulesPort` remain correctly unwrapped. The Stage-6B signature is
+  `choose_action(observation: Observation) -> PhysicalAction`; the row's
+  `ProposedAction` (with hint/intent/confidence) is **reserved for PRD-04**,
+  which owns the language half of a turn.
 - **21 ports** are registered here: the original 18, plus `SeriesLauncherPort`
   and `CompatibilityProfilePort` at Stage 2A-R2, plus `NonceSourcePort` at Stage
   5-R4P. The last is an authorized architecture evolution rather than a new

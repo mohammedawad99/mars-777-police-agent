@@ -10,8 +10,10 @@ and blocked cells, the five-token move set, movement legality, legal-move
 enumeration and safe move application. Stage 3B adds the remaining PRD-01
 semantics: barrier placement, the three capture routes, terminal/survival
 evaluation, role-keyed scoring and scent physics, and Stage 4C the FIXED
-counted-series length. Belief, observation, strategy, orchestration, protocol
-and reporting are **not** implemented here.
+counted-series length. Stage 6B adds the strategy-facing read model: the
+`Observation` privacy wall and barrier-aware reachability. Belief, the strategy
+policy itself, orchestration, protocol and reporting are **not** implemented
+here.
 
 No type in this package carries opponent truth (PRD01-FR-021).
 """

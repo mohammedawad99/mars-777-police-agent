@@ -1,7 +1,10 @@
 # Strategy Architecture — group MaRs-777 (POLICE)
 
-**Status: STAGE 2A ARCHITECTURE FREEZE — boundary design only. No strategy implemented.**
-This document defines **where strategy plugs in**, not what it decides.
+**Status: BOUNDARY FROZEN AT STAGE 2A; BASELINE IMPLEMENTED AT STAGE 6B.**
+This document still defines **where strategy plugs in**, not what it decides —
+the boundary below is unchanged. What changed is that the seam is now real:
+`Observation`, `StrategyPort` and one deterministic, zero-token baseline exist
+(§2, §3). Nothing calls them in production yet; wiring is Stage 6C.
 
 ## 1. The boundary
 
@@ -21,7 +24,22 @@ Gmail, or protocol parsing (design principle 10).
 
 ## 2. Legal inputs — `Observation`
 
-Contains **only** role-legal data (`ROLE_RESPONSIBILITIES.md` §2):
+**Implemented at Stage 6B** in `domain/observation.py`, with exactly **three**
+members — `board`, `own_position`, `quota` — frozen and slotted, built by the
+pure `observation_of(truth, quota)`. That is a strict subset of the list below,
+and deliberately so: Ch 10 §10.3.3 places a **blind** strategy at this stage,
+*"blind in the sense that there is not yet scent, natural language or
+deception"*, so scent readings, hints and belief arrive with PRD-04 rather than
+sitting on the type unread. Adding a member is an additive change to a frozen
+dataclass and changes neither `choose_action`'s signature nor the future game
+owner's call site — the seam does not need the fields in advance.
+
+The privacy guarantee is unchanged and is now structural rather than editorial:
+there is **no field** an opponent cell, a peer nonce, a reveal or a final-audit
+trajectory could arrive in, and a contract test asserts the field set exactly, so
+a new member fails the build rather than passing review (`PRD03-AC-001`).
+
+The full list below remains the long-term target:
 
 - own true position, own step/turn, own remaining budget (barriers/moves);
 - locked config values (board size, scoring, limits, scent parameters);
@@ -42,6 +60,15 @@ key material, or any transport handle. The type has no field for them.
 
 It is a **proposal**: authority to change state belongs to `app.turn_service` **after**
 `domain.rules` validates it. A rejected proposal triggers a deterministic fallback.
+
+**Stage-6B form.** `choose_action` returns the domain's existing `PhysicalAction`
+union **bare**. Hint text and `intent` are PRD-04's, and Ch 6 Figure 7 runs the
+dependency that way round — *"the language model receives the movement decision
+as a given fact"* — so the future owner **composes** a physical strategy with a
+language policy rather than hiding one inside the other. `ProposedAction` keeps
+its name for that composition. No fallback ladder exists yet: the baseline is
+total over `legal_moves`, so its only failure mode is an empty candidate set,
+which is a terminal the caller settles before asking (App E #47).
 
 ## 4. Strategy MUST NOT
 

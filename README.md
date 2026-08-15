@@ -36,15 +36,19 @@ game of its own accord.
 - the four official artifact families and the fourteen files a complete
   six-sub-game series produces
 
+**Implemented but not yet wired**
+
+- a **baseline physical strategy** (Stage 6B): each agent can now choose its own
+  legal, deterministic action from own position, the public board and the locked
+  barrier quota alone — no belief, no scent, no hints, no LLM, no randomness.
+  Nothing in production calls it yet; that is the game owner below.
+
 **Not yet implemented**
 
-- autonomous strategy for either role (no action is chosen by the agent)
 - a production game owner — nothing drives Step-0, turns or the six sub-games;
   the series services above are exercised by tests, not by the executable
 - belief / uncertainty modelling over the opponent's scent
 - the natural-language hint channel (the field is sealed; nothing writes it)
-- physical scent truthfulness — historical correspondence is proven, physics is
-  not re-verified (authorized as **JDEC-018**, scheduled for Part 2B)
 - accumulated scent-field evolution and full-turn decay
 - a user-facing Replay Viewer, the live GUI, and Gmail result reporting
 - public-network play is implemented but **not yet demonstrated end-to-end**;
