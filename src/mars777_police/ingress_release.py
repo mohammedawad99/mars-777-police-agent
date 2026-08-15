@@ -14,11 +14,25 @@ turn a completed run into a failed process would be a lie about what happened.
 It is recognised by the verified error number and by nothing else: no platform
 test, no error class, no message. An `OSError` without a `winerror` is never
 benign, which is every `OSError` outside Windows.
+
+**The same ending has a second shape.** Behind that abort was a second one: the
+in-flight Streamable-HTTP POST of the session being disconnected never gets its
+answer, because the peer it was talking to has already gone, and the read times
+out. Both are the same event - a conversation that finished - reported by two
+different layers, so both are tolerated here and only here.
+
+`httpx` is named directly because the exact type is the whole point: it is the
+observed exception, and a wider `TimeoutException` or a project identity of our
+own would both tolerate more than was ruled benign. It is the transport stack
+FastMCP already runs on, pinned by the lock, and only its identity is read - no
+API of it is called - so nothing about the framework boundary moves.
 """
 
 import asyncio
 import socket
 from contextlib import suppress
+
+import httpx
 
 from .transport.client import PeerClient
 
@@ -42,14 +56,18 @@ async def release(task: asyncio.Task[None] | None, listener: socket.socket | Non
 
 
 async def close_session(client: PeerClient) -> None:
-    """Exit the held outbound session, tolerating only the terminal abort above.
+    """Exit the held outbound session, tolerating only the two endings above.
 
-    Every other failure - an auth, protocol or transport fault, or any other
-    `OSError` - still leaves this frame, so a session that broke for a reason
-    the caller should hear about is still heard.
+    Every other failure - an auth, protocol or transport fault, any other
+    `OSError`, and every other HTTPX timeout, including a `ConnectTimeout` -
+    still leaves this frame, so a session that broke for a reason the caller
+    should hear about is still heard. A read that times out anywhere other than
+    this one terminal seam is untouched: it is still a failed request.
     """
     try:
         await client.__aexit__(None, None, None)
     except OSError as failure:
         if getattr(failure, "winerror", None) != SESSION_ABORTED:
             raise
+    except httpx.ReadTimeout:
+        pass
