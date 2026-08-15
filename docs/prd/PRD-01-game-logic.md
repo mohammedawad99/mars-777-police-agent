@@ -201,7 +201,7 @@ scent field update · terminal detection + outcome · per-sub-game and cumulativ
 
 | ID | Requirement | Traces to |
 |---|---|---|
-| **PRD01-FR-050** | Capture occurs when the police and thief occupy the same cell after a validated transition. | GAME-006 (capture scenario) |
+| **PRD01-FR-050** | Capture occurs when the police and thief occupy the same cell, **as evaluated against each side's sealed step-`k` cell** under `JDEC-016` §4: `state.self_pos` is the mover's cell *before* that step's action, both actors of a step are checked from the shared pre-step state, and the step's effects are applied afterwards. *Clarified at Stage 6C-B: the earlier wording, "after a validated transition", was written when one actor moved per step, where a non-mover's pre- and post-action cells coincide. Under lockstep both actors move in step `k`, so the two readings diverge and `JDEC-016` §4 - which is interoperability-binding and which both the live `capture_rules` path and the final `semantic_capture` audit already implement - governs. **This is alignment with an already-locked contract, not a new rule**; no register entry changed.* | GAME-006 (capture scenario); `JDEC-016` §4 |
 | **PRD01-FR-051** | Capture also occurs when a barrier is placed on the thief's current cell. | **BAR-003** |
 | **PRD01-FR-052** | Capture also occurs when the thief has **no legal move** (all orthogonal neighbours blocked by barriers or edges) — the thief is considered captured. | **GAME-005** |
 | **PRD01-FR-053** | Capture is evaluated **after** each validated transition, before the next turn is offered. | `STATE_MACHINE.md` (VALIDATING→TURN_COMPLETE) |

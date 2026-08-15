@@ -22,6 +22,7 @@ whole purpose is to hash the true result.
 
 from .app.active_runtime_context import ActiveRuntimeContext
 from .app.auth_values import AuthProfile
+from .app.baseline_strategy import BaselineStrategy
 from .app.config_lock_runtime import ConfigLockRuntime
 from .app.config_negotiation_runtime import ConfigNegotiationRuntime
 from .app.peer_runner import PeerRunner
@@ -121,6 +122,7 @@ def compose_agent(
         group_id,
         SystemClock(),
         ResultDigester(),
+        BaselineStrategy(),
     )
 
 

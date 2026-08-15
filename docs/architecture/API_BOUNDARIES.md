@@ -213,6 +213,11 @@ Consequences, recorded so no later stage mistakes one for the other:
   `BeliefPort`) documents the call boundary; wrapping it in a Protocol adds
   indirection without substitutability. Injection is required for the
   non-deterministic ports named in **P3**.
+- **`StrategyPort` is wired into production at Stage 6C-B.** `AgentComposition`
+  carries one, typed as the port, and `compose_agent` constructs the repository's
+  `BaselineStrategy` directly - no dotted-path loader, because App F Table 22 is
+  *"a reference table only"* and there is one strategy to choose between. The
+  register is **still 21**: the row was already there.
 - **`StrategyPort` gained a Python `Protocol` at Stage 6B** (`app.strategy_api`),
   and the register is **still 21** — an existing row acquiring a callable form is
   not a new port identity. It is also the one row this section's rule *positively*

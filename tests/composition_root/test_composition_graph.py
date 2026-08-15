@@ -26,6 +26,7 @@ def test_the_composition_exposes_only_what_boot_needs() -> None:
         "group_id",
         "clock",
         "digester",
+        "strategy",
     }
     assert AgentComposition.__dataclass_params__.frozen
 

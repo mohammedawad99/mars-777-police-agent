@@ -36,17 +36,19 @@ game of its own accord.
 - the four official artifact families and the fourteen files a complete
   six-sub-game series produces
 
-**Implemented but not yet wired**
-
-- a **baseline physical strategy** (Stage 6B): each agent can now choose its own
-  legal, deterministic action from own position, the public board and the locked
-  barrier quota alone — no belief, no scent, no hints, no LLM, no randomness.
-  Nothing in production calls it yet; that is the game owner below.
+- a **baseline physical strategy** (Stage 6B): each agent chooses its own legal,
+  deterministic action from own position, the public board and the locked barrier
+  quota alone — no belief, no scent, no hints, no LLM, no randomness
+- **one autonomous sub-game** (Stage 6C-B): `SubGameDriver` runs the real
+  lockstep loop — terminal check, observation, strategy, commit/acknowledge/reveal,
+  capture answer, one-time local-truth adoption — and derives the end event from
+  `domain.terminal`. Two real agents play a whole sub-game to a natural terminal
+  with no fixture supplying an action or an outcome
 
 **Not yet implemented**
 
-- a production game owner — nothing drives Step-0, turns or the six sub-games;
-  the series services above are exercised by tests, not by the executable
+- a **six-sub-game production series**, and the permanent CLI that would run it:
+  the driver plays one sub-game, and `python -m …` still only serves and waits
 - belief / uncertainty modelling over the opponent's scent
 - the natural-language hint channel (the field is sealed; nothing writes it)
 - accumulated scent-field evolution and full-turn decay

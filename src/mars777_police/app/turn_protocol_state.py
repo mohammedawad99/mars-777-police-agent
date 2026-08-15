@@ -18,13 +18,33 @@ for that cursor. It performs no verification and holds no secret - the `nonce`,
 during live play and are not represented here.
 """
 
-from dataclasses import dataclass
+import asyncio
+from dataclasses import dataclass, field
 from enum import StrEnum
 
 from ..domain.scent_emission import ScentEmission
 from .protocol_values import Sha256Digest
 from .sealed_record_values import ActorRole
 from .turn_cursor import TurnCursor
+
+
+@dataclass(slots=True)
+class TurnMilestones:
+    """The three inbound moments an autonomous driver has to wait for.
+
+    A driver that polled would burn a core and still race; these let it suspend
+    until the runtime has actually recorded the thing it needs. **They report
+    state, they never hold it** - each is set only after the phase machine has
+    already moved, so a waiter that wakes finds the transition complete rather
+    than in progress. Nothing here decides whether a message was legal.
+
+    One set per `TurnProtocolRuntime`, because a turn is the scope these facts
+    live in: a global event would let one step's arrival wake another's waiter.
+    """
+
+    peer_committed: asyncio.Event = field(default_factory=asyncio.Event)
+    acknowledged: asyncio.Event = field(default_factory=asyncio.Event)
+    peer_revealed: asyncio.Event = field(default_factory=asyncio.Event)
 
 
 class TurnPhase(StrEnum):

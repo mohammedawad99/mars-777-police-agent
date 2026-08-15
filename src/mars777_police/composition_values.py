@@ -28,6 +28,7 @@ from .app.result_exchange import ResultExchange
 from .app.result_identity_values import GithubLinks
 from .app.result_values import ResultContribution
 from .app.series_audit_gate import SeriesAuditGate
+from .app.strategy_api import StrategyPort
 from .transport.client import PeerClient
 from .transport.peer_operations import InboundPeerOperations
 
@@ -81,6 +82,12 @@ class AgentComposition:
     group_id: str
     clock: TimestampPort
     digester: ResultDigestPort
+    strategy: StrategyPort
+    """This agent's decision policy, behind the port so it can be replaced.
+
+    Typed as the port rather than the baseline: `PRD03-FR-001` makes the policy
+    a replaceable plug-in, and the whole point of Stage 6B's seam is that a
+    competitive strategy can take this slot without the driver noticing."""
 
     def complete_result(
         self,
