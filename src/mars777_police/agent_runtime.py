@@ -21,7 +21,7 @@ from enum import StrEnum
 
 from .app.protocol_errors import LocalDefectError
 from .composition_values import AgentComposition
-from .ingress_release import release
+from .ingress_release import close_session, release
 from .startup_budget import StartupBudget
 
 BACKLOG = 128
@@ -128,7 +128,7 @@ class AgentRuntime:
         self.server_task, self.listener, self.state = None, None, RuntimeState.CLOSED
         try:
             if connected:
-                await self.composition.peer_client.__aexit__(None, None, None)
+                await close_session(self.composition.peer_client)
         finally:
             await release(task, listener)
 
