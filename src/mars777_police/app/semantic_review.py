@@ -1,36 +1,32 @@
 """Driving one sub-game's semantic review from the two records that survive it.
 
-Both sides of the game are needed and both are already held locally when a
-sub-game ends: our own sealed turns in `OutboundEvidenceRuntime`, the peer's in
-the disclosure `AuditRuntime` verified, and the capture transcript in the two
-directions each of them retained. Nothing here asks the network for anything -
-the review is a second reading of evidence that already passed the hashes.
+Both sides are already held locally when a sub-game ends: our own sealed turns
+in `OutboundEvidenceRuntime`, the peer's in the disclosure `AuditRuntime`
+verified, the capture transcript each retained, and - since JDEC-018 - the scent
+history both directions kept. Nothing here asks the network for anything.
 
-**Step by step, both sides at once.** A step is checked as a whole, its capture
-questions are recomputed against the cells and the board *before* its effects,
-and only then is the step applied. The first violation ends the review: after a
-peer's story has broken once, later steps are replays of a game that did not
-happen.
+**Step by step, both sides at once.** A step is checked whole, its capture
+questions and emissions are recomputed against the cells and the board *before*
+its effects, and only then is the step applied. The first violation ends the
+review.
 
 **Who is at fault is part of the finding.** A dishonest answer belongs to the
 side that gave it and a false declaration to the side that made it - including
-when that side is us. One event can carry a fault on each side, and the finding
-names both rather than reporting whichever was noticed first. This runs
-identically in both repositories, so a peer's finding about our own play is the
-one we would reach about ourselves.
-"""
+when that side is us. One event can carry a fault on each side and the finding
+names both. This runs identically in both repositories."""
 
 from ..domain.barriers import BarrierQuota
 from ..domain.config_model import GridConfig
 from ..domain.negotiated_config import NegotiatedConfig
+from ..domain.scent_model import ScentModelAgreement
 from ..domain.terminal import Outcome
 from .audit_disclosure import turns as disclosed_turns
 from .audit_runtime import AuditRuntime
-from .capture_transcript import CaptureRecord
 from .outbound_evidence_runtime import OutboundEvidenceRuntime
 from .protocol_errors import LocalDefectError
+from .scent_truth import ScentHistory, history_of, require_truthful_scent
 from .sealed_record_values import ActorRole
-from .semantic_capture import AnsweredTurn, review_answer
+from .semantic_capture import Asked, answered_step, asked_rows
 from .semantic_replay import PlayedTurn, Replay
 from .semantic_values import CONSISTENT, SCORED_AS_TECHNICAL_LOSS, SemanticFinding, SemanticRules
 
@@ -67,24 +63,6 @@ def peer_turns(audit: AuditRuntime) -> tuple[PlayedTurn, ...]:
     )
 
 
-Asked = dict[tuple[int, ActorRole], AnsweredTurn]
-"""Every retained capture row, keyed by the step and the side that asked it."""
-
-
-def _asked(
-    rows: tuple[CaptureRecord, ...],
-    asker: ActorRole,
-    answerer: ActorRole,
-    played: tuple[PlayedTurn, ...],
-) -> Asked:
-    """One direction's rows, each carried back to the reveal that produced it."""
-    actions = {turn.step: turn.action for turn in played}
-    return {
-        (row.cursor.step, asker): AnsweredTurn(row, asker, answerer, actions[row.cursor.step])
-        for row in rows
-    }
-
-
 def _grouped(turns: tuple[PlayedTurn, ...]) -> dict[int, tuple[PlayedTurn, ...]]:
     """The turns of both sides by step, the police's first inside each step."""
     grouped: dict[int, tuple[PlayedTurn, ...]] = {}
@@ -94,54 +72,60 @@ def _grouped(turns: tuple[PlayedTurn, ...]) -> dict[int, tuple[PlayedTurn, ...]]
 
 
 def review_sub_game(
-    evidence: OutboundEvidenceRuntime, audit: AuditRuntime, rules: SemanticRules
+    evidence: OutboundEvidenceRuntime,
+    audit: AuditRuntime,
+    rules: SemanticRules,
+    model: ScentModelAgreement,
 ) -> SemanticFinding:
-    """Replay the finished sub-game and return the first violation it shows."""
+    """Replay the finished sub-game and return the first violation it shows.
+
+    *model* is the series-locked agreement, passed in rather than looked up: a
+    reviewer reaching for a local default could clear a peer running other
+    physics."""
     ours, theirs = own_turns(evidence), peer_turns(audit)
     own_role, peer_role = evidence.context.role, audit.context.peer_role
-    asked = _asked(evidence.capture, own_role, peer_role, ours)
-    asked |= _asked(audit.capture, peer_role, own_role, theirs)
-    return _walk(Replay(rules), _grouped(ours + theirs), asked)
+    asked = asked_rows(evidence.capture, own_role, peer_role, ours)
+    asked |= asked_rows(audit.capture, peer_role, own_role, theirs)
+    scent = history_of(evidence.scent, own_role, audit.expected_scent, peer_role)
+    return _walk(Replay(rules), _grouped(ours + theirs), asked, scent, model)
 
 
 def _walk(
-    replay: Replay, by_step: dict[int, tuple[PlayedTurn, ...]], asked: Asked
+    replay: Replay,
+    by_step: dict[int, tuple[PlayedTurn, ...]],
+    asked: Asked,
+    scent: ScentHistory,
+    model: ScentModelAgreement,
 ) -> SemanticFinding:
-    """Check, recompute and apply each step in order until something fails."""
+    """Check, recompute and apply each step in order until something fails.
+
+    Scent is judged last, and only where trajectory and answers already hold: a
+    cell never legally reached cannot be asked what it should have emitted, so a
+    stronger finding is never displaced."""
     for step in sorted(by_step):
         played = by_step[step]
         finding = replay.check(played)
         if not finding.consistent:
             return finding
-        finding = _answers(replay, played, asked)
+        finding = answered_step(replay, played, asked)
+        if not finding.consistent:
+            return finding
+        finding = require_truthful_scent(replay, played, scent, model)
         if not finding.consistent:
             return finding
         replay.apply(played)
     return CONSISTENT
 
 
-def _answers(replay: Replay, played: tuple[PlayedTurn, ...], asked: Asked) -> SemanticFinding:
-    """Recompute this step's capture questions, before the step takes effect."""
-    for turn in played:
-        question = asked.get((turn.step, turn.role))
-        if question is None:
-            continue
-        finding = review_answer(question, replay.board, replay.cell_of(ActorRole.THIEF))
-        if not finding.consistent:
-            return finding
-    return CONSISTENT
-
-
 def sanctioned(outcome: Outcome, finding: SemanticFinding) -> Outcome:
     """The sub-game's end event once the review has had its say.
 
-    A finding that the source scores rather than disqualifies replaces the end
-    event with `TECHNICAL_LOSS`, which `domain.scoring` already scores 0/0: an
-    illegal move (`GAME-003`), an illegal placement (`BAR-004`) and a false
-    declaration (`CRYPTO-005`) all say exactly that. A purely disqualifying
-    finding leaves the end event alone and goes to the audit gate instead, which
-    is what stops the whole series from reaching result agreement.
-    """
+    A finding that is scored rather than disqualifying replaces the end event
+    with `TECHNICAL_LOSS`, which `domain.scoring` already scores 0/0: an illegal
+    move (`GAME-003`), an illegal placement (`BAR-004`), a false declaration
+    (`CRYPTO-005`) and a physically impossible emission (`JDEC-018`) all say
+    that. One set membership decides it - nothing is special-cased here. A purely
+    disqualifying finding goes to the audit gate instead."""
     if finding.verdict in SCORED_AS_TECHNICAL_LOSS:
         return Outcome.TECHNICAL_LOSS
     return outcome

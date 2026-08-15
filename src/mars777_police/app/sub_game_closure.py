@@ -14,6 +14,7 @@ that disagrees with the gate the same series later applies.
 from dataclasses import dataclass
 
 from ..domain.negotiated_config import NegotiatedConfig
+from ..domain.scent_model import ScentModelAgreement
 from ..domain.terminal import Outcome
 from .audit_disclosure_writer import AuditDocument
 from .audit_runtime import AuditRuntime
@@ -37,17 +38,19 @@ def closed_sub_game(
     evidence: OutboundEvidenceRuntime,
     audit: AuditRuntime,
     config: NegotiatedConfig | None,
+    model: ScentModelAgreement,
     outcome: Outcome,
 ) -> ClosedSubGame:
     """Review the finished sub-game, sanction it if it needs one, and log it.
 
-    The locked config is the only outside fact required: the replay starts from
-    the two start cells and the barrier quota both sides agreed to, so a sub-game
-    that somehow reached its end without a locked config cannot be reviewed at
-    all - and an unreviewable sub-game is refused rather than recorded as clean.
+    Two outside facts are required and both are already locked: the config, whose
+    start cells and quota the replay begins from, and the series scent model the
+    physical check recomputes against. A sub-game that somehow reached its end
+    without a locked config cannot be reviewed at all - and an unreviewable
+    sub-game is refused rather than recorded as clean.
     """
     if config is None:
         raise LocalDefectError("a sub-game is closed against the config this series locked")
-    finding = review_sub_game(evidence, audit, rules_for(config))
+    finding = review_sub_game(evidence, audit, rules_for(config), model)
     audit.adopt_semantic(finding)
     return ClosedSubGame(finalized_log(evidence, audit), sanctioned(outcome, finding), finding)

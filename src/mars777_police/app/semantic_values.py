@@ -38,6 +38,15 @@ class SemanticVerdict(StrEnum):
     that confirmed it. Both sides broke a different rule (CRYPTO-005 and
     CRYPTO-004), so neither may be dropped, and the event is not a capture."""
 
+    DISHONEST_SCENT_EMISSION = "DISHONEST_SCENT_EMISSION"
+    """A reveal whose emission is not the one its own disclosed action produces.
+
+    `JDEC-018`, and **PROJECT-DERIVED**: the book assumes the scent map cannot
+    be forged because its own environment emits it (Ch 4 §4.4), but two isolated
+    peers have no shared environment, so the emission has to travel and the
+    premise has to be enforced instead of assumed. It names no sanction for the
+    case, so this verdict is the project's own."""
+
 
 TAMPERING: frozenset[SemanticVerdict] = frozenset(
     {
@@ -70,6 +79,7 @@ SCORED_AS_TECHNICAL_LOSS: frozenset[SemanticVerdict] = frozenset(
         SemanticVerdict.ILLEGAL_ACTION,
         SemanticVerdict.FALSE_CAPTURE_CLAIM,
         SemanticVerdict.FALSE_CLAIM_AFFIRMED,
+        SemanticVerdict.DISHONEST_SCENT_EMISSION,
     }
 )
 """The findings that decide the sub-game's end event instead of blocking it.

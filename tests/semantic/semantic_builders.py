@@ -27,6 +27,7 @@ from mars777_police.app.turn_protocol_state import TurnEvidence
 from mars777_police.domain.actions import MoveAction, PhysicalAction
 from mars777_police.domain.board import Position
 from mars777_police.domain.rules import Move
+from mars777_police.domain.scent_model_default import default_scent_model
 from mars777_police.protocol.audit_commitment import CommitmentRecomputer
 from mars777_police.protocol.secure_nonce import SecretsNonceSource
 
@@ -37,6 +38,8 @@ CONFIG = config()
 DIGEST = Sha256Digest("d" * 64)
 PEER_GROUP = "GROUP-XY"
 RULES = rules_for(CONFIG)
+MODEL = default_scent_model()
+"""The model a series locks; the review must be *given* it, never assume it."""
 COP, THIEF = CONFIG.board_and_agents.cop_start, CONFIG.board_and_agents.thief_start
 
 

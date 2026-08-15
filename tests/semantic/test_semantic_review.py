@@ -8,7 +8,7 @@ forgery hashes cannot see.
 
 import pytest
 import semantic_builders as build
-from semantic_builders import COP, NORTH, PEER_GROUP, RULES, THIEF, audited, row, seal
+from semantic_builders import COP, MODEL, NORTH, PEER_GROUP, RULES, THIEF, audited, row, seal
 
 from mars777_police.app.audit_values import AuditPhase
 from mars777_police.app.capture_values import CaptureAnswer
@@ -46,34 +46,34 @@ def sub_game(
 def test_a_legal_sub_game_reviews_as_consistent() -> None:
     ours, audit = sub_game()
     assert audit.verdict is FinalAuditVerdict.VERIFIED_OK
-    assert review_sub_game(ours, audit, RULES) is CONSISTENT
+    assert review_sub_game(ours, audit, RULES, MODEL) is CONSISTENT
 
 
 def test_a_peer_that_opened_off_its_locked_cell_is_caught_after_the_hashes_pass() -> None:
     ours, audit = sub_game(thief_cell=Position(6, 6))
     assert audit.verdict is FinalAuditVerdict.VERIFIED_OK, "the forgery is self-consistent"
-    finding = review_sub_game(ours, audit, RULES)
+    finding = review_sub_game(ours, audit, RULES, MODEL)
     assert finding.verdict is SemanticVerdict.WRONG_START
     assert finding.at_fault is THIEF_ROLE
 
 
 def test_a_true_claim_denied_by_the_peer_is_a_dishonest_answer() -> None:
     ours, audit = sub_game(claim=THIEF, answer=CaptureAnswer.NOT_CAUGHT)
-    finding = review_sub_game(ours, audit, RULES)
+    finding = review_sub_game(ours, audit, RULES, MODEL)
     assert finding.verdict is SemanticVerdict.DISHONEST_CAPTURE_ANSWER
     assert (finding.step, finding.at_fault) == (1, THIEF_ROLE)
 
 
 def test_our_own_false_declaration_is_found_by_our_own_review() -> None:
     ours, audit = sub_game(claim=Position(0, 6), answer=CaptureAnswer.NOT_CAUGHT)
-    finding = review_sub_game(ours, audit, RULES)
+    finding = review_sub_game(ours, audit, RULES, MODEL)
     assert finding.verdict is SemanticVerdict.FALSE_CAPTURE_CLAIM
     assert finding.at_fault is POLICE
 
 
 def test_a_true_claim_confirmed_is_consistent() -> None:
     ours, audit = sub_game(claim=THIEF, answer=CaptureAnswer.CAUGHT)
-    assert review_sub_game(ours, audit, RULES).consistent
+    assert review_sub_game(ours, audit, RULES, MODEL).consistent
 
 
 def test_a_review_needs_the_disclosure_it_reviews() -> None:
@@ -134,7 +134,7 @@ def test_an_honestly_committed_illegal_move_is_not_called_tampering() -> None:
     beside = Position(THIEF.row, THIEF.col + 1)
     prepared = seal(theirs, 1, THIEF, BarrierAction(beside))
     audit = audited(build.audit_for(THIEF_ROLE), theirs, [prepared], QUIET)
-    finding = review_sub_game(ours, audit, RULES)
+    finding = review_sub_game(ours, audit, RULES, MODEL)
 
     assert is_placeable(RULES.board, THIEF, beside, RULES.quota), "legal but for the role"
     assert finding.verdict is SemanticVerdict.ILLEGAL_ACTION
@@ -149,7 +149,7 @@ def test_an_honestly_committed_illegal_move_is_not_called_tampering() -> None:
 def test_a_false_claim_the_peer_confirmed_names_both_sides() -> None:
     """The police declared a cell the thief was not on; the thief said CAUGHT."""
     ours, audit = sub_game(claim=Position(0, 6), answer=CaptureAnswer.CAUGHT)
-    finding = review_sub_game(ours, audit, RULES)
+    finding = review_sub_game(ours, audit, RULES, MODEL)
     assert finding.verdict is SemanticVerdict.FALSE_CLAIM_AFFIRMED
     assert (finding.at_fault, finding.also_at_fault) == (THIEF_ROLE, POLICE)
     audit.adopt_semantic(finding)
@@ -166,7 +166,7 @@ def test_a_turn_that_was_sealed_but_never_revealed_asks_nothing() -> None:
     ours.observe_capture((row(1, CaptureAnswer.NO_QUESTION),))
     audit = audited(build.audit_for(THIEF_ROLE), theirs, [prepared], QUIET)
     assert len(ours.ordered) == 2 and len(ours.capture) == 1
-    assert review_sub_game(ours, audit, RULES).consistent
+    assert review_sub_game(ours, audit, RULES, MODEL).consistent
 
 
 def test_an_outcome_is_only_recorded_once_the_audit_has_one() -> None:

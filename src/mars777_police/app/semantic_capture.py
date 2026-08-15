@@ -34,6 +34,7 @@ from .capture_rules import answer_for_barrier, answer_for_claim
 from .capture_transcript import CaptureRecord
 from .capture_values import CaptureAnswer
 from .sealed_record_values import ActorRole
+from .semantic_replay import PlayedTurn, Replay
 from .semantic_values import CONSISTENT, SemanticFinding, SemanticVerdict
 
 
@@ -75,3 +76,35 @@ def review_answer(turn: AnsweredTurn, board: Board, thief_cell: Position) -> Sem
             SemanticVerdict.FALSE_CLAIM_AFFIRMED, step, turn.answered_by, turn.asked_by
         )
     return SemanticFinding(SemanticVerdict.DISHONEST_CAPTURE_ANSWER, step, turn.answered_by)
+
+
+Asked = dict[tuple[int, ActorRole], "AnsweredTurn"]
+"""Every retained capture row, keyed by the step and the side that asked it."""
+
+
+def asked_rows(
+    rows: tuple[CaptureRecord, ...],
+    asker: ActorRole,
+    answerer: ActorRole,
+    played: tuple["PlayedTurn", ...],
+) -> Asked:
+    """One direction's rows, each carried back to the reveal that produced it."""
+    actions = {turn.step: turn.action for turn in played}
+    return {
+        (row.cursor.step, asker): AnsweredTurn(row, asker, answerer, actions[row.cursor.step])
+        for row in rows
+    }
+
+
+def answered_step(
+    replay: "Replay", played: tuple["PlayedTurn", ...], asked: Asked
+) -> SemanticFinding:
+    """Recompute this step's capture questions, before the step takes effect."""
+    for turn in played:
+        question = asked.get((turn.step, turn.role))
+        if question is None:
+            continue
+        finding = review_answer(question, replay.board, replay.cell_of(ActorRole.THIEF))
+        if not finding.consistent:
+            return finding
+    return CONSISTENT

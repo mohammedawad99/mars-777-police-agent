@@ -30,7 +30,7 @@ from mars777_police.app.turn_cursor import TurnCursor
 from mars777_police.app.turn_protocol_runtime import TurnProtocolRuntime
 from mars777_police.domain.actions import BarrierAction, MoveAction, PhysicalAction
 from mars777_police.domain.board import Board, Position
-from mars777_police.domain.config_model import GridConfig, SeriesConfig
+from mars777_police.domain.config_model import GridConfig, InvalidScentError, SeriesConfig
 from mars777_police.domain.config_sections import BoardAndAgentsTerms
 from mars777_police.domain.rules import Move, destination_of
 from mars777_police.domain.scent_model_default import default_scent_model
@@ -227,12 +227,22 @@ async def one_unvalidated_turn(
     still possible, and the semantic audit exists for exactly that peer, so this
     harness reaches past the runner: it seals through the real evidence owner,
     registers and sends the real commitment, and reveals over the real transport
-    with the emission the sender's pre-action cell would produce.
+    with the emission its **post-action** cell produces.
+
+    Bypassing the sender's legality guard is the whole point of this harness; it
+    must not also inject a physical scent lie, or every scenario driven through
+    it would carry `DISHONEST_SCENT_EMISSION` on top of what it meant to test.
+    `moved` gives the same post-action cell the real projector would use.
     """
     composition = mover.composition
     model = composition.pregame.lock.scent_model
     source = cell or POSITIONS[role]
-    emission = emission_of(board(), model.kernel, source, model.params)
+    try:
+        emission = emission_of(board(), model.kernel, moved(source, action), model.params)
+    except InvalidScentError:
+        # An illegal move reaches no lawful cell, so it has no post-action
+        # emission; the audit reports the illegality first either way.
+        emission = emission_of(board(), model.kernel, source, model.params)
     prepared = composition.runtime_context.current_evidence().prepare_turn(
         state=SealedState(DIGEST, source, barriers, cursor.step, role),
         action=action,

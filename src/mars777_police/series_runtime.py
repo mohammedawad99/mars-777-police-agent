@@ -8,8 +8,7 @@ score in `domain.scoring`, the verdicts in `SeriesAuditGate`, the digest in
 
 **Every artifact waits for the fact it reports** - the declaration for a merged
 Step-0, a config for the lock this side verified, a log for its verdict, and the
-result for six sub-games, an audit and a mutual agreement. No placeholder.
-"""
+result for six sub-games, an audit and a mutual agreement. No placeholder."""
 
 from dataclasses import dataclass, field
 
@@ -112,7 +111,8 @@ class SeriesRuntime:
         evidence, audit = context.current_evidence(), context.current_audit()
         if len(self.lines) != self.sub_game - 1:
             raise LocalDefectError(f"sub-game {self.sub_game} was already recorded")
-        closed = closed_sub_game(evidence, audit, self.composition.pregame.config, outcome)
+        pregame = self.composition.pregame
+        closed = closed_sub_game(evidence, audit, pregame.config, pregame.lock.scent_model, outcome)
         stored = self.store.store(artifacts.log_name(self.game_id, self.sub_game), closed.document)
         self.composition.series_audit.record(audit)
         self.lines = (*self.lines, outcome_line(self.sub_game, closed.outcome))

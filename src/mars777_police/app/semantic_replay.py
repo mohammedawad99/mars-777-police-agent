@@ -78,6 +78,17 @@ class Replay:
         for turn in turns:
             self._apply(turn)
 
+    def cell_after(self, turn: PlayedTurn) -> Position:
+        """Where *turn* leaves its actor, without adopting the turn.
+
+        The same rule `_apply` uses, asked one turn at a time: a move resolves to
+        its destination and a placement leaves the placer exactly where it stood.
+        """
+        action = turn.action
+        if isinstance(action, MoveAction):
+            return destination_of(turn.cell, action.move)
+        return turn.cell
+
     def _check(self, turn: PlayedTurn) -> SemanticFinding:
         """Whether this disclosed turn could have happened where it says it did."""
         if turn.cell != self.cells[turn.role]:
@@ -104,6 +115,19 @@ class Replay:
         if turn.role is not ActorRole.POLICE:
             return False
         return is_placeable(self.board, turn.cell, action.target, self.rules.quota)
+
+    def board_after(self, turn: PlayedTurn) -> Board:
+        """The board *turn*'s actor had once its own action landed, and no more.
+
+        Deliberately not `self.board` after `apply`: within one step both sides
+        sealed before either revealed, so an emitter could not have seen the
+        opponent's step-`k` placement. Judging it against the combined
+        end-of-step board would test a world it never had.
+        """
+        action = turn.action
+        if isinstance(action, MoveAction):
+            return self.board
+        return place_barrier(self.board, turn.cell, action.target, self.rules.quota)
 
     def _apply(self, turn: PlayedTurn) -> None:
         """Adopt this turn's effect: a piece moves, or a cell becomes impassable."""

@@ -49,12 +49,21 @@ def test_the_log_persists_the_history_and_recomputes_none_of_it() -> None:
             assert forbidden not in source
 
 
-def test_the_semantic_vocabulary_is_unchanged() -> None:
-    assert len(SemanticVerdict) == 8
+def test_the_semantic_vocabulary_is_the_nine_member_contract() -> None:
+    """JDEC-018 added the ninth verdict; the two classification sets did not merge."""
+    assert len(SemanticVerdict) == 9
+    assert hasattr(SemanticVerdict, "DISHONEST_SCENT_EMISSION")
+    assert [one for one in SemanticVerdict if "SCENT" in one.value] == [
+        SemanticVerdict.DISHONEST_SCENT_EMISSION
+    ]
+
+
+def test_a_physical_scent_lie_is_scored_and_is_never_tampering() -> None:
+    """The whole point of JDEC-018: it can happen with every hash verifying."""
+    assert SemanticVerdict.DISHONEST_SCENT_EMISSION in SCORED_AS_TECHNICAL_LOSS
+    assert SemanticVerdict.DISHONEST_SCENT_EMISSION not in TAMPERING
     assert len(TAMPERING) == 5
-    assert len(SCORED_AS_TECHNICAL_LOSS) == 3
-    assert not [one for one in SemanticVerdict if "SCENT" in one.value]
-    assert not hasattr(SemanticVerdict, "DISHONEST_SCENT_EMISSION")
+    assert len(SCORED_AS_TECHNICAL_LOSS) == 4
 
 
 def test_the_new_member_sits_beside_the_entries_and_never_inside_one() -> None:

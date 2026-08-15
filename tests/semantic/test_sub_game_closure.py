@@ -7,7 +7,7 @@ and the finding itself - rather than only in the runtime that decided it.
 
 import pytest
 import semantic_builders as build
-from semantic_builders import CONFIG, COP, NORTH, THIEF, audited, row, seal
+from semantic_builders import CONFIG, COP, MODEL, NORTH, THIEF, audited, row, seal
 from test_semantic_review import QUIET, SOUTH
 
 from mars777_police.app.capture_values import CaptureAnswer
@@ -35,7 +35,7 @@ def closed(
     prepared = seal(theirs, 1, THIEF, NORTH)
     ours.observe_capture((row(1, answer, claim),))
     audit = audited(build.audit_for(THIEF_ROLE), theirs, [prepared], QUIET)
-    return closed_sub_game(ours, audit, CONFIG, outcome)
+    return closed_sub_game(ours, audit, CONFIG, MODEL, outcome)
 
 
 def reveals(document: object) -> list[dict[str, object]]:
@@ -113,7 +113,7 @@ def test_an_illegal_disclosed_move_is_scored_and_leaves_the_evidence_verified() 
     seal(ours, 1, COP, SOUTH)
     prepared = seal(theirs, 1, THIEF, BarrierAction(Position(THIEF.row, THIEF.col + 1)))
     audit = audited(build.audit_for(THIEF_ROLE), theirs, [prepared], QUIET)
-    result = closed_sub_game(ours, audit, CONFIG, Outcome.SURVIVAL)
+    result = closed_sub_game(ours, audit, CONFIG, MODEL, Outcome.SURVIVAL)
     written = result.document["audit"]
     assert result.finding.verdict is SemanticVerdict.ILLEGAL_ACTION
     assert result.outcome is Outcome.TECHNICAL_LOSS
@@ -129,7 +129,7 @@ def test_a_sub_game_cannot_be_closed_without_the_config_it_was_played_under() ->
     prepared = seal(theirs, 1, THIEF, NORTH)
     audit = audited(build.audit_for(THIEF_ROLE), theirs, [prepared], QUIET)
     with pytest.raises(LocalDefectError, match="config this series locked"):
-        closed_sub_game(ours, audit, None, Outcome.CAPTURE)
+        closed_sub_game(ours, audit, None, MODEL, Outcome.CAPTURE)
 
 
 def test_the_review_runs_before_the_log_is_rendered() -> None:
@@ -139,7 +139,7 @@ def test_the_review_runs_before_the_log_is_rendered() -> None:
     prepared = seal(theirs, 1, Position(6, 6), NORTH)
     audit = audited(build.audit_for(THIEF_ROLE), theirs, [prepared], QUIET)
     assert audit.outcome is not None and audit.outcome.verified, "the hashes agreed"
-    result = closed_sub_game(ours, audit, CONFIG, Outcome.CAPTURE)
+    result = closed_sub_game(ours, audit, CONFIG, MODEL, Outcome.CAPTURE)
     written = result.document["audit"]
     assert written["result"] == FinalAuditVerdict.TAMPERED.value
     assert written["semantic"]["verdict"] == SemanticVerdict.WRONG_START.value

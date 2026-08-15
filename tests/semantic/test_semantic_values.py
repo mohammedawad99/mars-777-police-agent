@@ -84,7 +84,8 @@ def test_no_unilateral_finding_carries_a_second_side() -> None:
         assert SemanticFinding(verdict, 1, ActorRole.POLICE).also_at_fault is None
 
 
-def test_the_vocabulary_is_exactly_these_eight() -> None:
+def test_the_vocabulary_is_exactly_these_nine() -> None:
+    """Eight replay findings, plus the physical-scent verdict JDEC-018 added."""
     assert [verdict.value for verdict in SemanticVerdict] == [
         "CONSISTENT",
         "WRONG_START",
@@ -94,6 +95,7 @@ def test_the_vocabulary_is_exactly_these_eight() -> None:
         "FALSE_CAPTURE_CLAIM",
         "DISHONEST_CAPTURE_ANSWER",
         "FALSE_CLAIM_AFFIRMED",
+        "DISHONEST_SCENT_EMISSION",
     ]
 
 
