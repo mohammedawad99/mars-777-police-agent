@@ -17,11 +17,11 @@ from mars777_police.app.audit_runtime import AuditRuntime
 from mars777_police.app.audit_values import SubGameContext
 from mars777_police.app.capture_transcript import CaptureRecord
 from mars777_police.app.capture_values import CaptureAnswer, CaptureClaim, TurnOutcome
+from mars777_police.app.config_rules import rules_of
 from mars777_police.app.outbound_evidence_runtime import OutboundEvidenceRuntime
 from mars777_police.app.outbound_evidence_values import LocalEvidenceContext
 from mars777_police.app.protocol_values import Sha256Digest
 from mars777_police.app.sealed_record_values import ActorRole, Intent, SealedState
-from mars777_police.app.semantic_review import rules_for
 from mars777_police.app.turn_cursor import TurnCursor
 from mars777_police.app.turn_protocol_state import TurnEvidence
 from mars777_police.domain.actions import MoveAction, PhysicalAction
@@ -37,7 +37,7 @@ SUB_GAME = 1
 CONFIG = config()
 DIGEST = Sha256Digest("d" * 64)
 PEER_GROUP = "GROUP-XY"
-RULES = rules_for(CONFIG)
+RULES = rules_of(CONFIG)
 MODEL = default_scent_model()
 """The model a series locks; the review must be *given* it, never assume it."""
 COP, THIEF = CONFIG.board_and_agents.cop_start, CONFIG.board_and_agents.thief_start

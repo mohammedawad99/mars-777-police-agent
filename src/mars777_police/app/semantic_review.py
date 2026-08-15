@@ -15,9 +15,6 @@ side that gave it and a false declaration to the side that made it - including
 when that side is us. One event can carry a fault on each side and the finding
 names both. This runs identically in both repositories."""
 
-from ..domain.barriers import BarrierQuota
-from ..domain.config_model import GridConfig
-from ..domain.negotiated_config import NegotiatedConfig
 from ..domain.scent_model import ScentModelAgreement
 from ..domain.terminal import Outcome
 from .audit_disclosure import turns as disclosed_turns
@@ -29,15 +26,6 @@ from .sealed_record_values import ActorRole
 from .semantic_capture import Asked, answered_step, asked_rows
 from .semantic_replay import PlayedTurn, Replay
 from .semantic_values import CONSISTENT, SCORED_AS_TECHNICAL_LOSS, SemanticFinding, SemanticRules
-
-
-def rules_for(config: NegotiatedConfig) -> SemanticRules:
-    """The locked geometry, quota and start cells this series agreed on."""
-    board, barriers = config.board_and_agents, config.movement_and_barriers
-    grid = GridConfig.from_grid_size(board.grid_size, board.axis_start_index)
-    return SemanticRules(
-        grid.to_board(), BarrierQuota(barriers.max_barriers), board.cop_start, board.thief_start
-    )
 
 
 def own_turns(evidence: OutboundEvidenceRuntime) -> tuple[PlayedTurn, ...]:

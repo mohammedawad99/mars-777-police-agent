@@ -241,6 +241,11 @@ Consequences, recorded so no later stage mistakes one for the other:
   `receive_turn`, two share `submit_audit`, and nothing frozen told a receiver
   which had arrived. The binding is now fixed. Everything else in this section
   stands, including that the chosen names are **PROJECT-CONTRACT**.
+- **`StrategyPort` reaches a whole series at Stage 6C-C1.** `series_driver.SeriesDriver`
+  builds one `SubGameDriver` per sub-game and hands each the same composed strategy, so
+  the port is called exactly once per own turn across all six sub-games. **The register
+  stays 21** - the series driver introduces no port, and every collaborator it uses is an
+  existing runtime owner.
 
 **O-note (Stage 4E-R12) — profile provisioning is not an operation.** No `O8` is
 created and **O1-O7 are unchanged**. Two clarifications to the existing text:

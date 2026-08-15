@@ -35,6 +35,7 @@ from .result_core_values import CumulativeResult, ResultApprovalCore
 from .result_identity_values import GithubLinks
 from .result_values import ResultContribution
 from .series_audit_gate import SeriesAuditGate
+from .series_milestones import ResultMilestones
 
 
 @dataclass(slots=True)
@@ -56,6 +57,7 @@ class ResultExchange:
     peer_contribution: ResultContribution | None = field(default=None)
     verified: bool = field(default=False)
     timestamp: UtcTimestamp | None = field(default=None)
+    milestones: ResultMilestones = field(default_factory=ResultMilestones)
 
     @property
     def gate(self) -> MutualAgreementGate:
@@ -122,6 +124,7 @@ class ResultExchange:
         self.local_digest = self._digest_with(agreement.contribution, adopted)
         self.peer_request_handled = True
         self._verify()
+        self.milestones.requested.set()
         return self.local_digest
 
     async def open_agreement(self) -> None:

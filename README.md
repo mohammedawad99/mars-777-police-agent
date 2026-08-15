@@ -4,8 +4,9 @@
 
 - **Group code:** `MaRs-777`
 - **Repository role:** **POLICE**
-- **Status:** **Protocol and evidence stack implemented; autonomous play not yet
-  implemented.** See *Implementation status* below for the exact boundary.
+- **Status:** **Protocol, evidence stack and a complete six-sub-game autonomous
+  series implemented; the permanent CLI autonomous boot is not.** See
+  *Implementation status* below for the exact boundary.
 
 This repository is the **POLICE** agent. Its sibling, the **THIEF** agent,
 lives in a separate, independent repository (see *Paired repository* below). The
@@ -44,11 +45,18 @@ game of its own accord.
   capture answer, one-time local-truth adoption — and derives the end event from
   `domain.terminal`. Two real agents play a whole sub-game to a natural terminal
   with no fixture supplying an action or an outcome
+- an **exact-six autonomous series** (Stage 6C-C1): `SeriesDriver` negotiates and
+  locks a config per sub-game, opens one `SubGameDriver` per sub-game, closes each
+  through the final-nonce / audit / semantic-review stack, agrees the result with
+  the peer and persists it — exactly `g01`…`g06`, six natural outcomes and the
+  fourteen official files, with no fixture supplying an action, an outcome or a
+  lifecycle call
 
 **Not yet implemented**
 
-- a **six-sub-game production series**, and the permanent CLI that would run it:
-  the driver plays one sub-game, and `python -m …` still only serves and waits
+- the **permanent CLI** that would run the series as a real process: the series
+  driver is production code and is exercised in-process, but `python -m …` still
+  only serves and waits, and the two-OS-process proof is Stage 6C-C2
 - belief / uncertainty modelling over the opponent's scent
 - the natural-language hint channel (the field is sealed; nothing writes it)
 - accumulated scent-field evolution and full-turn decay

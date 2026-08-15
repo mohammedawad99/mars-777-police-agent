@@ -18,10 +18,11 @@ from ..domain.scent_model import ScentModelAgreement
 from ..domain.terminal import Outcome
 from .audit_disclosure_writer import AuditDocument
 from .audit_runtime import AuditRuntime
+from .config_rules import rules_of
 from .log_document import finalized_log
 from .outbound_evidence_runtime import OutboundEvidenceRuntime
 from .protocol_errors import LocalDefectError
-from .semantic_review import review_sub_game, rules_for, sanctioned
+from .semantic_review import review_sub_game, sanctioned
 from .semantic_values import SemanticFinding
 
 
@@ -51,6 +52,6 @@ def closed_sub_game(
     """
     if config is None:
         raise LocalDefectError("a sub-game is closed against the config this series locked")
-    finding = review_sub_game(evidence, audit, rules_for(config), model)
+    finding = review_sub_game(evidence, audit, rules_of(config), model)
     audit.adopt_semantic(finding)
     return ClosedSubGame(finalized_log(evidence, audit), sanctioned(outcome, finding), finding)

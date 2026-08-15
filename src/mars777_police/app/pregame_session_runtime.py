@@ -1,31 +1,26 @@
 """The application owner of one peer session's pregame protocol state.
 
-Stage 5-R3 stopped on a real gap. `Step0Runtime.accept(local, exchange)` needs
-the declaration snapshot and **returns** a merged one somebody must retain;
-`ConfigNegotiationRuntime.accept` needs the round's `opening` and `seen`;
-`ConfigLockRuntime.accept` needs our own digest. Nothing held any of it, so the
-three runtimes had no caller at all. This is that caller.
-
-It **composes** them and owns nothing they already own: no keyed verification,
-digest algorithm, profile comparison, proposal construction or phase machine.
-Every refusal below is raised by the runtime it delegates to.
+Stage 5-R3 stopped on a real gap: three runtimes each needed round state nobody
+held, so none of them had a caller. This is that caller. It **composes** them
+and owns nothing they already own - no keyed verification, digest algorithm,
+profile comparison, proposal construction or phase machine - so every refusal
+below is raised by the runtime it delegates to.
 
 **The authenticated peer identity is an output, never an input.** `accept_step0`
-returns the `group_id` the keyed proof verified, only *after* it did, and
-`Step0Runtime.accept` refuses a peer authoring our own subtree: no self-naming.
+returns the `group_id` the keyed proof verified, only *after* it did.
 
 **One instance per authenticated series, one round at a time.** The declaration
 and the verified peer outlive every sub-game; the two round runtimes, `opening`,
-`seen`, the config and the verified lock are sub-game facts `open_round` replaces.
+`seen`, the config, the verified lock and the round's milestones are sub-game
+facts `open_round` replaces.
 
 **The lock digest is ours, never theirs.** `adopt_config` registers the config
 this side agreed and the digest comes from that, through the port
-`ConfigLockRuntime` holds; digesting the peer's proposal would compare their
-evidence against their own bytes.
+`ConfigLockRuntime` holds.
 
 **The agreed scent model is a series fact too** (SCENT-001): `scent_freeze` is
-established by the first sub-game whose lock verified, then required unchanged by
-every later one - and `open_round` leaves it alone, being where a switch would slip in.
+established by the first sub-game whose lock verified, then required unchanged
+by every later one - and `open_round` leaves it alone.
 """
 
 from dataclasses import dataclass, field
@@ -36,6 +31,7 @@ from .config_negotiation_runtime import ConfigNegotiationRuntime
 from .declaration_values import Declaration
 from .peer_pregame_messages import ConfigLockEvidence, ConfigProposal, Step0DeclarationExchange
 from .protocol_errors import LocalDefectError, StaleMessageError
+from .series_milestones import PregameMilestones
 from .series_scent_freeze import SeriesScentFreeze
 from .step0_runtime import Step0Runtime, sole_subtree
 
@@ -55,6 +51,7 @@ class PregameSessionRuntime:
     scent_freeze: SeriesScentFreeze = field(default=SeriesScentFreeze())
     """This series' agreed model identity - unset until its first lock verified."""
 
+    milestones: PregameMilestones = field(default_factory=PregameMilestones)
     locked_evidence: ConfigLockEvidence | None = field(default=None)
     """The evidence this round verified - the only thing an artifact may report."""
 
@@ -94,6 +91,7 @@ class PregameSessionRuntime:
         self.seen = frozenset()
         self.config = None
         self.locked_evidence = None
+        self.milestones = PregameMilestones()
 
     def accept_proposal(self, proposal: ConfigProposal, sender_id: str) -> bool:
         """Validate the peer's proposal for this round and advance the round.
@@ -106,6 +104,7 @@ class PregameSessionRuntime:
         )
         self.seen = self.seen | {sender_id}
         self.opening = False
+        self.milestones.proposal_seen.set()
         return converges
 
     def prepare_proposal(self, config: NegotiatedConfig) -> ConfigProposal:
@@ -148,3 +147,4 @@ class PregameSessionRuntime:
         self.lock.accept(evidence, self.lock.digester.digest(config))
         self.scent_freeze = self.scent_freeze.established(evidence.context.scent_model_sha256)
         self.locked_evidence = evidence
+        self.milestones.lock_verified.set()

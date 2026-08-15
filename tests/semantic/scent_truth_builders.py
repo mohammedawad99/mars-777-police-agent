@@ -15,10 +15,10 @@ import semantic_builders as build
 from semantic_builders import CONFIG, COP, SUB_GAME, THIEF, seal, witness
 
 from mars777_police.app.audit_runtime import AuditRuntime
+from mars777_police.app.config_rules import rules_of
 from mars777_police.app.outbound_evidence_runtime import OutboundEvidenceRuntime
 from mars777_police.app.scent_records import ScentRecord
 from mars777_police.app.sealed_record_values import ActorRole
-from mars777_police.app.semantic_review import rules_for
 from mars777_police.app.turn_cursor import TurnCursor
 from mars777_police.domain.actions import PhysicalAction
 from mars777_police.domain.board import Board, Position
@@ -29,7 +29,7 @@ from mars777_police.domain.scent_observation import emission_of
 MODEL = default_scent_model()
 """The model a series locks in these fixtures; the verifier must be *given* it."""
 
-RULES = rules_for(CONFIG)
+RULES = rules_of(CONFIG)
 BOARD: Board = RULES.board
 
 
