@@ -467,23 +467,42 @@ _NOTED: set[int] = set()
 """Processes whose loop has already been recorded; the note is wanted once."""
 
 
-def select_event_loop(choice: str) -> str:
-    """Apply a **test-only** event-loop policy and report what actually happened.
+def wanted_policy(choice: str) -> tuple[str, Any]:
+    """Decide which event-loop policy the experiment asks for, applying nothing.
 
-    The experiment changes one variable, so it says plainly whether it managed
-    to: `selector` when the policy was applied, `unavailable` where the class
-    does not exist, `default` when nothing was asked for. Nothing infers the
-    running loop from this - that is read from the loop itself later.
+    Deciding and applying are separate on purpose. The previous attempt tested
+    this by calling the real global setter, which on Windows changed the policy
+    of the pytest process itself and broke every asyncio test collected after
+    it - while passing on Linux, where the class does not exist. A decision
+    that returns a class cannot do that to anyone.
+
+    Returns the outcome name and the policy class to construct, or `None` when
+    there is nothing to apply.
     """
     import asyncio
 
     if choice != SELECTOR:
-        return "default"
+        return "default", None
     policy = getattr(asyncio, "WindowsSelectorEventLoopPolicy", None)
     if policy is None:
-        return "unavailable"
-    asyncio.set_event_loop_policy(policy())
-    return SELECTOR
+        return "unavailable", None
+    return SELECTOR, policy
+
+
+def apply_event_loop(choice: str, setter: Any = None) -> str:
+    """Apply the decided policy through *setter*, and say what happened.
+
+    **The parent test runner must never call this with the real setter.** It is
+    for the synthetic opponent's own process, before that process has an event
+    loop; unit tests pass a fake and assert on what it was handed.
+    """
+    import asyncio
+
+    outcome, policy = wanted_policy(choice)
+    if policy is None:
+        return outcome
+    (setter or asyncio.set_event_loop_policy)(policy())
+    return outcome
 
 
 def note_loop(trace: HandlerTrace) -> None:
@@ -760,8 +779,9 @@ def client_report(path: Path, keep: int = 12) -> str:
     writes = [one for one in found if str(one.get("event")).startswith("client_")]
     if not writes:
         return "    client write trace: no events recorded"
+    loops = loop_report(found).replace("    event loop:", "    real CLI event loop:")
     base = min(int(one.get("monotonic_ns", 0)) for one in writes)
-    lines = [f"    client write trace: {len(writes)} events, baseline={base}"]
+    lines = [loops, f"    client write trace: {len(writes)} events, baseline={base}"]
     slowest, slowest_at = 0, None
     opened: dict[str, dict[str, Any]] = {}
     for one in sorted(writes, key=lambda item: int(item.get("seq", 0))):

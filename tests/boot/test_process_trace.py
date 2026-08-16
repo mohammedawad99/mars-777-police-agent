@@ -10,6 +10,7 @@ refusing to choose when they cannot.
 
 import asyncio
 import json
+import socket
 from pathlib import Path
 from typing import ClassVar
 
@@ -1061,24 +1062,88 @@ def test_the_first_handoff_stream_ids_are_reported() -> None:
     assert "first-handoff stream ids: [99]" in process_trace.stream_report(found, 0)
 
 
-def test_no_flag_leaves_the_event_loop_policy_alone() -> None:
-    """Absent the experiment, the test opponent behaves exactly as before."""
-    before = asyncio.get_event_loop_policy()
+class FakeSetter:
+    """Stands in for `asyncio.set_event_loop_policy`, and changes nothing.
 
-    assert process_trace.select_event_loop("") == "default"
-    assert process_trace.select_event_loop("proactor") == "default"
+    The parent test runner must never call the real setter: on Windows that
+    mutates interpreter-global state for every test collected afterwards, and
+    on Linux it silently does nothing, so the mistake cannot be caught locally.
+    """
+
+    def __init__(self) -> None:
+        self.given: list[object] = []
+
+    def __call__(self, policy: object) -> None:
+        self.given.append(policy)
+
+
+def test_no_flag_decides_on_no_policy_at_all() -> None:
+    for choice in ("", "proactor", "default"):
+        outcome, policy = process_trace.wanted_policy(choice)
+        assert (outcome, policy) == ("default", None)
+
+
+def test_the_selector_choice_is_decided_without_being_applied() -> None:
+    """The decision names a class; only the opponent's own process applies it."""
+    outcome, policy = process_trace.wanted_policy("selector")
+
+    if hasattr(asyncio, "WindowsSelectorEventLoopPolicy"):  # pragma: no cover - Windows only
+        assert outcome == "selector"
+        assert policy is asyncio.WindowsSelectorEventLoopPolicy
+    else:
+        assert (outcome, policy) == ("unavailable", None)
+
+
+def test_applying_hands_the_policy_to_the_given_setter_only() -> None:
+    setter = FakeSetter()
+
+    outcome = process_trace.apply_event_loop("selector", setter)
+
+    if hasattr(asyncio, "WindowsSelectorEventLoopPolicy"):  # pragma: no cover - Windows only
+        assert outcome == "selector"
+        assert len(setter.given) == 1
+        assert isinstance(setter.given[0], asyncio.WindowsSelectorEventLoopPolicy)
+    else:
+        assert outcome == "unavailable"
+        assert setter.given == []
+
+
+def test_applying_nothing_never_touches_the_setter() -> None:
+    setter = FakeSetter()
+
+    assert process_trace.apply_event_loop("", setter) == "default"
+    assert setter.given == []
+
+
+def test_the_parent_runner_policy_is_never_mutated_by_these_tests() -> None:
+    """The regression for what invalidated the first experiment.
+
+    Every path a unit test may take is exercised here, and the interpreter's
+    own policy object must be the same one afterwards.
+    """
+    before = asyncio.get_event_loop_policy()
+    setter = FakeSetter()
+
+    process_trace.wanted_policy("selector")
+    process_trace.wanted_policy("")
+    process_trace.apply_event_loop("selector", setter)
+    process_trace.apply_event_loop("", setter)
+
     assert asyncio.get_event_loop_policy() is before
 
 
-def test_the_selector_choice_is_honest_about_this_platform() -> None:
-    """On Linux the Windows policy does not exist; nothing is faked for it."""
-    applied = process_trace.select_event_loop("selector")
+def test_a_socket_lifecycle_still_works_after_the_selection_tests() -> None:
+    """Ordering guard: a leaked policy would surface here, not in the unit test."""
+    before = asyncio.get_event_loop_policy()
 
-    if hasattr(asyncio, "WindowsSelectorEventLoopPolicy"):  # pragma: no cover - Windows only
-        assert applied == "selector"
-        assert isinstance(asyncio.get_event_loop_policy(), asyncio.WindowsSelectorEventLoopPolicy)
-    else:
-        assert applied == "unavailable"
+    async def bind_and_close() -> int:
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            probe.listen(1)
+            return int(probe.getsockname()[1])
+
+    assert asyncio.run(bind_and_close()) > 0
+    assert asyncio.get_event_loop_policy() is before
 
 
 def test_the_loop_is_read_from_the_running_loop_not_the_policy(tmp_path: Path) -> None:
@@ -1132,3 +1197,42 @@ def test_the_loop_report_names_both_recorded_loops() -> None:
 
     assert "ProactorEventLoop" in process_trace.loop_report(found)
     assert "not recorded" in process_trace.loop_report([])
+
+
+def test_the_client_report_names_the_real_cli_loop(tmp_path: Path) -> None:
+    """R12 could not quote the shipped process's loop; this closes that gap."""
+    path = tmp_path / "client.jsonl"
+    rows = [
+        {
+            "event": "loop_kind",
+            "family": "lifecycle",
+            "layer": "asgi",
+            "seq": 1,
+            "monotonic_ns": 0,
+            "loop": "ProactorEventLoop",
+            "policy": "WindowsProactorEventLoopPolicy",
+        },
+        {
+            "event": "client_body_enter",
+            "family": "mcp",
+            "layer": "session",
+            "seq": 2,
+            "monotonic_ns": 0,
+            "method": "POST",
+            "path": "/mcp",
+            "content_length": 284,
+        },
+        {
+            "event": "client_body_exit",
+            "family": "mcp",
+            "layer": "session",
+            "seq": 3,
+            "monotonic_ns": 1_000_000,
+        },
+    ]
+    path.write_text("\n".join(json.dumps(one) for one in rows), encoding="utf-8")
+
+    text = process_trace.client_report(path)
+
+    assert "real CLI event loop: ProactorEventLoop" in text
+    assert "WindowsProactorEventLoopPolicy" in text
