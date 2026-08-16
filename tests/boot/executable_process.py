@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import composed_builders as compose
+import process_trace
 import r7_builders as r7
 from boot_builders import HOST, SECRET, free_port
 from r16_builders import GROUP_A
@@ -69,7 +70,12 @@ def spawn(package: str, launch: Path, environ: dict[str, str]) -> "subprocess.Po
 
 
 def spawn_opponent(
-    role: str, port: int, opponent_url: str, root: Path, variant: str = "same"
+    role: str,
+    port: int,
+    opponent_url: str,
+    root: Path,
+    variant: str = "same",
+    trace: Path | None = None,
 ) -> "subprocess.Popen[str]":
     """Start the **synthetic, non-counted** distinct-group opponent process.
 
@@ -79,8 +85,11 @@ def spawn_opponent(
     against without weakening anti-self-play.
     """
     script = Path(__file__).with_name("opponent_entrypoint.py")
+    arguments = [role, str(port), opponent_url, str(root), variant]
+    if trace is not None:
+        arguments.append(str(trace))
     return subprocess.Popen(
-        [sys.executable, str(script), role, str(port), opponent_url, str(root), variant],
+        [sys.executable, str(script), *arguments],
         env={**os.environ},
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -189,7 +198,9 @@ def snapshot(name: str, root: Path) -> str:
     return "\n".join([*lines, *_log_lines(root, names)])
 
 
-def two_process_report(runs: Sequence[Ran], roots: Sequence[tuple[str, Path]]) -> str:
+def two_process_report(
+    runs: Sequence[Ran], roots: Sequence[tuple[str, Path]], trace: Path | None = None
+) -> str:
     """Everything a failing two-process run knows, with the secret scrubbed.
 
     The scrub is belt and braces: the streams are separately asserted free of
@@ -200,6 +211,12 @@ def two_process_report(runs: Sequence[Ran], roots: Sequence[tuple[str, Path]]) -
         killed = " (killed after timeout)" if ran.timed_out else ""
         blocks.append(f"  {ran.name}: pid={ran.pid} exit={ran.status}{killed}")
     blocks.extend(snapshot(name, root) for name, root in roots)
+    if trace is not None:
+        blocks.append(process_trace.summary(trace))
+    sse = [ran.name for ran in runs if "standalone SSE writer" in ran.err]
+    accept = [ran.name for ran in runs if "IocpProactor.accept" in ran.err]
+    blocks.append(f"  SSE writer error reported by: {sse or 'neither'}")
+    blocks.append(f"  accept-task WinError 995 reported by: {accept or 'neither'}")
     for ran in runs:
         blocks.append(f"--- {ran.name} stdout ---\n{ran.out}")
         blocks.append(f"--- {ran.name} stderr ---\n{ran.err}")

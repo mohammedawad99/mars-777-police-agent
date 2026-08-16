@@ -26,13 +26,19 @@ for _directory in sorted(TESTS.iterdir()):
         sys.path.insert(0, str(_directory))
 
 
-def main(role_name: str, port: int, opponent: str, root: str, variant: str = "same") -> int:
+def main(
+    role_name: str, port: int, opponent: str, root: str, variant: str = "same", trace: str = ""
+) -> int:
     """Run one whole series as the distinct-group opponent, then stop.
 
     *variant* selects this side's boot config candidate: `same` is the shared
     one, `other` is an equally legal config differing only in the NEGOTIABLE
     `hint_max_words`, so a mismatch can be exercised without bending a FIXED
     value.
+
+    *trace* names a file this process records its own inbound turn handlers
+    into. It is installed here, on the synthetic side, and changes nothing the
+    handlers decide - the shipped CLI never sees it.
     """
     import asyncio
     import dataclasses
@@ -60,6 +66,13 @@ def main(role_name: str, port: int, opponent: str, root: str, variant: str = "sa
     settings = RuntimeSettings(
         base.role, base.local, base.key_id, base.secret, base.opponent, Path(root)
     )
+    if trace:
+        import process_trace
+
+        from mars777_police.transport.peer_operations import InboundPeerOperations
+
+        process_trace.install(InboundPeerOperations, process_trace.HandlerTrace(Path(trace)))
+
     composition = compose_agent(settings, compose.identity_for(GROUP_B, "group_b"), GROUP_B)
     runtime = AgentRuntime(composition, settings.local.host, port)
     asyncio.run(AutonomousBoot(runtime, settings, config, role).run())
@@ -67,4 +80,4 @@ def main(role_name: str, port: int, opponent: str, root: str, variant: str = "sa
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4], *sys.argv[5:6]))
+    raise SystemExit(main(sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4], *sys.argv[5:7]))

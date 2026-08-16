@@ -55,9 +55,14 @@ def test_the_real_cli_plays_a_whole_series_against_a_non_counted_opponent(tmp_pa
     environment = process.environment(
         ours_port, root=ours_root, opponent=f"http://{process.HOST}:{theirs_port}/mcp"
     )
+    trace = tmp_path / "opponent_handlers.jsonl"
     child = process.spawn("mars777_police", launch, environment)
     opponent = process.spawn_opponent(
-        ActorRole.THIEF.value, theirs_port, f"http://{process.HOST}:{ours_port}/mcp", theirs_root
+        ActorRole.THIEF.value,
+        theirs_port,
+        f"http://{process.HOST}:{ours_port}/mcp",
+        theirs_root,
+        trace=trace,
     )
     try:
         assert process.await_application(child, ours_port) == process.NOT_ACCEPTABLE
@@ -71,7 +76,9 @@ def test_the_real_cli_plays_a_whole_series_against_a_non_counted_opponent(tmp_pa
 
     assert SECRET not in ours.out and SECRET not in ours.err
     assert SECRET not in theirs.out and SECRET not in theirs.err
-    report = process.two_process_report((ours, theirs), ((REAL, ours_root), (PEER, theirs_root)))
+    report = process.two_process_report(
+        (ours, theirs), ((REAL, ours_root), (PEER, theirs_root)), trace=trace
+    )
 
     assert ours.status == 0, report
     assert theirs.status == 0, report
