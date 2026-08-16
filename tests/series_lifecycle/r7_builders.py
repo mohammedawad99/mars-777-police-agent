@@ -30,6 +30,7 @@ from mars777_police.app.turn_cursor import TurnCursor
 from mars777_police.app.turn_protocol_runtime import TurnProtocolRuntime
 from mars777_police.domain.actions import BarrierAction, MoveAction, PhysicalAction
 from mars777_police.domain.board import Board, Position
+from mars777_police.domain.config_league_sections import NetworkAndLeagueTerms
 from mars777_police.domain.config_model import GridConfig, InvalidScentError, SeriesConfig
 from mars777_police.domain.config_sections import BoardAndAgentsTerms
 from mars777_police.domain.rules import Move, destination_of
@@ -50,6 +51,25 @@ CONFIG = dataclasses.replace(
 Adjacency is what makes the capture routes reachable at all - BAR-004 lets the
 police place only on its own cell or one beside it, so a thief that starts four
 cells away cannot be captured by a barrier in the first turn of a sub-game."""
+
+SLOW = dataclasses.replace(
+    CONFIG,
+    network_and_league=NetworkAndLeagueTerms(
+        45,
+        60,
+        CONFIG.network_and_league.num_games,
+        CONFIG.network_and_league.diversity_reward,
+        CONFIG.network_and_league.min_games_to_pass,
+        CONFIG.network_and_league.max_games_per_team,
+        CONFIG.network_and_league.token_budget_per_series,
+    ),
+)
+"""The same series with a longer agreed response deadline, and nothing else.
+
+`response_timeout_sec` is NEGOTIABLE, so 45 is as legal as 30; the watchdog
+stays at 60 so the hard supervision bound is unchanged and the response
+deadline is the only thing that moved.
+"""
 
 DIGEST = Sha256Digest(config_sha256(CONFIG).value)
 POSITIONS = {

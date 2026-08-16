@@ -232,6 +232,15 @@ def snapshot(name: str, root: Path) -> str:
     return "\n".join([*lines, *_log_lines(root, names)])
 
 
+ATTACH = "MARS777_STACK_ATTACH"
+"""Opt-in for the external stack reader; off unless a checkpoint asks for it.
+
+py-spy could not read the Windows target, so leaving the observer armed would
+spend attach attempts on every run for nothing. The code stays; the attempts
+do not happen unless this is set.
+"""
+
+
 def watch_stacks(pid: int, trace: Path) -> "stack_attach.Observer":
     """Start the parent-side stack observer for *pid*, in a daemon thread.
 
@@ -240,7 +249,8 @@ def watch_stacks(pid: int, trace: Path) -> "stack_attach.Observer":
     in-process watchdog perturbed a green run.
     """
     observer = stack_attach.Observer(pid=pid, trace=trace)
-    threading.Thread(target=observer.run, name="stack-observer", daemon=True).start()
+    if os.environ.get(ATTACH) == "1":
+        threading.Thread(target=observer.run, name="stack-observer", daemon=True).start()
     return observer
 
 
@@ -381,7 +391,7 @@ def environment(
     }
 
 
-def launch_document(group_id: str = GROUP_A, slot: str = "group_a") -> str:
+def launch_document(group_id: str = GROUP_A, slot: str = "group_a", config: object = None) -> str:
     """A launch document in the exact frozen wire shapes, from real values.
 
     `config` is this side's opening candidate, in the same `NegotiatedConfigWire`
@@ -393,14 +403,16 @@ def launch_document(group_id: str = GROUP_A, slot: str = "group_a") -> str:
         {
             "declaration": declared.model_dump(mode="json", exclude_none=True),
             "profiles": encode_profiles(identity.profiles).model_dump(mode="json"),
-            "config": encode_config(r7.CONFIG).model_dump(mode="json"),
+            "config": encode_config(config or r7.CONFIG).model_dump(mode="json"),
             "first_sub_game": identity.first_sub_game,
         }
     )
 
 
-def written_launch(directory: Path, group_id: str = GROUP_A, slot: str = "group_a") -> Path:
+def written_launch(
+    directory: Path, group_id: str = GROUP_A, slot: str = "group_a", config: object = None
+) -> Path:
     """Write the launch document a subprocess can be started with."""
     path = directory / "launch.json"
-    path.write_text(launch_document(group_id, slot), encoding="utf-8")
+    path.write_text(launch_document(group_id, slot, config), encoding="utf-8")
     return path

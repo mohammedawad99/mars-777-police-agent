@@ -22,6 +22,7 @@ import json
 from pathlib import Path
 
 import executable_process as process
+import r7_builders as r7
 from boot_builders import SECRET, free_port
 
 from mars777_police.app.sealed_record_values import ActorRole
@@ -32,6 +33,19 @@ FILES = 14
 REAL = "real CLI"
 PEER = "synthetic opponent"
 """The two sides, named once so a diagnostic says which process it is quoting."""
+
+
+def locked_deadline(root: Path) -> tuple[int, int]:
+    """What the official g01 config says the two sides actually locked.
+
+    Read from the artifact rather than from the fixture that proposed it: the
+    experiment is only meaningful if the negotiated value survived convergence
+    and the mutual lock, and the artifact is the record of that.
+    """
+    name = next(one for one in process.official(root) if one.startswith("config_"))
+    document = json.loads((root / name).read_text(encoding="utf-8"))
+    terms = document["config"]["network_and_league"]
+    return terms["response_timeout_sec"], terms["watchdog_timeout_sec"]
 
 
 def _roots(tmp_path: Path) -> tuple[Path, Path]:
@@ -51,7 +65,7 @@ def test_the_real_cli_plays_a_whole_series_against_a_non_counted_opponent(tmp_pa
     """
     ours_port, theirs_port = free_port(), free_port()
     ours_root, theirs_root = _roots(tmp_path)
-    launch = process.written_launch(tmp_path)
+    launch = process.written_launch(tmp_path, config=r7.SLOW)
     environment = process.environment(
         ours_port, root=ours_root, opponent=f"http://{process.HOST}:{theirs_port}/mcp"
     )
@@ -63,6 +77,7 @@ def test_the_real_cli_plays_a_whole_series_against_a_non_counted_opponent(tmp_pa
         theirs_port,
         f"http://{process.HOST}:{ours_port}/mcp",
         theirs_root,
+        variant="slow",
         trace=trace,
     )
     observer = process.watch_stacks(opponent.pid, trace)
@@ -95,6 +110,7 @@ def test_the_real_cli_plays_a_whole_series_against_a_non_counted_opponent(tmp_pa
 
     for root in (ours_root, theirs_root):
         names = process.official(root)
+        assert locked_deadline(root) == (45, 60), report
         assert len(names) == FILES == len(set(names)), report
         assert sum(name.startswith("declaration_") for name in names) == 1, report
         assert sum(name.startswith("result_") for name in names) == 1, report

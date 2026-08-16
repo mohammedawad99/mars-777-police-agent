@@ -54,13 +54,14 @@ def main(
     from mars777_police.domain.config_sections import WorldTerms
     from mars777_police.infra.settings import RuntimeSettings
 
-    config = (
-        r7.CONFIG
-        if variant == "same"
-        else dataclasses.replace(
+    if variant == "slow":
+        config = r7.SLOW
+    elif variant == "same":
+        config = r7.CONFIG
+    else:
+        config = dataclasses.replace(
             r7.CONFIG, world=WorldTerms(map_area=r7.CONFIG.world.map_area, hint_max_words=12)
         )
-    )
     role = ActorRole(role_name)
     base = compose.settings_for(role, opponent, port)
     settings = RuntimeSettings(
