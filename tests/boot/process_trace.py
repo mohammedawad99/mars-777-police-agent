@@ -38,6 +38,9 @@ ACKNOWLEDGEMENT = "acknowledgement"
 COMMITMENT = "commitment"
 REVEAL = "reveal"
 
+ASGI, TOOL, ROUTER, HANDLER = "asgi", "tool", "router", "handler"
+"""The instrumentation depths, kept apart from what a message *means*."""
+
 REQUEST_ID: ContextVar[int | None] = ContextVar("diagnostic_request_id", default=None)
 """Set by the ASGI wrapper, read wherever the execution context still carries it.
 
@@ -69,12 +72,21 @@ class HandlerTrace:
         self.path = path
         self.sequence = 0
 
-    def event(self, event: str, family: str, **fields: object) -> None:
-        """Write one boundary, with a local sequence and a monotonic reading."""
+    def event(self, event: str, family: str, layer: str = HANDLER, **fields: object) -> None:
+        """Write one boundary, naming the layer it came from as well as the family.
+
+        The layer is separate from the family on purpose. R6 recorded the
+        router's events under `family="acknowledgement"` too, so counting
+        acknowledgement handlers counted three layers at once and reported
+        twenty-two starts against sixty-six completions. Instrumentation depth
+        and protocol meaning are different questions and now have different
+        fields.
+        """
         self.sequence += 1
         record: dict[str, object] = {
             "event": event,
             "family": family,
+            "layer": layer,
             "seq": self.sequence,
             "monotonic_ns": time.monotonic_ns(),
             **fields,
@@ -98,13 +110,15 @@ def traced(original: Callable[..., Any], family: str, trace: HandlerTrace) -> Ca
             "sub_game": getattr(cursor, "sub_game", None),
             "step": getattr(cursor, "step", None),
         }
-        trace.event("inbound_start", family, **where)
+        trace.event("inbound_start", family, layer=HANDLER, **where)
         try:
             result = original(operations, message, session)
         except BaseException as failure:
-            trace.event("inbound_error", family, error_type=type(failure).__name__, **where)
+            trace.event(
+                "inbound_error", family, layer=HANDLER, error_type=type(failure).__name__, **where
+            )
             raise
-        trace.event("inbound_success", family, **where)
+        trace.event("inbound_success", family, layer=HANDLER, **where)
         return result
 
     return wrapper
@@ -144,6 +158,7 @@ class Timed:
         self.trace.event(
             "asgi_start",
             "http",
+            layer=ASGI,
             request_id=request_id,
             method=scope.get("method"),
             path=scope.get("path"),
@@ -153,12 +168,22 @@ class Timed:
             await self.app(scope, receive, watched)
         except BaseException as failure:
             self.trace.event(
-                "asgi_error", "http", request_id=request_id, error_type=type(failure).__name__
+                "asgi_error",
+                "http",
+                layer=ASGI,
+                request_id=request_id,
+                error_type=type(failure).__name__,
             )
             raise
         else:
             self.trace.event(
-                "asgi_end", "http", request_id=request_id, status=seen[0] if seen else None
+                "asgi_end",
+                "http",
+                layer=ASGI,
+                request_id=request_id,
+                method=scope.get("method"),
+                path=scope.get("path"),
+                status=seen[0] if seen else None,
             )
         finally:
             REQUEST_ID.reset(token)
@@ -170,18 +195,19 @@ def timed_async(
     """Bracket one awaited callable, carrying whatever request id is in scope."""
 
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
-        trace.event(f"{event}_start", family, request_id=REQUEST_ID.get())
+        trace.event(f"{event}_start", family, layer=TOOL, request_id=REQUEST_ID.get())
         try:
             result = await original(*args, **kwargs)
         except BaseException as failure:
             trace.event(
                 f"{event}_error",
                 family,
+                layer=TOOL,
                 request_id=REQUEST_ID.get(),
                 error_type=type(failure).__name__,
             )
             raise
-        trace.event(f"{event}_success", family, request_id=REQUEST_ID.get())
+        trace.event(f"{event}_success", family, layer=TOOL, request_id=REQUEST_ID.get())
         return result
 
     return wrapper
@@ -192,7 +218,7 @@ def timed_router(original: Callable[..., Any], trace: HandlerTrace) -> Callable[
 
     def wrapper(operations: Any, request: Any, session: Any) -> Any:
         kind = getattr(request, "kind", None)
-        trace.event("router_start", str(kind), request_id=REQUEST_ID.get())
+        trace.event("router_start", str(kind), layer=ROUTER, request_id=REQUEST_ID.get())
         try:
             result = original(operations, request, session)
         except BaseException as failure:
@@ -203,7 +229,7 @@ def timed_router(original: Callable[..., Any], trace: HandlerTrace) -> Callable[
                 error_type=type(failure).__name__,
             )
             raise
-        trace.event("router_success", str(kind), request_id=REQUEST_ID.get())
+        trace.event("router_success", str(kind), layer=ROUTER, request_id=REQUEST_ID.get())
         return result
 
     return wrapper
@@ -223,6 +249,7 @@ def install_dispatch(trace: HandlerTrace) -> None:
     """
     from fastmcp import FastMCP
 
+    from mars777_police.agent_runtime import AgentRuntime
     from mars777_police.transport import server
 
     original_app = FastMCP.http_app
@@ -235,6 +262,15 @@ def install_dispatch(trace: HandlerTrace) -> None:
     FastMCP.http_app = http_app  # type: ignore[method-assign]
     server.inbound = timed_async(server.inbound, "tool", "receive_any", trace)
     server.route_receive_turn = timed_router(server.route_receive_turn, trace)
+
+    original_stop = AgentRuntime.stop
+
+    async def stop(self: Any) -> Any:
+        """Mark the terminal boundary immediately before the real stop runs."""
+        trace.event("teardown_start", "lifecycle", layer=ASGI)
+        return await original_stop(self)
+
+    AgentRuntime.stop = stop  # type: ignore[method-assign]
 
 
 def events(path: Path) -> list[dict[str, Any]]:
@@ -263,7 +299,8 @@ def classify(found: list[dict[str, Any]]) -> str:
     reached a handler at all. A handler that raised should have produced an
     error for the caller rather than a silence, so it is not classified here.
     """
-    acknowledgements = [one for one in found if one.get("family") == ACKNOWLEDGEMENT]
+    inbound = [one for one in found if one.get("layer", HANDLER) == HANDLER]
+    acknowledgements = [one for one in inbound if one.get("family") == ACKNOWLEDGEMENT]
     if not acknowledgements:
         return "H1 - no acknowledgement ever reached the instrumented handler"
     last = acknowledgements[-1]
@@ -271,7 +308,7 @@ def classify(found: list[dict[str, Any]]) -> str:
         return "H2 - the last acknowledgement handler began and never returned"
     if last.get("event") == "inbound_error":
         return "HX - the last acknowledgement handler raised; a caller should have seen that"
-    after = [one for one in found if int(one.get("seq", 0)) > int(last.get("seq", 0))]
+    after = [one for one in inbound if int(one.get("seq", 0)) > int(last.get("seq", 0))]
     if not after:
         return "H3 - the last acknowledgement completed and nothing inbound followed it"
     return (
@@ -284,90 +321,136 @@ STALL_NS = 10_000_000_000
 """Ten seconds: far above a healthy turn, far below the thirty being explained."""
 
 
-def dispatch_timeline(found: list[dict[str, Any]]) -> str:
-    """Say which interval of the ingress holds the long wait, if any does.
+def ledger(found: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
+    """Every ASGI request this process served, whether or not it ever finished.
 
-    The intervals are read off the last stretch of the trace in order, because
-    the request id does not survive below the transport - the tool runs in a
-    task the session's receive loop started, not in the one serving the HTTP
-    request. Order is sound here only while requests do not overlap, so the
-    overlap is reported next to the verdict rather than assumed away.
+    Kept as a ledger rather than a tail, because R6 printed only the last
+    twelve events and the two requests that mattered - the ones open across
+    the stall - had started long before that window. A request that never ends
+    is the interesting kind here, so an absent end is recorded as `None` and
+    never as a closed row.
     """
-    ordered = sorted(found, key=lambda one: int(one.get("seq", 0)))
-    marks = {
-        "asgi_start": "T1 asgi arrival",
-        "tool_start": "T2 tool body",
-        "router_start": "T3 router",
-        "inbound_start": "T4 handler start",
-        "inbound_success": "T5 handler success",
-        "asgi_end": "T6 asgi end",
-    }
-    last: dict[str, int] = {}
-    for one in ordered:
-        event = str(one.get("event"))
-        if event in marks:
-            last[event] = int(one.get("monotonic_ns", 0))
-    lines = ["    dispatch timeline (last observed of each boundary):"]
-    for event, label in marks.items():
-        lines.append(f"      {label}: {last.get(event, 'absent')}")
-    gaps = [
-        ("T1->T2 mcp dispatch", "asgi_start", "tool_start"),
-        ("T2->T3 tool first await", "tool_start", "router_start"),
-        ("T3->T4 router to handler", "router_start", "inbound_start"),
-        ("T4->T5 handler body", "inbound_start", "inbound_success"),
-        ("T5->T6 response return", "inbound_success", "asgi_end"),
+    rows: dict[int, dict[str, Any]] = {}
+    for one in sorted(found, key=lambda item: int(item.get("seq", 0))):
+        if one.get("layer") != ASGI:
+            continue
+        request_id = int(one.get("request_id", 0))
+        if one.get("event") == "asgi_start":
+            rows[request_id] = {
+                "seq": request_id,
+                "method": one.get("method"),
+                "path": one.get("path"),
+                "start_ns": int(one.get("monotonic_ns", 0)),
+                "end_ns": None,
+                "status": None,
+                "error_type": None,
+            }
+        elif request_id in rows:
+            rows[request_id]["end_ns"] = int(one.get("monotonic_ns", 0))
+            rows[request_id]["status"] = one.get("status")
+            rows[request_id]["error_type"] = one.get("error_type")
+    return rows
+
+
+def _row(one: dict[str, Any], base: int) -> str:
+    end = one["end_ns"]
+    held = "open" if end is None else f"{(end - one['start_ns']) / 1e9:.3f}s"
+    ended = "never" if end is None else f"{(end - base) / 1e9:.3f}s"
+    return (
+        f"      #{one['seq']:>3} {one['method']!s:<6} {one['path']!s:<6}"
+        f" start={(one['start_ns'] - base) / 1e9:8.3f}s end={ended:>10} held={held:>9}"
+        f" status={one['status']} error={one['error_type']}"
+    )
+
+
+def open_across(found: list[dict[str, Any]], at_ns: int) -> list[dict[str, Any]]:
+    """The requests that had started before *at_ns* and had not finished by it."""
+    return [
+        one
+        for one in ledger(found).values()
+        if one["start_ns"] <= at_ns and (one["end_ns"] is None or one["end_ns"] > at_ns)
     ]
-    widest, widest_name = 0, "none"
-    for label, start, end in gaps:
-        if start in last and end in last:
-            delta = last[end] - last[start]
-            lines.append(f"      {label}: {delta / 1e9:.3f}s")
-            if delta > widest:
-                widest, widest_name = delta, label
-        else:
-            lines.append(f"      {label}: unmeasured")
-    verdict = {
-        "T1->T2 mcp dispatch": "A2 - the server application had it; MCP dispatch held it",
-        "T2->T3 tool first await": "A3 - the tool body was entered and its first await held it",
-        "T3->T4 router to handler": "A3 - the router held it",
-        "T4->T5 handler body": "A3 - the handler body held it",
-        "T5->T6 response return": "A4 - the handler finished and the response return held it",
-    }
-    if widest < STALL_NS:
-        lines.append("      CLASSIFICATION: A1 - no interval below ASGI holds the wait")
-    else:
-        lines.append(f"      CLASSIFICATION: {verdict[widest_name]}")
+
+
+def stall_report(found: list[dict[str, Any]], keep: int = 10) -> str:
+    """The ledger view that decides A1 from A2, and the reasoning behind it.
+
+    The decisive question is whether a POST was already inside this server for
+    the whole thirty seconds. That is answered by one request's own start and
+    end, so those are printed in full rather than inferred from a global last
+    of each boundary - the mistake that made R6's verdict meaningless.
+    """
+    rows = ledger(found)
+    if not rows:
+        return "    asgi ledger: no requests recorded"
+    base = min(one["start_ns"] for one in rows.values())
+    handlers = [
+        one
+        for one in found
+        if one.get("layer", HANDLER) == HANDLER and one.get("event") == "inbound_start"
+    ]
+    last_handler = handlers[-1] if handlers else None
+    teardown = [one for one in found if one.get("event") == "teardown_start"]
+    at = (
+        int(teardown[0]["monotonic_ns"])
+        if teardown
+        else max((one["end_ns"] or one["start_ns"] for one in rows.values()), default=base)
+    )
+    marker = (
+        "absent"
+        if not teardown
+        else f"{(int(teardown[0]['monotonic_ns']) - base) / 1e9:.3f}s after baseline"
+    )
+    lines = [
+        f"    asgi ledger: {len(rows)} requests, baseline={base}",
+        f"    teardown_start: {marker}",
+    ]
+    if last_handler is not None:
+        lines.append(
+            f"    last handler dispatch: {last_handler.get('family')}"
+            f" sub_game={last_handler.get('sub_game')} step={last_handler.get('step')}"
+            f" at {(int(last_handler['monotonic_ns']) - base) / 1e9:.3f}s"
+        )
+    lines.append(f"    last {keep} requests:")
+    lines.extend(_row(one, base) for one in sorted(rows.values(), key=lambda r: r["seq"])[-keep:])
+    still = sorted(open_across(found, at), key=lambda r: r["seq"])
+    lines.append(f"    open at the terminal boundary ({len(still)}):")
+    lines.extend(_row(one, base) for one in still)
+    held = [one for one in rows.values() if one["method"] == "POST" and _held(one) >= STALL_NS]
+    lines.append(f"    POSTs held >= 10s ({len(held)}):")
+    lines.extend(_row(one, base) for one in sorted(held, key=lambda r: r["seq"]))
+    lines.append(f"    CLASSIFICATION: {stall_verdict(rows)}")
     return "\n".join(lines)
 
 
-def concurrency(found: list[dict[str, Any]]) -> str:
-    """How many ASGI requests were open when the last one arrived."""
-    ordered = sorted(found, key=lambda one: int(one.get("seq", 0)))
-    starts = [one for one in ordered if one.get("event") == "asgi_start"]
-    if not starts:
-        return "    asgi requests: none recorded"
-    final = starts[-1]
-    before = {
-        int(one["request_id"])
-        for one in ordered
-        if one.get("event") == "asgi_start" and int(one.get("seq", 0)) < int(final.get("seq", 0))
-    }
-    closed = {
-        int(one["request_id"])
-        for one in ordered
-        if one.get("event") in {"asgi_end", "asgi_error"}
-        and int(one.get("seq", 0)) < int(final.get("seq", 0))
-    }
-    return (
-        f"    asgi requests: {len(starts)} started;"
-        f" still open when the last arrived: {sorted(before - closed)}"
-    )
+def _held(one: dict[str, Any]) -> int:
+    """How long a request was inside this server, counting an open one to the end."""
+    if one["end_ns"] is None:
+        return STALL_NS * 1000
+    return int(one["end_ns"]) - int(one["start_ns"])
+
+
+def stall_verdict(rows: dict[int, dict[str, Any]]) -> str:
+    """A1, A2 or AX, decided only by how many POSTs were held long enough.
+
+    Exactly one long-held POST is the discriminator: it entered this server
+    promptly and stayed inside it across the wait, which places the delay above
+    the tool and below ASGI arrival. More than one candidate is ambiguity, not
+    a stronger result, and is reported as such.
+    """
+    held = [one for one in rows.values() if one["method"] == "POST" and _held(one) >= STALL_NS]
+    if not held:
+        return "A1 - no POST was inside this server across the stall"
+    if len(held) > 1:
+        return f"AX - {len(held)} POSTs were held that long; identity is not unique"
+    return "A2 - exactly one POST was inside this server across the stall"
 
 
 def summary(path: Path, keep: int = 12) -> str:
     """The tail of the trace, what it implies, and the numbers behind it."""
     found = events(path)
-    acknowledgements = [one for one in found if one.get("family") == ACKNOWLEDGEMENT]
+    inbound = [one for one in found if one.get("layer", HANDLER) == HANDLER]
+    acknowledgements = [one for one in inbound if one.get("family") == ACKNOWLEDGEMENT]
     starts = [one for one in acknowledgements if one.get("event") == "inbound_start"]
     done = [one for one in acknowledgements if one.get("event") != "inbound_start"]
     lines = [
@@ -378,8 +461,7 @@ def summary(path: Path, keep: int = 12) -> str:
         f"    last acknowledgement start: {starts[-1] if starts else 'none'}",
         f"    last acknowledgement completed: {done[-1] if done else 'none'}",
         f"    CLASSIFICATION: {classify(found)}",
-        concurrency(found),
-        dispatch_timeline(found),
+        stall_report(found),
         f"    last {keep} events:",
     ]
     lines.extend(f"      {one}" for one in found[-keep:])

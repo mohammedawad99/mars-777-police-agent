@@ -378,74 +378,170 @@ def test_the_router_wrapper_preserves_the_original_exception(tmp_path: Path) -> 
     assert process_trace.events(trace.path)[1]["error_type"] == "TypeError"
 
 
-def _timeline(**at: int) -> list[dict[str, object]]:
-    order = [
-        "asgi_start",
-        "tool_start",
-        "router_start",
-        "inbound_start",
-        "inbound_success",
-        "asgi_end",
+def _asgi(
+    seq: int, method: str, start: int, end: int | None = None, status: int | None = 200
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = [
+        {
+            "event": "asgi_start",
+            "family": "http",
+            "layer": "asgi",
+            "seq": seq * 2 - 1,
+            "request_id": seq,
+            "method": method,
+            "path": "/mcp",
+            "monotonic_ns": start,
+        }
     ]
-    return [
-        {"event": event, "family": "x", "seq": index, "monotonic_ns": at[event], "request_id": 1}
-        for index, event in enumerate(order, start=1)
-        if event in at
-    ]
+    if end is not None:
+        rows.append(
+            {
+                "event": "asgi_end",
+                "family": "http",
+                "layer": "asgi",
+                "seq": seq * 2,
+                "request_id": seq,
+                "method": method,
+                "path": "/mcp",
+                "monotonic_ns": end,
+                "status": status,
+            }
+        )
+    return rows
 
 
-def test_a_healthy_timeline_holds_no_long_interval() -> None:
-    found = _timeline(
-        asgi_start=0,
-        tool_start=1_000_000,
-        router_start=2_000_000,
-        inbound_start=3_000_000,
-        inbound_success=4_000_000,
-        asgi_end=5_000_000,
-    )
+def test_the_ledger_keeps_a_request_that_never_finished() -> None:
+    """The interesting request is the one still open; it must not be dropped."""
+    found = [*_asgi(1, "POST", 0, 1_000_000), *_asgi(2, "POST", 2_000_000)]
 
-    assert "CLASSIFICATION: A1" in process_trace.dispatch_timeline(found)
+    rows = process_trace.ledger(found)
+
+    assert rows[2]["end_ns"] is None
+    assert rows[2]["method"] == "POST"
+    assert rows[1]["end_ns"] == 1_000_000
 
 
-def test_a_long_wait_before_the_tool_body_is_mcp_dispatch() -> None:
-    found = _timeline(
-        asgi_start=0,
-        tool_start=30_000_000_000,
-        router_start=30_000_100_000,
-        inbound_start=30_000_200_000,
-        inbound_success=30_000_300_000,
-        asgi_end=30_000_400_000,
-    )
-
-    assert "CLASSIFICATION: A2" in process_trace.dispatch_timeline(found)
-
-
-def test_a_long_wait_after_the_handler_is_response_return() -> None:
-    found = _timeline(
-        asgi_start=0,
-        tool_start=1_000_000,
-        router_start=2_000_000,
-        inbound_start=3_000_000,
-        inbound_success=4_000_000,
-        asgi_end=31_000_000_000,
-    )
-
-    assert "CLASSIFICATION: A4" in process_trace.dispatch_timeline(found)
-
-
-def test_an_unmeasured_boundary_is_named_rather_than_guessed() -> None:
-    text = process_trace.dispatch_timeline(_timeline(asgi_start=0, inbound_start=5_000_000))
-
-    assert "T1->T2 mcp dispatch: unmeasured" in text
-    assert "T2 tool body: absent" in text
-
-
-def test_open_requests_are_reported_next_to_the_verdict() -> None:
+def test_later_requests_do_not_overwrite_an_earlier_open_one() -> None:
+    """R6 lost requests 72 and 73 to a twelve-event window; the ledger cannot."""
     found = [
-        {"event": "asgi_start", "seq": 1, "request_id": 1, "monotonic_ns": 0},
-        {"event": "asgi_start", "seq": 2, "request_id": 2, "monotonic_ns": 1},
-        {"event": "asgi_end", "seq": 3, "request_id": 2, "monotonic_ns": 2},
-        {"event": "asgi_start", "seq": 4, "request_id": 3, "monotonic_ns": 3},
+        *_asgi(72, "POST", 1_000_000_000, 32_000_000_000),
+        *_asgi(73, "GET", 1_500_000_000, 32_000_000_000),
+        *_asgi(74, "DELETE", 31_900_000_000, 31_950_000_000),
     ]
 
-    assert "still open when the last arrived: [1]" in process_trace.concurrency(found)
+    rows = process_trace.ledger(found)
+
+    assert sorted(rows) == [72, 73, 74]
+    assert rows[72]["method"] == "POST" and rows[73]["method"] == "GET"
+    text = process_trace.stall_report(found)
+    assert "# 72 POST" in text and "# 73 GET" in text
+
+
+def test_exactly_one_long_held_post_is_the_discriminator() -> None:
+    found = [
+        *_asgi(1, "POST", 0, 100_000_000),
+        *_asgi(2, "GET", 0, 31_000_000_000),
+        *_asgi(3, "POST", 500_000_000, 31_000_000_000),
+    ]
+
+    assert process_trace.stall_verdict(process_trace.ledger(found)).startswith("A2")
+
+
+def test_no_long_held_post_is_delivery_below_asgi() -> None:
+    found = [*_asgi(1, "POST", 0, 100_000_000), *_asgi(2, "GET", 0, 31_000_000_000)]
+
+    assert process_trace.stall_verdict(process_trace.ledger(found)).startswith("A1")
+
+
+def test_two_long_held_posts_are_ambiguous_not_a_stronger_result() -> None:
+    found = [
+        *_asgi(1, "POST", 0, 31_000_000_000),
+        *_asgi(2, "POST", 100_000_000, 31_500_000_000),
+    ]
+
+    assert process_trace.stall_verdict(process_trace.ledger(found)).startswith("AX")
+
+
+def test_open_across_names_only_what_spanned_the_moment() -> None:
+    found = [
+        *_asgi(1, "POST", 0, 1_000),
+        *_asgi(2, "POST", 500, 5_000),
+        *_asgi(3, "GET", 900),
+    ]
+
+    assert sorted(one["seq"] for one in process_trace.open_across(found, 2_000)) == [2, 3]
+
+
+def test_the_teardown_marker_is_reported_and_closes_nothing() -> None:
+    found = [
+        *_asgi(1, "POST", 0, 31_000_000_000),
+        {
+            "event": "teardown_start",
+            "family": "lifecycle",
+            "layer": "asgi",
+            "seq": 99,
+            "monotonic_ns": 30_000_000_000,
+        },
+    ]
+
+    text = process_trace.stall_report(found)
+
+    assert "teardown_start: 30.000s after baseline" in text
+    assert process_trace.ledger(found)[1]["end_ns"] == 31_000_000_000
+
+
+def test_router_events_do_not_contaminate_handler_counts(tmp_path: Path) -> None:
+    """R6 counted twenty-two starts against sixty-six completions this way."""
+    path = tmp_path / "trace.jsonl"
+    rows = [
+        {
+            "event": "inbound_start",
+            "family": "acknowledgement",
+            "layer": "handler",
+            "seq": 1,
+            "monotonic_ns": 0,
+            "sub_game": 1,
+            "step": 1,
+        },
+        {
+            "event": "inbound_success",
+            "family": "acknowledgement",
+            "layer": "handler",
+            "seq": 2,
+            "monotonic_ns": 1,
+            "sub_game": 1,
+            "step": 1,
+        },
+        {
+            "event": "router_start",
+            "family": "acknowledgement",
+            "layer": "router",
+            "seq": 3,
+            "monotonic_ns": 2,
+        },
+        {
+            "event": "router_success",
+            "family": "acknowledgement",
+            "layer": "router",
+            "seq": 4,
+            "monotonic_ns": 3,
+        },
+    ]
+    path.write_text("\n".join(json.dumps(one) for one in rows), encoding="utf-8")
+
+    text = process_trace.summary(path)
+
+    assert "acknowledgement starts: 1, completed: 1, unmatched: 0" in text
+
+
+def test_asgi_events_do_not_change_the_handler_classification() -> None:
+    """An `asgi_end` is not inbound application work, whatever its sequence."""
+    handled = [
+        {"event": "inbound_start", "family": "acknowledgement", "layer": "handler", "seq": 1},
+        {"event": "inbound_success", "family": "acknowledgement", "layer": "handler", "seq": 2},
+    ]
+
+    assert process_trace.classify(handled).startswith("H3")
+    assert process_trace.classify(
+        [*handled, {"event": "asgi_end", "family": "http", "layer": "asgi", "seq": 3}]
+    ).startswith("H3")
