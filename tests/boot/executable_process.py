@@ -17,6 +17,8 @@ import signal
 import subprocess
 import sys
 import time
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 import composed_builders as compose
@@ -90,6 +92,118 @@ def spawn_opponent(
 def official(root: Path) -> list[str]:
     """The official file names a finished side left behind, sorted."""
     return sorted(path.name for path in root.iterdir()) if root.exists() else []
+
+
+KILL_SECONDS = 10.0
+"""How long a killed process is given to hand over what it had already written."""
+
+
+@dataclass(frozen=True)
+class Ran:
+    """One finished process, kept whole so a failure can describe **both** sides.
+
+    A two-process run that stalls is a statement about a pair, not about one
+    process: asserting the first side's status before the second was ever
+    collected reported one stack and silently discarded the peer holding the
+    other end of it.
+    """
+
+    name: str
+    pid: int
+    status: int | None
+    out: str
+    err: str
+    timed_out: bool = False
+
+
+def finished(name: str, child: "subprocess.Popen[str]", timeout: float) -> Ran:
+    """Collect a process whole, bounded by *timeout* and never waiting past it.
+
+    A peer that hangs is killed and still described. Letting `TimeoutExpired`
+    escape would throw the evidence away in order to report the waiting, which
+    is the one thing already known.
+    """
+    timed_out = False
+    try:
+        out, err = child.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        child.kill()
+        out, err = child.communicate(timeout=KILL_SECONDS)
+    return Ran(name, child.pid, child.returncode, out, err, timed_out)
+
+
+SUB_GAME_IN_NAME = re.compile(r"_(g\d{2})\.")
+"""The `gNN` an official per-sub-game file carries in its own name."""
+
+
+def highest(names: Sequence[str], family: str) -> str:
+    """The furthest `gNN` *family* reached, or `none` if it never started."""
+    tokens = [
+        found.group(1)
+        for name in names
+        if name.startswith(family) and (found := SUB_GAME_IN_NAME.search(name))
+    ]
+    return max(tokens) if tokens else "none"
+
+
+def _log_lines(root: Path, names: Sequence[str]) -> list[str]:
+    """What each **finalized** sub-game log already records, and nothing more."""
+    lines = []
+    for name in sorted(name for name in names if name.startswith("log_")):
+        try:
+            document = json.loads((root / name).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as failure:
+            lines.append(f"    {name}: unreadable ({type(failure).__name__})")
+            continue
+        audit = document.get("audit", {})
+        lines.append(
+            f"    {name}: sub_game={document.get('sub_game')}"
+            f" entries={len(document.get('entries', []))}"
+            f" result={audit.get('result')}"
+            f" semantic={audit.get('semantic', {}).get('verdict')}"
+        )
+    return lines
+
+
+def snapshot(name: str, root: Path) -> str:
+    """One side's persisted evidence: how far it got, read from files alone.
+
+    A sub-game's config is written when it locks and its log only when it
+    finishes, so `config g06` beside `log g05` places a stall inside g06 without
+    any live progress record existing. The **step** inside the active round is
+    not persisted until that sub-game finalizes, so it stays unknown here rather
+    than being guessed at.
+    """
+    names = official(root)
+    declared = any(one.startswith("declaration_") for one in names)
+    concluded = any(one.startswith("result_") for one in names)
+    lines = [
+        f"  {name} artifacts in {root}: {len(names)} file(s)",
+        f"    declaration: {'yes' if declared else 'no'}",
+        f"    result: {'yes' if concluded else 'no'}",
+        f"    highest locked config: {highest(names, 'config_')}",
+        f"    highest completed log: {highest(names, 'log_')}",
+        f"    names: {names}",
+    ]
+    return "\n".join([*lines, *_log_lines(root, names)])
+
+
+def two_process_report(runs: Sequence[Ran], roots: Sequence[tuple[str, Path]]) -> str:
+    """Everything a failing two-process run knows, with the secret scrubbed.
+
+    The scrub is belt and braces: the streams are separately asserted free of
+    the synthetic secret, and this is the text a CI log would publish.
+    """
+    blocks = ["TWO-PROCESS DIAGNOSTIC"]
+    for ran in runs:
+        killed = " (killed after timeout)" if ran.timed_out else ""
+        blocks.append(f"  {ran.name}: pid={ran.pid} exit={ran.status}{killed}")
+    blocks.extend(snapshot(name, root) for name, root in roots)
+    for ran in runs:
+        blocks.append(f"--- {ran.name} stdout ---\n{ran.out}")
+        blocks.append(f"--- {ran.name} stderr ---\n{ran.err}")
+    return "\n".join(blocks).replace(SECRET, "<secret redacted>")
 
 
 def await_application(child: "subprocess.Popen[str]", port: int) -> int:

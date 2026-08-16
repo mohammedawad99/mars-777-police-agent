@@ -29,6 +29,10 @@ from mars777_police.app.sealed_record_values import ActorRole
 GAMES = 6
 FILES = 14
 
+REAL = "real CLI"
+PEER = "synthetic opponent"
+"""The two sides, named once so a diagnostic says which process it is quoting."""
+
 
 def _roots(tmp_path: Path) -> tuple[Path, Path]:
     ours, theirs = tmp_path / "mars777", tmp_path / "opponent"
@@ -37,18 +41,14 @@ def _roots(tmp_path: Path) -> tuple[Path, Path]:
     return ours, theirs
 
 
-def _finish(child: "process.subprocess.Popen[str]", timeout: float) -> tuple[int, str, str]:
-    try:
-        out, err = child.communicate(timeout=timeout)
-    finally:
-        if child.poll() is None:
-            child.kill()
-            child.communicate(timeout=10)
-    return child.returncode, out, err
-
-
 def test_the_real_cli_plays_a_whole_series_against_a_non_counted_opponent(tmp_path: Path) -> None:
-    """One full exact-six autonomous series, both sides real OS processes."""
+    """One full exact-six autonomous series, both sides real OS processes.
+
+    **Both sides are collected before anything is asserted.** A stall here is a
+    statement about a pair, and judging the first process while the second was
+    still undescribed reported one stack and discarded the peer holding the
+    other end of it - which is exactly what a reproducible Windows stall needed.
+    """
     ours_port, theirs_port = free_port(), free_port()
     ours_root, theirs_root = _roots(tmp_path)
     launch = process.written_launch(tmp_path)
@@ -61,30 +61,33 @@ def test_the_real_cli_plays_a_whole_series_against_a_non_counted_opponent(tmp_pa
     )
     try:
         assert process.await_application(child, ours_port) == process.NOT_ACCEPTABLE
-        status, out, err = _finish(child, timeout=600)
-        peer_status, _, peer_err = _finish(opponent, timeout=120)
+        ours = process.finished(REAL, child, timeout=600)
+        theirs = process.finished(PEER, opponent, timeout=120)
     finally:
         for one in (child, opponent):
             if one.poll() is None:
                 one.kill()
                 one.communicate(timeout=10)
 
-    assert status == 0, err
-    assert peer_status == 0, peer_err
+    assert SECRET not in ours.out and SECRET not in ours.err
+    assert SECRET not in theirs.out and SECRET not in theirs.err
+    report = process.two_process_report((ours, theirs), ((REAL, ours_root), (PEER, theirs_root)))
+
+    assert ours.status == 0, report
+    assert theirs.status == 0, report
     assert child.pid != opponent.pid
-    assert not process.crashed(err), err
-    assert SECRET not in out and SECRET not in err
-    assert f"{FILES} artifacts" in out
+    assert not process.crashed(ours.err), report
+    assert f"{FILES} artifacts" in ours.out, report
 
     for root in (ours_root, theirs_root):
         names = process.official(root)
-        assert len(names) == FILES == len(set(names))
-        assert sum(name.startswith("declaration_") for name in names) == 1
-        assert sum(name.startswith("result_") for name in names) == 1
+        assert len(names) == FILES == len(set(names)), report
+        assert sum(name.startswith("declaration_") for name in names) == 1, report
+        assert sum(name.startswith("result_") for name in names) == 1, report
         for family in ("config_", "log_"):
             got = sorted(name for name in names if name.startswith(family))
-            assert len(got) == GAMES
-            assert all(f"_g0{index}." in name for index, name in enumerate(got, start=1))
+            assert len(got) == GAMES, report
+            assert all(f"_g0{index}." in name for index, name in enumerate(got, start=1)), report
 
     for log in sorted(path for path in ours_root.iterdir() if path.name.startswith("log_")):
         document = json.loads(log.read_text(encoding="utf-8"))
@@ -103,13 +106,14 @@ def test_a_peer_that_never_appears_fails_inside_its_budget(tmp_path: Path) -> No
     )
     child = process.spawn("mars777_police", launch, environment)
     assert process.await_application(child, port) == process.NOT_ACCEPTABLE
-    status, out, err = _finish(child, timeout=300)
+    ours = process.finished(REAL, child, timeout=300)
 
-    assert status == 4, err
-    assert "never became reachable" in err
-    assert not process.crashed(err), err
-    assert SECRET not in out and SECRET not in err
-    assert process.official(ours_root) == []
+    assert SECRET not in ours.out and SECRET not in ours.err
+    report = process.two_process_report((ours,), ((REAL, ours_root),))
+    assert ours.status == 4, report
+    assert "never became reachable" in ours.err, report
+    assert not process.crashed(ours.err), report
+    assert process.official(ours_root) == [], report
 
 
 def test_the_startup_retry_joins_an_opponent_that_starts_second(tmp_path: Path) -> None:
@@ -170,19 +174,21 @@ def test_two_legal_but_different_boot_configs_are_refused_by_the_lock(tmp_path: 
         variant="other",
     )
     try:
-        status, out, err = _finish(child, timeout=300)
-        peer_status, _, _ = _finish(opponent, timeout=120)
+        ours = process.finished(REAL, child, timeout=300)
+        theirs = process.finished(PEER, opponent, timeout=120)
     finally:
         for one in (child, opponent):
             if one.poll() is None:
                 one.kill()
                 one.communicate(timeout=10)
 
-    assert status != 0, out
-    assert peer_status != 0
-    assert "E-CONFIG-MISMATCH" in err or "series stopped" in err, err
-    assert SECRET not in out and SECRET not in err
+    assert SECRET not in ours.out and SECRET not in ours.err
+    assert SECRET not in theirs.out and SECRET not in theirs.err
+    report = process.two_process_report((ours, theirs), ((REAL, ours_root), (PEER, theirs_root)))
+    assert ours.status != 0, report
+    assert theirs.status != 0, report
+    assert "E-CONFIG-MISMATCH" in ours.err or "series stopped" in ours.err, report
     for root in (ours_root, theirs_root):
         names = process.official(root)
-        assert [name for name in names if name.startswith("result_")] == []
-        assert [name for name in names if name.startswith("config_")] == []
+        assert [name for name in names if name.startswith("result_")] == [], report
+        assert [name for name in names if name.startswith("config_")] == [], report
