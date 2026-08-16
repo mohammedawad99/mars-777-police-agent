@@ -7,10 +7,15 @@ the thing it measures cannot answer a question about that thing, so nothing
 here runs in the target at all. The observed process is byte-for-byte the one
 R13 already measured.
 
-Instead the parent watches the trace the opponent is already writing, notices a
-first hand-off that has begun and not finished, and asks an external profiler
-to read that process's stacks by pid. The target imports nothing, installs
-nothing and is never asked to cooperate.
+Instead the parent watches the trace the opponent is already writing, notices
+that its heartbeat has fallen silent, and asks an external profiler to read
+that process's stacks by pid. The target imports nothing, installs nothing and
+is never asked to cooperate.
+
+**The silence is the trigger, not the shape of the stall.** An earlier version
+waited for a hand-off that had begun and not finished, which is one of the two
+ways this defect presents; the run that followed presented the other, and the
+observer never fired. The heartbeat stops in both.
 
 **Never `--locals`.** Frame identity - file, function, line - is what the
 question needs; the values inside those frames are protocol material and must
@@ -29,9 +34,18 @@ TOOL = "py-spy"
 VERSION = "0.4.1"
 """Pinned: a stack reader whose version drifts is a report whose shape drifts."""
 
-SESSION_MESSAGE = "SessionMessage"
-OFFSETS = (5.0, 15.0, 25.0)
-"""Where in a thirty-second stall to look: early, middle, and near release."""
+STALE_SECONDS = 2.0
+"""Four missed half-second beats: far outside jitter, far inside the blackout."""
+
+HEALTHY_TICKS = 3
+"""Proof the heartbeat was running before its silence can mean anything."""
+
+OFFSETS = (0.0, 8.0, 18.0)
+"""From detection, which is already ~2s in: roughly 2s, 10s and 20s of the gap.
+
+Not +25s: that approaches the release boundary, and a third sample taken after
+the loop resumes is worse than no third sample.
+"""
 
 POLL_SECONDS = 0.5
 
@@ -79,36 +93,58 @@ class Observer:
     alive: Callable[[], bool] = lambda: True
     attempts: list[Attempt] = field(default_factory=list)
     stopped: bool = False
+    seen: int = 0
+    fresh: float = 0.0
+    detected: int | None = None
 
-    def outstanding(self) -> bool:
-        """True when a first hand-off has begun and not yet finished.
+    def ticks(self) -> list[int]:
+        """Every heartbeat this process has recorded, read from its own trace."""
+        return [
+            int(one["monotonic_ns"])
+            for one in _lines(self.trace)
+            if one.get("event") == "heartbeat_tick" and one.get("monotonic_ns") is not None
+        ]
 
-        Read only from the file the opponent already writes. The opponent is
-        never asked for anything, and nothing is inferred from wall-clock game
-        start.
+    def blacked_out(self) -> bool:
+        """True when a heartbeat that *was* beating has gone quiet.
+
+        The trigger is the silence itself, not the shape of whatever the loop
+        was doing when it stopped. Two runs showed the send entered before the
+        blackout and one showed it entered after; keying on either would miss
+        the other, while the silence is present in both.
+
+        Two guards keep it honest: the heartbeat must have proved a cadence
+        first, so a process that has not started beating is never mistaken for
+        one that stopped; and staleness is measured against this process's own
+        latest tick, not against a clock shared with the target.
         """
-        enters = exits = 0
-        for line in _lines(self.trace):
-            event = line.get("event")
-            if event == "memory_send_enter" and line.get("item_type") == SESSION_MESSAGE:
-                enters += 1
-            elif event in {"memory_send_exit", "memory_send_error"}:
-                exits += 1
-        return enters > exits
+        beats = self.ticks()
+        if len(beats) < HEALTHY_TICKS:
+            self.seen = 0
+            return False
+        if len(beats) > self.seen:
+            self.seen, self.fresh = len(beats), self.clock()
+        return self.clock() - self.fresh >= STALE_SECONDS
 
     def run(self) -> None:
-        """Wait for a stalled hand-off, then read stacks at the three offsets."""
+        """Wait for the heartbeat to fall silent, then read stacks from outside.
+
+        A resumed heartbeat ends the capture immediately: it is more
+        authoritative than any assumption about what the loop was doing, and a
+        dump taken after the loop recovers answers a different question.
+        """
         while not self.stopped and self.alive():
-            if not self.outstanding():
+            if not self.blacked_out():
                 self.sleeper(POLL_SECONDS)
                 continue
+            self.detected = self.stamp()
             began = self.clock()
             for index, offset in enumerate(OFFSETS, start=1):
                 while not self.stopped and self.clock() - began < offset:
-                    if not self.outstanding() or not self.alive():
+                    if not self.blacked_out() or not self.alive():
                         return
                     self.sleeper(POLL_SECONDS)
-                if self.stopped or not self.alive():
+                if self.stopped or not self.alive() or not self.blacked_out():
                     return
                 self.capture(index, offset)
             return

@@ -1293,34 +1293,69 @@ def _ticks(*stamps: int) -> list[dict[str, object]]:
     ]
 
 
-def test_ticks_continuing_through_the_stall_mean_the_loop_is_alive() -> None:
-    """Sixty ticks half a second apart across a thirty-second send."""
-    stamps = [index * 500_000_000 for index in range(80)]
-    verdict, facts = process_trace.heartbeat_shape(_ticks(*stamps), (5_000_000_000, 35_000_000_000))
-
-    assert verdict == "F1"
-    assert facts["ticks_inside"] >= 50
+def _slow(seconds: float = 30.0) -> list[tuple[dict[str, object], dict[str, object]]]:
+    return [(_send(1, 0, "enter", receivers=1), _send(2, int(seconds * 1e9), "exit"))]
 
 
-def test_a_silence_covering_the_stall_means_the_loop_stopped() -> None:
-    stamps = [0, 500_000_000, 1_000_000_000, 32_000_000_000, 32_500_000_000]
-    verdict, facts = process_trace.heartbeat_shape(_ticks(*stamps), (1_500_000_000, 31_500_000_000))
+def test_a_long_silence_means_the_loop_stopped() -> None:
+    """Thirty seconds without a beat that had been beating every half second."""
+    stamps = [0, 500_000_000, 1_000_000_000, 31_500_000_000, 32_000_000_000]
+
+    verdict, facts = process_trace.heartbeat_shape(_ticks(*stamps), [])
 
     assert verdict == "F2"
-    assert facts["widest_gap_inside_ns"] >= facts["stall_ns"] * 0.8
+    assert facts["widest_gap_ns"] >= process_trace.STALL_NS
+    assert facts["window"] == (1_000_000_000, 31_500_000_000)
 
 
-def test_abnormal_but_partial_gaps_are_degradation_not_either_verdict() -> None:
-    stamps = [0, 500_000_000, 1_000_000_000, 1_500_000_000]
-    stamps += [12_000_000_000, 12_500_000_000, 24_000_000_000, 31_500_000_000]
-    verdict, _ = process_trace.heartbeat_shape(_ticks(*stamps), (1_000_000_000, 31_000_000_000))
+def test_a_blackout_is_found_with_no_slow_send_at_all() -> None:
+    """The E1 shape: the send begins only after the loop comes back."""
+    stamps = [0, 500_000_000, 1_000_000_000, 31_500_000_000]
 
-    assert verdict == "F3"
+    assert process_trace.heartbeat_shape(_ticks(*stamps), [])[0] == "F2"
 
 
-def test_no_heartbeat_or_no_window_is_not_classified() -> None:
-    assert process_trace.heartbeat_shape([], (0, 1))[0] == "FX"
-    assert process_trace.heartbeat_shape(_ticks(0, 1), None)[0] == "FX"
+def test_a_blackout_is_found_when_a_send_stalled_too() -> None:
+    """The E2 shape: same verdict, reached without needing the send."""
+    stamps = [0, 500_000_000, 1_000_000_000, 31_500_000_000]
+
+    assert process_trace.heartbeat_shape(_ticks(*stamps), _slow())[0] == "F2"
+
+
+def test_a_beat_that_held_through_a_stalled_send_means_one_task_starved() -> None:
+    stamps = [index * 500_000_000 for index in range(80)]
+
+    assert process_trace.heartbeat_shape(_ticks(*stamps), _slow())[0] == "F1"
+
+
+def test_abnormal_but_partial_gaps_are_degradation() -> None:
+    stamps = [0, 500_000_000, 1_000_000_000, 8_000_000_000, 8_500_000_000]
+
+    assert process_trace.heartbeat_shape(_ticks(*stamps), [])[0] == "F3"
+
+
+def test_a_healthy_beat_with_no_stalled_send_is_not_a_verdict() -> None:
+    """A green run must not be reported as a blackout by the derivation."""
+    stamps = [index * 500_000_000 for index in range(20)]
+
+    verdict, facts = process_trace.heartbeat_shape(_ticks(*stamps), [])
+
+    assert verdict == "FX"
+    assert "the beat held" in facts["reason"]
+
+
+def test_too_few_ticks_are_not_classified() -> None:
+    assert process_trace.heartbeat_shape([], [])[0] == "FX"
+    assert process_trace.heartbeat_shape(_ticks(0), [])[0] == "FX"
+
+
+def test_the_widest_gap_window_is_read_from_the_beat_alone() -> None:
+    stamps = [0, 500_000_000, 31_000_000_000, 31_500_000_000]
+
+    assert process_trace.heartbeat_gap_window(_ticks(*stamps)) == (
+        500_000_000,
+        31_000_000_000,
+    )
 
 
 def test_the_heartbeat_report_survives_a_run_without_ticks() -> None:
@@ -1328,7 +1363,7 @@ def test_the_heartbeat_report_survives_a_run_without_ticks() -> None:
 
 
 def test_teardown_events_do_not_corrupt_the_stall_window() -> None:
-    """The window comes from the send pair, not from whatever happened last."""
+    """The window comes from the beat, not from whatever happened last."""
     found = [
         *_ticks(0, 500_000_000, 31_000_000_000),
         _send(100, 500_000_000, "enter", receivers=1),
@@ -1344,4 +1379,4 @@ def test_teardown_events_do_not_corrupt_the_stall_window() -> None:
 
     text = process_trace.heartbeat_report(found, 0)
 
-    assert "stall window: 0.500s -> 30.800s" in text
+    assert "stall window: 0.500s -> 31.000s" in text

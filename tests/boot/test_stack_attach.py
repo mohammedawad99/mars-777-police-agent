@@ -27,7 +27,20 @@ def _trace(path: Path, *rows: dict[str, object]) -> Path:
     return path
 
 
-def _enter(seq: int = 1) -> dict[str, object]:
+def _beats(count: int) -> list[dict[str, object]]:
+    return [
+        {
+            "event": "heartbeat_tick",
+            "layer": "asgi",
+            "seq": index,
+            "monotonic_ns": index * 500_000_000,
+            "tick": index,
+        }
+        for index in range(1, count + 1)
+    ]
+
+
+def _enter(seq: int = 900) -> dict[str, object]:
     return {
         "event": "memory_send_enter",
         "layer": "stream",
@@ -37,10 +50,6 @@ def _enter(seq: int = 1) -> dict[str, object]:
         "waiting_receivers": 1,
         "capacity": 0,
     }
-
-
-def _exit(seq: int = 2) -> dict[str, object]:
-    return {"event": "memory_send_exit", "layer": "stream", "seq": seq, "monotonic_ns": 1}
 
 
 class FakeRunner:
@@ -93,53 +102,113 @@ def test_the_command_never_asks_for_locals() -> None:
     assert "--locals" not in argv and "-l" not in argv
 
 
-def test_a_stalled_handoff_is_read_from_the_trace_alone(tmp_path: Path) -> None:
-    _trace(tmp_path / "trace.jsonl", _enter())
+def test_a_beating_heartbeat_does_not_trigger(tmp_path: Path) -> None:
+    """The healthy cadence must cost nothing at all."""
+    path = tmp_path / "trace.jsonl"
+    _trace(path, *_beats(10))
+    runner, clock = FakeRunner(), Clock()
+    observer = _observer(tmp_path, runner, clock)
+
+    assert observer.blacked_out() is False
+    clock.sleep(1.0)
+    assert observer.blacked_out() is False
+
+
+def test_a_single_late_tick_within_jitter_does_not_trigger(tmp_path: Path) -> None:
+    _trace(tmp_path / "trace.jsonl", *_beats(6))
+    runner, clock = FakeRunner(), Clock()
+    observer = _observer(tmp_path, runner, clock)
+
+    observer.blacked_out()
+    clock.sleep(1.5)
+
+    assert observer.blacked_out() is False
+
+
+def test_a_stale_heartbeat_after_a_healthy_baseline_triggers(tmp_path: Path) -> None:
+    _trace(tmp_path / "trace.jsonl", *_beats(6))
+    runner, clock = FakeRunner(), Clock()
+    observer = _observer(tmp_path, runner, clock)
+
+    observer.blacked_out()
+    clock.sleep(stack_attach.STALE_SECONDS)
+
+    assert observer.blacked_out() is True
+
+
+def test_a_process_that_never_beat_is_not_a_blackout(tmp_path: Path) -> None:
+    """Startup silence is not the same as a loop that stopped."""
+    _trace(tmp_path / "trace.jsonl", *_beats(2))
+    runner, clock = FakeRunner(), Clock()
+    observer = _observer(tmp_path, runner, clock)
+
+    clock.sleep(60.0)
+
+    assert observer.blacked_out() is False
+
+
+def test_an_empty_trace_is_not_a_blackout(tmp_path: Path) -> None:
+    _trace(tmp_path / "trace.jsonl")
     observer = _observer(tmp_path, FakeRunner(), Clock())
 
-    assert observer.outstanding() is True
+    assert observer.blacked_out() is False
 
 
-def test_a_completed_handoff_is_not_outstanding(tmp_path: Path) -> None:
-    _trace(tmp_path / "trace.jsonl", _enter(), _exit())
-    observer = _observer(tmp_path, FakeRunner(), Clock())
-
-    assert observer.outstanding() is False
-
-
-def test_three_dumps_are_taken_across_the_stall(tmp_path: Path) -> None:
-    _trace(tmp_path / "trace.jsonl", _enter())
+def test_the_trigger_does_not_depend_on_a_send_having_started(tmp_path: Path) -> None:
+    """The E1 shape: no send has been entered when the loop goes quiet."""
+    _trace(tmp_path / "trace.jsonl", *_beats(6))
     runner, clock = FakeRunner(), Clock()
 
     _observer(tmp_path, runner, clock).run()
 
     assert len(runner.argv) == 3
-    assert all(one == stack_attach.command(4242) for one in runner.argv)
 
 
-def test_a_handoff_that_finishes_promptly_is_never_dumped(tmp_path: Path) -> None:
-    """Only a stall is interesting; a healthy turn must cost nothing."""
-    path = tmp_path / "trace.jsonl"
-    _trace(path, _enter())
+def test_the_trigger_also_fires_when_a_send_is_outstanding(tmp_path: Path) -> None:
+    """The E2 shape: same trigger, reached the same way."""
+    _trace(tmp_path / "trace.jsonl", *_beats(6), _enter())
+    runner, clock = FakeRunner(), Clock()
+
+    _observer(tmp_path, runner, clock).run()
+
+    assert len(runner.argv) == 3
+
+
+def test_three_dumps_are_taken_across_the_blackout(tmp_path: Path) -> None:
+    _trace(tmp_path / "trace.jsonl", *_beats(6))
     runner, clock = FakeRunner(), Clock()
     observer = _observer(tmp_path, runner, clock)
-    original = observer.outstanding
-    calls = {"n": 0}
 
-    def outstanding() -> bool:
-        calls["n"] += 1
-        if calls["n"] > 2:
-            _trace(path, _enter(), _exit())
-        return original()
-
-    observer.outstanding = outstanding  # type: ignore[method-assign]
     observer.run()
 
-    assert runner.argv == []
+    assert [one.offset for one in observer.attempts] == list(stack_attach.OFFSETS)
+    assert all(one == stack_attach.command(4242) for one in runner.argv)
+    assert observer.detected is not None
+
+
+def test_a_resumed_heartbeat_cancels_the_remaining_dumps(tmp_path: Path) -> None:
+    """A beat that comes back is more authoritative than any assumption."""
+    path = tmp_path / "trace.jsonl"
+    _trace(path, *_beats(6))
+    runner, clock = FakeRunner(), Clock()
+    observer = _observer(tmp_path, runner, clock, alive=lambda: clock.now < 40.0)
+    original = observer.ticks
+    calls = {"n": 0}
+
+    def ticks() -> list[int]:
+        calls["n"] += 1
+        if calls["n"] > 3:
+            _trace(path, *_beats(6 + calls["n"]))
+        return original()
+
+    observer.ticks = ticks  # type: ignore[method-assign]
+    observer.run()
+
+    assert len(observer.attempts) < 3
 
 
 def test_nothing_is_dumped_after_the_opponent_exits(tmp_path: Path) -> None:
-    _trace(tmp_path / "trace.jsonl", _enter())
+    _trace(tmp_path / "trace.jsonl", *_beats(6))
     runner, clock = FakeRunner(), Clock()
 
     _observer(tmp_path, runner, clock, alive=lambda: False).run()
@@ -148,7 +217,7 @@ def test_nothing_is_dumped_after_the_opponent_exits(tmp_path: Path) -> None:
 
 
 def test_stopping_ends_the_watch(tmp_path: Path) -> None:
-    _trace(tmp_path / "trace.jsonl", _enter())
+    _trace(tmp_path / "trace.jsonl", *_beats(6))
     runner, clock = FakeRunner(), Clock()
     observer = _observer(tmp_path, runner, clock)
     observer.stop()
@@ -160,7 +229,7 @@ def test_stopping_ends_the_watch(tmp_path: Path) -> None:
 
 def test_a_failed_attach_is_recorded_rather_than_hidden(tmp_path: Path) -> None:
     """A profiler that could not attach is evidence, not an absence of it."""
-    _trace(tmp_path / "trace.jsonl", _enter())
+    _trace(tmp_path / "trace.jsonl", *_beats(6))
     runner = FakeRunner(stdout="", code=1)
     clock = Clock()
 
@@ -173,7 +242,7 @@ def test_a_failed_attach_is_recorded_rather_than_hidden(tmp_path: Path) -> None:
 
 
 def test_a_tool_that_cannot_be_launched_is_recorded(tmp_path: Path) -> None:
-    _trace(tmp_path / "trace.jsonl", _enter())
+    _trace(tmp_path / "trace.jsonl", *_beats(6))
 
     def explode(argv: list[str]) -> "subprocess.CompletedProcess[str]":
         raise FileNotFoundError("py-spy")
@@ -257,7 +326,7 @@ def test_attempts_are_written_beside_the_trace_not_into_an_artifact_root(
     tmp_path: Path,
 ) -> None:
     """Official files are the game's; a diagnostic must never join them."""
-    _trace(tmp_path / "trace.jsonl", _enter())
+    _trace(tmp_path / "trace.jsonl", *_beats(6))
     observer = _observer(tmp_path, FakeRunner(), Clock())
     observer.run()
 

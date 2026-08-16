@@ -821,44 +821,58 @@ def heartbeat_gaps(ticks: list[dict[str, Any]]) -> list[int]:
     return [later - earlier for earlier, later in itertools.pairwise(stamps)]
 
 
-def heartbeat_shape(
-    ticks: list[dict[str, Any]], window: tuple[int, int] | None
-) -> tuple[str, dict[str, Any]]:
-    """Say whether the loop kept running through the stall, and how confidently.
+def heartbeat_gap_window(ticks: list[dict[str, Any]]) -> tuple[int, int] | None:
+    """The widest silence between two heartbeats, derived from the beat alone.
 
-    The distinction is coarse on purpose. Ticks continuing at roughly their
-    usual cadence mean the loop scheduled this task repeatedly while another
-    one waited. A silence covering most of the stall means the loop was not
-    running this task either. Anything in between is degradation rather than
-    either, and is reported as such rather than rounded to whichever is more
-    convenient.
+    The previous derivation took its window from a slow memory send, so a run
+    where the send was entered only *after* the loop recovered had no window at
+    all and classified as unknown - even though the beat showed a thirty-second
+    silence. The heartbeat is present in every shape of this defect, so it is
+    what the window is built from now. Send timing remains useful for
+    correlation, and is no longer required for a verdict.
     """
-    if len(ticks) < 2 or window is None:
-        return "FX", {"reason": "no heartbeat evidence to correlate"}
-    started, ended = window
-    stall = ended - started
-    inside = [one for one in ticks if started <= int(one["monotonic_ns"]) <= ended]
-    outside = [
-        gap
-        for one, gap in zip(
-            sorted(ticks, key=lambda i: int(i["seq"]))[:-1], heartbeat_gaps(ticks), strict=False
-        )
-        if not (started <= int(one["monotonic_ns"]) <= ended)
-    ]
-    widest_inside = max(heartbeat_gaps(inside), default=0) if len(inside) > 1 else stall
-    facts = {
-        "ticks_inside": len(inside),
-        "stall_ns": stall,
-        "widest_gap_inside_ns": widest_inside,
-        "typical_gap_ns": sorted(outside)[len(outside) // 2] if outside else None,
-        "widest_gap_outside_ns": max(outside, default=None),
+    ordered = sorted(ticks, key=lambda one: int(one["seq"]))
+    if len(ordered) < 2:
+        return None
+    widest, at = 0, None
+    for earlier, later in itertools.pairwise(ordered):
+        gap = int(later["monotonic_ns"]) - int(earlier["monotonic_ns"])
+        if gap > widest:
+            widest, at = gap, (int(earlier["monotonic_ns"]), int(later["monotonic_ns"]))
+    return at
+
+
+def heartbeat_shape(
+    ticks: list[dict[str, Any]], sends: list[tuple[dict[str, Any], dict[str, Any]]]
+) -> tuple[str, dict[str, Any]]:
+    """Say whether the loop went quiet, and how confidently.
+
+    The beat decides. A silence long enough to be unmistakable means the loop
+    itself stopped running things; a beat that held its cadence *through* a
+    stalled send means the loop was alive and one task was not being resumed;
+    gaps that are abnormal without being either are degradation. The send is
+    consulted only to separate the second case from the third, never to build
+    the window - a run where the send began after the loop recovered still has
+    a blackout, and the previous derivation could not see it.
+    """
+    if len(ticks) < 2:
+        return "FX", {"reason": "too few heartbeats to derive a cadence"}
+    gaps = heartbeat_gaps(ticks)
+    typical, widest = sorted(gaps)[len(gaps) // 2], max(gaps)
+    facts: dict[str, Any] = {
+        "ticks": len(ticks),
+        "typical_gap_ns": typical,
+        "widest_gap_ns": widest,
+        "slow_sends": len(sends),
+        "window": heartbeat_gap_window(ticks),
     }
-    if len(inside) < 2 or widest_inside >= stall * 0.8:
+    if widest >= STALL_NS:
         return "F2", facts
-    typical = facts["typical_gap_ns"] or HEARTBEAT_SECONDS * 1e9
-    if widest_inside > max(typical * 5, 5_000_000_000):
+    if sends:
+        return "F1", facts
+    if widest > max(typical * 5, 5_000_000_000):
         return "F3", facts
-    return "F1", facts
+    return "FX", {**facts, "reason": "the beat held and no send stalled"}
 
 
 def heartbeat_report(found: list[dict[str, Any]], base: int) -> str:
@@ -867,11 +881,8 @@ def heartbeat_report(found: list[dict[str, Any]], base: int) -> str:
     if not ticks:
         return "    heartbeat: no ticks recorded"
     slow = slow_stream_sends(found)
-    window = None
-    if slow:
-        started, ended = slow[0]
-        window = (int(started["monotonic_ns"]), int(ended["monotonic_ns"]))
-    verdict, facts = heartbeat_shape(ticks, window)
+    verdict, facts = heartbeat_shape(ticks, slow)
+    window = facts.get("window")
     gaps = heartbeat_gaps(ticks)
     lines = [
         f"    heartbeat: {len(ticks)} ticks",
@@ -879,7 +890,7 @@ def heartbeat_report(found: list[dict[str, Any]], base: int) -> str:
         f" max={_seconds(max(gaps)) if gaps else 'n/a'}",
     ]
     if window is None:
-        lines.append("      no pathological send to correlate against")
+        lines.append("      too few ticks to derive a gap")
     else:
         started, ended = window
         before = [one for one in ticks if int(one["monotonic_ns"]) < started]
@@ -890,11 +901,11 @@ def heartbeat_report(found: list[dict[str, Any]], base: int) -> str:
             [
                 f"      stall window: {(started - base) / 1e9:.3f}s ->"
                 f" {(ended - base) / 1e9:.3f}s ({_seconds(ended - started)})",
-                f"      ticks inside stall: {facts['ticks_inside']}",
-                f"      widest gap inside stall: {_seconds(facts['widest_gap_inside_ns'])}",
-                f"      typical gap outside: {_seconds(facts['typical_gap_ns'])}",
+                f"      widest heartbeat gap: {_seconds(facts.get('widest_gap_ns'))}",
+                f"      typical heartbeat gap: {_seconds(facts.get('typical_gap_ns'))}",
                 f"      last tick before stall: {last_before}",
                 f"      first tick after stall: {first_after}",
+                f"      slow memory sends (correlation only): {len(slow)}",
             ]
         )
     lines.append(f"      LOOP VERDICT: {verdict}")
