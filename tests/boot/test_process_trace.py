@@ -11,6 +11,7 @@ refusing to choose when they cannot.
 import asyncio
 import json
 from pathlib import Path
+from typing import ClassVar
 
 import process_trace
 import pytest
@@ -635,3 +636,134 @@ def test_the_session_report_never_prints_a_payload(tmp_path: Path) -> None:
     assert "receive_turn" in text and SECRET not in text
     for forbidden in ("payload", "nonce", "h_commit", "params="):
         assert forbidden not in text
+
+
+class Chunked:
+    """An ASGI app that reads a body in pieces, exactly as Starlette does."""
+
+    def __init__(self) -> None:
+        self.seen: list[dict[str, object]] = []
+
+    async def __call__(self, scope: object, receive: object, send: object) -> None:
+        while True:
+            message = await receive()
+            self.seen.append(message)
+            if not message.get("more_body"):
+                break
+        await send({"type": "http.response.start", "status": 200})
+        await send({"type": "http.response.body", "body": b""})
+
+
+def test_the_receive_wrapper_preserves_every_chunk_and_flag(tmp_path: Path) -> None:
+    trace = _trace(tmp_path)
+    inner = Chunked()
+    wrapped = process_trace.Timed(inner, trace)
+    given = [
+        {"type": "http.request", "body": b"one", "more_body": True},
+        {"type": "http.request", "body": b"two", "more_body": False},
+    ]
+
+    async def run() -> None:
+        pending = list(given)
+
+        async def receive() -> dict[str, object]:
+            return pending.pop(0)
+
+        async def send(message: dict[str, object]) -> None:
+            return None
+
+        await wrapped({"type": "http", "method": "POST", "path": "/mcp"}, receive, send)
+
+    asyncio.run(run())
+
+    assert inner.seen == given
+    returns = [one for one in process_trace.events(trace.path) if one["event"] == "receive_return"]
+    assert [one["body_len"] for one in returns] == [3, 3]
+    assert [one["more_body"] for one in returns] == [True, False]
+    assert "one" not in trace.path.read_text(encoding="utf-8")
+
+
+def test_the_receive_wrapper_awaits_the_original_exactly_once(tmp_path: Path) -> None:
+    trace = _trace(tmp_path)
+    calls = []
+
+    async def app(scope: object, receive: object, send: object) -> None:
+        await receive()
+        await send({"type": "http.response.start", "status": 200})
+
+    async def run() -> None:
+        async def receive() -> dict[str, object]:
+            calls.append(1)
+            return {"type": "http.request", "body": b"x", "more_body": False}
+
+        async def send(message: dict[str, object]) -> None:
+            return None
+
+        await process_trace.Timed(app, trace)(
+            {"type": "http", "method": "POST", "path": "/mcp"}, receive, send
+        )
+
+    asyncio.run(run())
+
+    assert calls == [1]
+
+
+def test_the_client_description_reads_only_the_length(tmp_path: Path) -> None:
+    """Never the body: iterating the request stream would consume it."""
+
+    class Url:
+        target = b"/mcp"
+
+    class Request:
+        method = b"POST"
+        url = Url()
+        headers: ClassVar[list[tuple[bytes, bytes]]] = [
+            (b"content-length", b"412"),
+            (b"authorization", b"Bearer secret-value"),
+        ]
+
+        @property
+        def stream(self) -> object:
+            raise AssertionError("the diagnostic must never touch the body")
+
+    about = process_trace._request_about(object(), Request())
+
+    assert about["method"] == "POST" and about["path"] == "/mcp"
+    assert about["content_length"] == 412
+    assert "Bearer" not in str(about) and "authorization" not in str(about)
+
+
+def test_the_client_report_survives_an_empty_trace(tmp_path: Path) -> None:
+    path = tmp_path / "client.jsonl"
+    path.write_text("", encoding="utf-8")
+
+    assert "no events recorded" in process_trace.client_report(path)
+
+
+def test_the_client_report_names_the_slowest_write(tmp_path: Path) -> None:
+    path = tmp_path / "client.jsonl"
+    rows = [
+        {
+            "event": "client_body_enter",
+            "family": "mcp",
+            "layer": "session",
+            "seq": 1,
+            "monotonic_ns": 0,
+            "method": "POST",
+            "path": "/mcp",
+            "content_length": 10,
+        },
+        {
+            "event": "client_body_exit",
+            "family": "mcp",
+            "layer": "session",
+            "seq": 2,
+            "monotonic_ns": 31_000_000_000,
+        },
+    ]
+    path.write_text("\n".join(json.dumps(one) for one in rows), encoding="utf-8")
+
+    text = process_trace.client_report(path)
+
+    assert "slowest single write: 31.000s" in text
+    assert "content_length=10" in text

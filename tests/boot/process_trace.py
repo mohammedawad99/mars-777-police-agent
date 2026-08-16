@@ -155,6 +155,27 @@ class Timed:
                 seen.append(int(message["status"]))
             await send(message)
 
+        async def listened() -> Any:
+            """Time the receive channel, and hand back exactly what it gave.
+
+            The body is never read here - only how many bytes a chunk carried
+            and whether more were promised, which is what separates "no first
+            byte yet" from "body arriving in pieces".
+            """
+            self.trace.event("receive_wait", "http", layer=ASGI, request_id=request_id)
+            message = await receive()
+            body = message.get("body")
+            self.trace.event(
+                "receive_return",
+                "http",
+                layer=ASGI,
+                request_id=request_id,
+                message_type=message.get("type"),
+                body_len=len(body) if isinstance(body, bytes | bytearray) else None,
+                more_body=message.get("more_body"),
+            )
+            return message
+
         self.trace.event(
             "asgi_start",
             "http",
@@ -165,7 +186,7 @@ class Timed:
         )
         token = REQUEST_ID.set(request_id)
         try:
-            await self.app(scope, receive, watched)
+            await self.app(scope, listened, watched)
         except BaseException as failure:
             self.trace.event(
                 "asgi_error",
@@ -345,6 +366,80 @@ def install_session(trace: HandlerTrace) -> None:
     Server._handle_message = timed_library(  # type: ignore[method-assign]
         Server._handle_message, "dispatch", trace, _message_about
     )
+
+
+CLIENT = "client"
+"""The sending side: httpcore's HTTP/1.1 header and body writes."""
+
+
+def _request_about(connection: Any, request: Any = None, **_kw: Any) -> dict[str, Any]:
+    """Method, target, declared length and which connection carried it.
+
+    `Content-Length` is a number, not content, and the connection is named by
+    local object identity so reuse is visible. No other header is read and the
+    body is never touched - iterating it here would consume the request.
+    """
+    length = None
+    for name, value in getattr(request, "headers", None) or []:
+        if bytes(name).lower() == b"content-length":
+            length = int(bytes(value))
+    target = getattr(getattr(request, "url", None), "target", None)
+    method = getattr(request, "method", None)
+    return {
+        "method": bytes(method).decode() if method is not None else None,
+        "path": bytes(target).decode() if target is not None else None,
+        "content_length": length,
+        "connection": id(connection),
+    }
+
+
+def install_client(trace: HandlerTrace) -> None:
+    """Time the real CLI's own HTTP writes, in that process only.
+
+    The two calls wrapped are where httpcore hands header and body bytes to
+    the network stream, which is the only place that can say whether this side
+    put the request on the wire promptly. A high-level hook would fire before
+    any byte was written and would prove nothing.
+    """
+    from httpcore._async.http11 import AsyncHTTP11Connection
+
+    AsyncHTTP11Connection._send_request_headers = timed_library(  # type: ignore[method-assign]
+        AsyncHTTP11Connection._send_request_headers, "client_headers", trace, _request_about
+    )
+    AsyncHTTP11Connection._send_request_body = timed_library(  # type: ignore[method-assign]
+        AsyncHTTP11Connection._send_request_body, "client_body", trace, _request_about
+    )
+
+
+def client_report(path: Path, keep: int = 12) -> str:
+    """When the sending side actually wrote each request, and for how long."""
+    found = events(path)
+    writes = [one for one in found if str(one.get("event")).startswith("client_")]
+    if not writes:
+        return "    client write trace: no events recorded"
+    base = min(int(one.get("monotonic_ns", 0)) for one in writes)
+    lines = [f"    client write trace: {len(writes)} events, baseline={base}"]
+    slowest, slowest_at = 0, None
+    opened: dict[str, dict[str, Any]] = {}
+    for one in sorted(writes, key=lambda item: int(item.get("seq", 0))):
+        name, _, phase = str(one.get("event")).rpartition("_")
+        if phase == "enter":
+            opened[name] = one
+        elif name in opened:
+            started = opened.pop(name)
+            held = int(one.get("monotonic_ns", 0)) - int(started["monotonic_ns"])
+            if held > slowest:
+                slowest, slowest_at = held, started
+    body = [one for one in writes if str(one.get("event")).startswith("client_body")]
+    lines.append(
+        f"      body writes: {len([one for one in body if one['event'].endswith('enter')])}"
+    )
+    lines.append(f"      slowest single write: {slowest / 1e9:.3f}s {_about(slowest_at or {})}")
+    lines.append(f"      last {keep} client events:")
+    for one in sorted(writes, key=lambda item: int(item.get("seq", 0)))[-keep:]:
+        when = (int(one.get("monotonic_ns", 0)) - base) / 1e9
+        lines.append(f"        {when:9.3f}s {one.get('event')} {_about(one)}")
+    return "\n".join(lines)
 
 
 def events(path: Path) -> list[dict[str, Any]]:
@@ -555,7 +650,17 @@ def session_report(found: list[dict[str, Any]], base: int) -> str:
 
 
 def _about(one: dict[str, Any]) -> str:
-    keys = ("method", "path", "message_type", "request_type", "tool")
+    keys = (
+        "method",
+        "path",
+        "message_type",
+        "request_type",
+        "tool",
+        "content_length",
+        "connection",
+        "body_len",
+        "more_body",
+    )
     return " ".join(f"{key}={one[key]}" for key in keys if one.get(key) is not None)
 
 

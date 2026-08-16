@@ -57,11 +57,31 @@ READY_TIMEOUT = 30.0
 POLL_SECONDS = 0.05
 
 
-def spawn(package: str, launch: Path, environ: dict[str, str]) -> "subprocess.Popen[str]":
+BOOTSTRAP = Path(__file__).with_name("client_bootstrap")
+"""Where the test-only `sitecustomize` that times the CLI's HTTP writes lives."""
+
+
+def measured(environ: dict[str, str], trace: Path | None) -> dict[str, str]:
+    """Ask the spawned CLI to time its own HTTP writes, without touching `src`.
+
+    The interpreter imports `sitecustomize` at startup, so putting one on the
+    child's `PYTHONPATH` is how a measurement reaches a shipped entrypoint from
+    outside it. Absent the trace variable the module does nothing at all.
+    """
+    if trace is None:
+        return environ
+    existing = os.environ.get("PYTHONPATH", "")
+    joined = os.pathsep.join([str(BOOTSTRAP), existing]) if existing else str(BOOTSTRAP)
+    return {**environ, "PYTHONPATH": joined, "MARS777_CLIENT_TRACE": str(trace)}
+
+
+def spawn(
+    package: str, launch: Path, environ: dict[str, str], trace: Path | None = None
+) -> "subprocess.Popen[str]":
     """Start the real executable, in its own process group where that is needed."""
     return subprocess.Popen(
         [sys.executable, "-m", package, "--launch", str(launch)],
-        env={**os.environ, **environ},
+        env={**os.environ, **measured(environ, trace)},
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -199,7 +219,10 @@ def snapshot(name: str, root: Path) -> str:
 
 
 def two_process_report(
-    runs: Sequence[Ran], roots: Sequence[tuple[str, Path]], trace: Path | None = None
+    runs: Sequence[Ran],
+    roots: Sequence[tuple[str, Path]],
+    trace: Path | None = None,
+    client: Path | None = None,
 ) -> str:
     """Everything a failing two-process run knows, with the secret scrubbed.
 
@@ -213,6 +236,8 @@ def two_process_report(
     blocks.extend(snapshot(name, root) for name, root in roots)
     if trace is not None:
         blocks.append(process_trace.summary(trace))
+    if client is not None:
+        blocks.append(process_trace.client_report(client))
     sse = [ran.name for ran in runs if "standalone SSE writer" in ran.err]
     accept = [ran.name for ran in runs if "IocpProactor.accept" in ran.err]
     blocks.append(f"  SSE writer error reported by: {sse or 'neither'}")
