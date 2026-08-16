@@ -16,6 +16,7 @@ import re
 import signal
 import subprocess
 import sys
+import threading
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -24,6 +25,7 @@ from pathlib import Path
 import composed_builders as compose
 import process_trace
 import r7_builders as r7
+import stack_attach
 from boot_builders import HOST, SECRET, free_port
 from r16_builders import GROUP_A
 
@@ -230,11 +232,24 @@ def snapshot(name: str, root: Path) -> str:
     return "\n".join([*lines, *_log_lines(root, names)])
 
 
+def watch_stacks(pid: int, trace: Path) -> "stack_attach.Observer":
+    """Start the parent-side stack observer for *pid*, in a daemon thread.
+
+    It runs beside the test rather than inside the agent: the observed process
+    gains no import, no timer and no task, which is the whole point after an
+    in-process watchdog perturbed a green run.
+    """
+    observer = stack_attach.Observer(pid=pid, trace=trace)
+    threading.Thread(target=observer.run, name="stack-observer", daemon=True).start()
+    return observer
+
+
 def two_process_report(
     runs: Sequence[Ran],
     roots: Sequence[tuple[str, Path]],
     trace: Path | None = None,
     client: Path | None = None,
+    stacks: Sequence["stack_attach.Attempt"] = (),
 ) -> str:
     """Everything a failing two-process run knows, with the secret scrubbed.
 
@@ -250,6 +265,8 @@ def two_process_report(
         blocks.append(process_trace.summary(trace))
     if client is not None:
         blocks.append(process_trace.client_report(client))
+    if stacks:
+        blocks.append(stack_attach.attach_report(stacks, _scrubbed))
     sse = [ran.name for ran in runs if "standalone SSE writer" in ran.err]
     accept = [ran.name for ran in runs if "IocpProactor.accept" in ran.err]
     blocks.append(f"  SSE writer error reported by: {sse or 'neither'}")
@@ -257,7 +274,12 @@ def two_process_report(
     for ran in runs:
         blocks.append(f"--- {ran.name} stdout ---\n{ran.out}")
         blocks.append(f"--- {ran.name} stderr ---\n{ran.err}")
-    return "\n".join(blocks).replace(SECRET, "<secret redacted>")
+    return _scrubbed("\n".join(blocks))
+
+
+def _scrubbed(text: str) -> str:
+    """The one scrubber every published diagnostic passes through."""
+    return text.replace(SECRET, "<secret redacted>")
 
 
 def await_application(child: "subprocess.Popen[str]", port: int) -> int:

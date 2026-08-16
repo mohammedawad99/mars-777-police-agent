@@ -36,6 +36,12 @@ jobs:
       - name: Mypy (strict)
         run: uv run mypy --strict src
 
+      - name: Install stack-attach diagnostic (Windows only)
+        if: runner.os == 'Windows'
+        run: |
+          uv tool install py-spy==0.4.1
+          py-spy --version
+
       - name: Tests + coverage (fail under 90%)
         run: uv run pytest --cov --cov-report=term-missing --cov-fail-under=90
 

@@ -65,11 +65,13 @@ def test_the_real_cli_plays_a_whole_series_against_a_non_counted_opponent(tmp_pa
         theirs_root,
         trace=trace,
     )
+    observer = process.watch_stacks(opponent.pid, trace)
     try:
         assert process.await_application(child, ours_port) == process.NOT_ACCEPTABLE
         ours = process.finished(REAL, child, timeout=600)
         theirs = process.finished(PEER, opponent, timeout=120)
     finally:
+        observer.stop()
         for one in (child, opponent):
             if one.poll() is None:
                 one.kill()
@@ -78,7 +80,11 @@ def test_the_real_cli_plays_a_whole_series_against_a_non_counted_opponent(tmp_pa
     assert SECRET not in ours.out and SECRET not in ours.err
     assert SECRET not in theirs.out and SECRET not in theirs.err
     report = process.two_process_report(
-        (ours, theirs), ((REAL, ours_root), (PEER, theirs_root)), trace=trace, client=client
+        (ours, theirs),
+        ((REAL, ours_root), (PEER, theirs_root)),
+        trace=trace,
+        client=client,
+        stacks=observer.attempts,
     )
 
     assert ours.status == 0, report
