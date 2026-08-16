@@ -15,6 +15,7 @@ from conftest import LivePeer
 from live_support import TIMEOUT, requires_live_ngrok
 from peer_ops import acknowledgement
 
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.transport.client import PeerClient
 from mars777_police.transport.codec_turn import encode_acknowledgement
 
@@ -30,7 +31,7 @@ def test_forty_public_operations_succeed_inside_one_production_session(
     before = peer.received().count("acknowledgement")
 
     async def drive() -> object:
-        async with PeerClient(endpoint.url, timeout=TIMEOUT) as client:
+        async with PeerClient(endpoint.url, PeerDeadline(TimeoutPolicy(TIMEOUT))) as client:
             held = client._session
             for _ in range(OPERATIONS):
                 await client.complete(

@@ -11,6 +11,7 @@ from peer_ops import agreement
 from r16_builders import GROUP_A, GROUP_B
 from test_composed_end_to_end import held_runner
 
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.app.protocol_errors import StaleMessageError
 from mars777_police.app.series_audit_gate import SeriesAuditGate
 from mars777_police.transport.client import PeerClient
@@ -80,8 +81,8 @@ def test_the_composed_graph_drives_a_real_result_agreement(pair: tuple) -> None:
         import dataclasses
 
         async with (
-            PeerClient(url_b, timeout=TIMEOUT) as a_held,
-            PeerClient(url_a, timeout=TIMEOUT) as b_held,
+            PeerClient(url_b, PeerDeadline(TimeoutPolicy(TIMEOUT))) as a_held,
+            PeerClient(url_a, PeerDeadline(TimeoutPolicy(TIMEOUT))) as b_held,
         ):
             a_to_b, b_to_a = FastMcpPeerTransport(a_held), FastMcpPeerTransport(b_held)
             runner_a = dataclasses.replace(a.peer_runner, transport=a_to_b)

@@ -13,6 +13,7 @@ import pytest
 import session_calls
 from session_process import SessionPeer
 
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.transport.client import PeerClient
 from mars777_police.transport.server import PEER_TOOLS
 
@@ -29,7 +30,7 @@ def peer() -> Iterator[SessionPeer]:
 async def drive(url: str) -> list[object]:
     """Send every kind on one held session and collect each raw result."""
     results: list[object] = []
-    async with PeerClient(url, timeout=TIMEOUT) as client:
+    async with PeerClient(url, PeerDeadline(TimeoutPolicy(TIMEOUT))) as client:
         for tool, kind, payload in session_calls.payloads():
             results.append(await client.call(tool, kind, payload))
     return results

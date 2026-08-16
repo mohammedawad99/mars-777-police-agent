@@ -21,6 +21,7 @@ from r16_builders import GROUP_A, GROUP_B, PROFILES, config
 
 from mars777_police.app.capture_values import CaptureAnswer
 from mars777_police.app.interop_profiles import CompatibilityProfile
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.app.protocol_errors import ConfigMismatchError
 from mars777_police.app.sealed_record_values import ActorRole, Intent, SealedState
 from mars777_police.app.turn_contract_gate import require_counted_turn_contract
@@ -53,7 +54,7 @@ def sealed(role: ActorRole) -> SealedState:
 
 
 async def step0_on(peer: object, url: str) -> FastMcpPeerTransport:
-    client = await PeerClient(url, timeout=TIMEOUT).__aenter__()
+    client = await PeerClient(url, PeerDeadline(TimeoutPolicy(TIMEOUT))).__aenter__()
     transport = FastMcpPeerTransport(client)
     await peer.runner(transport).send_step0(peer.own)
     return transport

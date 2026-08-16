@@ -13,6 +13,7 @@ import session_calls
 import turn_builders
 from session_process import SessionPeer
 
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.app.protocol_errors import AuthFailureError, ReportDisagreeError
 from mars777_police.transport.client import PeerClient
 from mars777_police.transport.codec_declaration import encode_step0
@@ -42,7 +43,7 @@ def fresh() -> Iterator[SessionPeer]:
 
 async def one_call(url: str, tool: str, kind: str, payload: object) -> object:
     """A single call on its own fresh, unauthenticated session."""
-    async with PeerClient(url, timeout=TIMEOUT) as client:
+    async with PeerClient(url, PeerDeadline(TimeoutPolicy(TIMEOUT))) as client:
         return await client.call(tool, kind, payload)
 
 
@@ -63,7 +64,7 @@ def test_a_failed_step0_leaves_the_session_unauthenticated(peer: SessionPeer) ->
     """No partial binding: a proof that does not verify authenticates nothing."""
 
     async def run() -> None:
-        async with PeerClient(peer.url, timeout=TIMEOUT) as client:
+        async with PeerClient(peer.url, PeerDeadline(TimeoutPolicy(TIMEOUT))) as client:
             with pytest.raises(AuthFailureError):
                 await client.call("negotiate", "step0", encode_step0(session_calls.forged_step0()))
             with pytest.raises(AuthFailureError) as raised:
@@ -81,9 +82,9 @@ def test_a_second_session_cannot_borrow_the_first_sessions_authentication(
     """Binding is per session; there is no process-wide current sender."""
 
     async def run() -> None:
-        async with PeerClient(fresh.url, timeout=TIMEOUT) as first:
+        async with PeerClient(fresh.url, PeerDeadline(TimeoutPolicy(TIMEOUT))) as first:
             await first.call("negotiate", "step0", encode_step0(peer_ops.step0_exchange()))
-            async with PeerClient(fresh.url, timeout=TIMEOUT) as second:
+            async with PeerClient(fresh.url, PeerDeadline(TimeoutPolicy(TIMEOUT))) as second:
                 with pytest.raises(AuthFailureError):
                     await second.call(
                         "receive_turn",
@@ -103,7 +104,7 @@ def test_the_binding_persists_across_many_calls_on_one_session(fresh: SessionPee
 
     async def run() -> list[str]:
         outcomes: list[str] = []
-        async with PeerClient(fresh.url, timeout=TIMEOUT) as client:
+        async with PeerClient(fresh.url, PeerDeadline(TimeoutPolicy(TIMEOUT))) as client:
             await client.call("negotiate", "step0", encode_step0(peer_ops.step0_exchange()))
             for _ in range(3):
                 try:
@@ -129,7 +130,7 @@ def test_a_result_request_naming_another_group_is_refused_over_the_wire(
     from mars777_police.transport.codec_final import encode_result_agreement
 
     async def run() -> None:
-        async with PeerClient(fresh.url, timeout=TIMEOUT) as client:
+        async with PeerClient(fresh.url, PeerDeadline(TimeoutPolicy(TIMEOUT))) as client:
             await client.call("negotiate", "step0", encode_step0(peer_ops.step0_exchange()))
             await client.call(
                 "receive_control",

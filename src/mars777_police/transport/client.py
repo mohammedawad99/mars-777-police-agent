@@ -4,9 +4,11 @@ Owns the endpoint, the tool invocation, the per-call timeout, response decoding
 and framework-error translation - and **no** gameplay state: no cadence, no
 commitment verification, no legality.
 
-**Timeouts come from the locked config**: `for_locked_config` reads
-`response_timeout_sec` off the agreed `NegotiatedConfig` through `TimeoutPolicy`,
-and `for_bootstrap` uses the negotiation window. No number appears here.
+**Timeouts come from the locked config**, through the `PeerDeadline` this
+client is composed with: the negotiation window until a lock is verified, the
+agreed `response_timeout_sec` afterwards. No number appears here, and none is
+stored - the deadline is read per call, so a lock verified after this object
+was built still governs it.
 
 Every response is decoded **strictly**: a completing operation refuses a value,
 `reveal` requires an exact `TurnOutcome`, and a digest must be well formed.
@@ -30,10 +32,9 @@ from fastmcp.exceptions import ToolError
 from pydantic import BaseModel, ValidationError
 
 from ..app.capture_values import TurnOutcome
-from ..app.peer_supervision import TimeoutPolicy
+from ..app.peer_supervision import PeerDeadline
 from ..app.protocol_errors import MalformedMessageError
 from ..app.protocol_values import InvalidDigestError, Sha256Digest
-from ..domain.negotiated_config import NegotiatedConfig
 from .codec_turn import decode_outcome
 from .wire_errors import TransportFailureError, inbound
 from .wire_turn import TurnOutcomeWire
@@ -58,28 +59,20 @@ def envelope(kind: str, payload: BaseModel | dict[str, object]) -> dict[str, obj
 class PeerClient:
     """One peer endpoint, one connection lifecycle, no shared global state."""
 
-    def __init__(self, url: str, timeout: float) -> None:
+    def __init__(self, url: str, deadline: PeerDeadline) -> None:
         self._url = url
-        self._timeout = timeout
+        self._deadline = deadline
         self._session: Client[StreamableHttpTransport] | None = None
         self._stack: AsyncExitStack | None = None
 
-    @classmethod
-    def for_locked_config(
-        cls, url: str, config: NegotiatedConfig, policy: TimeoutPolicy
-    ) -> "PeerClient":
-        """Bind the per-call deadline to the **agreed** `response_timeout_sec`."""
-        return cls(url, policy.for_config(config))
-
-    @classmethod
-    def for_bootstrap(cls, url: str, policy: TimeoutPolicy) -> "PeerClient":
-        """Bind pre-lock calls to the negotiation window the state owns."""
-        return cls(url, policy.bootstrap())
-
     @property
     def timeout(self) -> float:
-        """The deadline every call on this client carries."""
-        return self._timeout
+        """The deadline a call made now would carry.
+
+        Read through the authority rather than stored, so the value both peers
+        locked governs every request from the moment they locked it.
+        """
+        return self._deadline.seconds()
 
     @property
     def url(self) -> str:
@@ -87,7 +80,7 @@ class PeerClient:
         return self._url
 
     def _client(self) -> Client[StreamableHttpTransport]:
-        return Client(StreamableHttpTransport(self._url), timeout=self._timeout)
+        return Client(StreamableHttpTransport(self._url), timeout=self.timeout)
 
     async def __aenter__(self) -> "PeerClient":
         """Hold one session open for every call made inside this context."""
@@ -111,10 +104,10 @@ class PeerClient:
         request = envelope(kind, payload)
         try:
             if self._session is not None:
-                result = await self._session.call_tool(tool, request, timeout=self._timeout)
+                result = await self._session.call_tool(tool, request, timeout=self.timeout)
             else:
                 async with self._client() as client:
-                    result = await client.call_tool(tool, request, timeout=self._timeout)
+                    result = await client.call_tool(tool, request, timeout=self.timeout)
         except ToolError as failure:
             raise inbound(str(failure)) from None
         except Exception as failure:

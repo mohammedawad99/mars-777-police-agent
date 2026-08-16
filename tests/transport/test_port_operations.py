@@ -23,6 +23,7 @@ from peer_ops import (
 from peer_process import free_port
 from peer_recorder import RecordingOperations
 
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.transport.client import PeerClient
 from mars777_police.transport.peer_transport import FastMcpPeerTransport
 from mars777_police.transport.server import build_server
@@ -51,7 +52,9 @@ def test_every_port_operation_reaches_the_application_through_the_adapter() -> N
             if server.started:
                 break
             await asyncio.sleep(0.05)
-        adapter = FastMcpPeerTransport(PeerClient(f"http://127.0.0.1:{port}/mcp", timeout=20.0))
+        adapter = FastMcpPeerTransport(
+            PeerClient(f"http://127.0.0.1:{port}/mcp", PeerDeadline(TimeoutPolicy(20.0)))
+        )
         await adapter.send_step0(step0_exchange())
         await adapter.send_config_proposal(proposal())
         await adapter.send_config_lock(lock_evidence())

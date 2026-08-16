@@ -18,6 +18,7 @@ from cadence_ops import CadenceOperations, exchange_for
 from peer_process import CadencePeer
 from r16_builders import GROUP_A, GROUP_B, STAMP
 
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.transport.client import PeerClient
 from mars777_police.transport.peer_transport import FastMcpPeerTransport
 from mars777_police.transport.server import PEER_TOOLS
@@ -32,7 +33,7 @@ def status_of(path: Path) -> dict[str, object]:
 
 def transport_to(url: str) -> FastMcpPeerTransport:
     """The concrete adapter, injected where the port is expected."""
-    return FastMcpPeerTransport(PeerClient(url, timeout=TIMEOUT))
+    return FastMcpPeerTransport(PeerClient(url, PeerDeadline(TimeoutPolicy(TIMEOUT))))
 
 
 @pytest.fixture

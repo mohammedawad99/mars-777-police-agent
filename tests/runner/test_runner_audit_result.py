@@ -10,6 +10,7 @@ import turn_builders
 from r16_builders import GROUP_A, GROUP_B
 from test_runner_two_sided import CURSOR, TIMEOUT, sealed, step0_on
 
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.app.protocol_errors import StaleMessageError
 from mars777_police.app.protocol_values import FinalAuditVerdict
 from mars777_police.app.sealed_record_values import ActorRole, Intent
@@ -100,8 +101,8 @@ def test_a_verified_series_drives_the_real_result_cadence_to_equal_digests(
 
     async def run() -> None:
         async with (
-            PeerClient(a.url, timeout=TIMEOUT) as b_held,
-            PeerClient(b.url, timeout=TIMEOUT) as a_held,
+            PeerClient(a.url, PeerDeadline(TimeoutPolicy(TIMEOUT))) as b_held,
+            PeerClient(b.url, PeerDeadline(TimeoutPolicy(TIMEOUT))) as a_held,
         ):
             b_to_a, a_to_b = FastMcpPeerTransport(b_held), FastMcpPeerTransport(a_held)
             b.results.transport, a.results.transport = b_to_a, a_to_b

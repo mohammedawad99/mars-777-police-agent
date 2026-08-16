@@ -27,6 +27,7 @@ from peer_ops import (
 from peer_process import PeerProcess
 from r16_builders import GROUP_A, GROUP_B
 
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.transport.client import PeerClient
 from mars777_police.transport.codec_declaration import encode_step0
 from mars777_police.transport.codec_final import encode_final_nonce, encode_result_agreement
@@ -69,7 +70,7 @@ def test_tool_discovery_exposes_exactly_four_peer_tools(peers: object) -> None:
 
 
 def call(url: str, tool: str, kind: str, payload: object) -> object:
-    client = PeerClient(url, timeout=TIMEOUT)
+    client = PeerClient(url, PeerDeadline(TimeoutPolicy(TIMEOUT)))
     return asyncio.run(client.call(tool, kind, payload))
 
 
@@ -99,13 +100,13 @@ def test_the_full_turn_exchange_crosses_the_transport(peers: object) -> None:
 
 def test_a_legal_reveal_returns_true_across_two_processes(peers: object) -> None:
     police, _ = peers
-    client = PeerClient(police.url, timeout=TIMEOUT)
+    client = PeerClient(police.url, PeerDeadline(TimeoutPolicy(TIMEOUT)))
     assert asyncio.run(client.outcome(encode_reveal(reveal()))).accepted is True
 
 
 def test_an_illegal_reveal_returns_false_across_two_processes(peers: object) -> None:
     police, _ = peers
-    client = PeerClient(police.url, timeout=TIMEOUT)
+    client = PeerClient(police.url, PeerDeadline(TimeoutPolicy(TIMEOUT)))
     assert asyncio.run(client.outcome(encode_reveal(reveal(ILLEGAL_HINT)))).accepted is False
 
 
@@ -120,7 +121,7 @@ def test_the_audit_surfaces_cross_the_transport(peers: object) -> None:
 
 def test_result_agreement_returns_a_digest_across_two_processes(peers: object) -> None:
     police, _ = peers
-    client = PeerClient(police.url, timeout=TIMEOUT)
+    client = PeerClient(police.url, PeerDeadline(TimeoutPolicy(TIMEOUT)))
     digest = asyncio.run(client.digest(encode_result_agreement(agreement())))
     assert len(digest.value) == 64
     assert digest.value == digest.value.lower()

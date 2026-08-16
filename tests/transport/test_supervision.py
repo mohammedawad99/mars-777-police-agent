@@ -6,12 +6,14 @@ one request, the **watchdog** bounds peer progress. Neither is tested by waiting
 """
 
 from dataclasses import replace
+from functools import partial
 
 import pytest
 from r16_builders import config
 
 from mars777_police.app.peer_supervision import (
     WATCHDOG_TIMEOUT,
+    PeerDeadline,
     TimeoutPolicy,
     Watchdog,
     WatchdogTimeoutError,
@@ -40,21 +42,51 @@ def test_the_post_lock_timeout_is_the_negotiated_value() -> None:
 
 def test_the_client_carries_the_negotiated_timeout_not_a_baseline() -> None:
     """The whole point: 30 is a baseline, and this config never says 30."""
-    client = PeerClient.for_locked_config(ENDPOINT, tuned(45), TimeoutPolicy(WINDOW))
+    client = PeerClient(ENDPOINT, PeerDeadline(TimeoutPolicy(WINDOW), lambda: tuned(45)))
     assert client.timeout == 45.0
     assert client.timeout != 30.0
 
 
 def test_a_differently_negotiated_timeout_reaches_the_client_unchanged() -> None:
     for agreed in (17, 45, 120):
-        client = PeerClient.for_locked_config(ENDPOINT, tuned(agreed), TimeoutPolicy(WINDOW))
-        assert client.timeout == float(agreed)
+        deadline = PeerDeadline(TimeoutPolicy(WINDOW))
+        deadline.locked = partial(tuned, agreed)
+        assert PeerClient(ENDPOINT, deadline).timeout == float(agreed)
 
 
 def test_pre_lock_calls_use_the_injected_negotiation_window() -> None:
     """No number is named here; the window is the state's, injected."""
-    client = PeerClient.for_bootstrap(ENDPOINT, TimeoutPolicy(WINDOW))
+    client = PeerClient(ENDPOINT, PeerDeadline(TimeoutPolicy(WINDOW)))
     assert client.timeout == WINDOW
+
+
+def test_the_deadline_moves_to_the_agreed_value_only_once_a_lock_exists() -> None:
+    """The seam these tests could not see: the client is built before the lock.
+
+    Composition happens first and the configuration is agreed later, so a
+    client that read its deadline once at construction could never carry what
+    the peers went on to agree. This is that ordering, in miniature.
+    """
+    agreed: list[object] = []
+    client = PeerClient(
+        ENDPOINT, PeerDeadline(TimeoutPolicy(WINDOW), lambda: agreed[0] if agreed else None)
+    )
+
+    assert client.timeout == WINDOW
+    agreed.append(tuned(45))
+    assert client.timeout == 45.0
+
+
+def test_a_verified_lock_is_not_forgotten_when_the_next_round_opens() -> None:
+    """Between sub-games the round resets; a running series keeps its deadline."""
+    agreed: list[object] = [tuned(45)]
+    client = PeerClient(
+        ENDPOINT, PeerDeadline(TimeoutPolicy(WINDOW), lambda: agreed[0] if agreed else None)
+    )
+
+    assert client.timeout == 45.0
+    agreed.clear()
+    assert client.timeout == 45.0
 
 
 def test_no_transport_or_supervision_module_hard_codes_thirty() -> None:

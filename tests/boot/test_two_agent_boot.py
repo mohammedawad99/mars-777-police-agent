@@ -19,6 +19,7 @@ import turn_builders
 from r16_builders import GROUP_A, GROUP_B
 
 from mars777_police.agent_runtime import AgentRuntime, RuntimeState
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.app.protocol_errors import AuthFailureError
 from mars777_police.app.sealed_record_values import ActorRole, Intent
 from mars777_police.app.turn_cursor import TurnCursor
@@ -111,7 +112,7 @@ def test_a_fresh_session_is_still_refused_after_boot(agents: tuple) -> None:
     async def run() -> None:
         async with booted(a, b):
             await a.composition.peer_runner.send_step0(a.composition.identity.declaration)
-            async with PeerClient(b.address, timeout=TIMEOUT) as fresh:
+            async with PeerClient(b.address, PeerDeadline(TimeoutPolicy(TIMEOUT))) as fresh:
                 with pytest.raises(AuthFailureError):
                     await FastMcpPeerTransport(fresh).send_commitment(turn_builders.commitment())
 

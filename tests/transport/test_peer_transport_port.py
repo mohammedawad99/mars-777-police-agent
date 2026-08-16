@@ -13,6 +13,7 @@ import pytest
 from peer_ops import agreement, step0_exchange
 
 from mars777_police.app import peer_transport
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.app.peer_transport import PeerTransportPort
 from mars777_police.transport.client import PeerClient
 from mars777_police.transport.handlers import PeerOperations
@@ -32,7 +33,9 @@ OPERATIONS = [
 
 
 def transport() -> FastMcpPeerTransport:
-    return FastMcpPeerTransport(PeerClient("http://127.0.0.1:9/mcp", timeout=1.0))
+    return FastMcpPeerTransport(
+        PeerClient("http://127.0.0.1:9/mcp", PeerDeadline(TimeoutPolicy(1.0)))
+    )
 
 
 def test_the_port_is_a_protocol_owned_by_the_application_layer() -> None:

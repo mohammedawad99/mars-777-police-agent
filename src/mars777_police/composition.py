@@ -26,6 +26,7 @@ from .app.baseline_strategy import BaselineStrategy
 from .app.config_lock_runtime import ConfigLockRuntime
 from .app.config_negotiation_runtime import ConfigNegotiationRuntime
 from .app.peer_runner import PeerRunner
+from .app.peer_supervision import PeerDeadline, TimeoutPolicy
 from .app.pregame_session_runtime import PregameSessionRuntime
 from .app.series_audit_gate import SeriesAuditGate
 from .app.step0_runtime import Step0Runtime
@@ -43,7 +44,13 @@ from .transport.peer_transport import FastMcpPeerTransport
 from .transport.server import build_server
 
 PEER_TIMEOUT_SECONDS = 30.0
-"""The pre-lock deadline for outbound calls until a config fixes one."""
+"""The pre-lock deadline for outbound calls until a config fixes one.
+
+It bounds negotiation only. Once a lock is verified the agreed
+`response_timeout_sec` takes over, which is what `PeerDeadline` is for: a
+client that demanded a locked config could never make the calls that produce
+one, and a client that kept this constant would ignore what the peers agreed.
+"""
 
 
 def keyed_authenticator(settings: RuntimeSettings) -> KeyedAuthenticator:
@@ -98,7 +105,11 @@ def compose_agent(
     inbound = InboundPeerOperations(
         pregame, active.current_turn, active.current_audit, active.current_result
     )
-    client = PeerClient(_opponent_url(settings), PEER_TIMEOUT_SECONDS)
+    deadline = PeerDeadline(
+        TimeoutPolicy(PEER_TIMEOUT_SECONDS),
+        lambda: pregame.config if pregame.locked_evidence is not None else None,
+    )
+    client = PeerClient(_opponent_url(settings), deadline)
     transport = FastMcpPeerTransport(client)
     series = SeriesAuditGate()
     return AgentComposition(

@@ -20,6 +20,7 @@ from peer_ops import proposal, step0_exchange
 from r16_builders import PROFILES
 
 from mars777_police.app.interop_profiles import SeriesConvention
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.app.protocol_errors import (
     AuthFailureError,
     ConventionMismatchError,
@@ -58,7 +59,7 @@ def test_every_feasible_peer_identity_survives_the_public_tunnel(
     seen: dict[str, str] = {}
 
     async def drive() -> None:
-        async with PeerClient(endpoint.url, timeout=TIMEOUT) as client:
+        async with PeerClient(endpoint.url, PeerDeadline(TimeoutPolicy(TIMEOUT))) as client:
             for label, call in (
                 ("malformed-kind", client.complete("negotiate", "commitment", {"nonsense": True})),
                 ("malformed-payload", client.complete("negotiate", "step0", {"declaration": 7})),
@@ -88,7 +89,7 @@ def test_no_public_failure_was_reduced_to_a_boolean(public_peer: LivePeer) -> No
     _, endpoint, _peer = public_peer
 
     async def drive() -> None:
-        async with PeerClient(endpoint.url, timeout=TIMEOUT) as client:
+        async with PeerClient(endpoint.url, PeerDeadline(TimeoutPolicy(TIMEOUT))) as client:
             await client.outcome({"kind": "reveal", "payload": {"bad": 1}})
 
     with pytest.raises(MalformedMessageError):

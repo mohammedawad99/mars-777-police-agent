@@ -27,6 +27,7 @@ from peer_ops import (
     step0_exchange,
 )
 
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.transport.client import PeerClient
 from mars777_police.transport.codec_declaration import encode_step0
 from mars777_police.transport.codec_final import encode_final_nonce
@@ -45,7 +46,7 @@ def test_every_peer_kind_crosses_the_public_route(public_peer: LivePeer) -> None
     _, endpoint, peer = public_peer
 
     async def drive() -> tuple[bool, bool]:
-        async with PeerClient(endpoint.url, timeout=TIMEOUT) as client:
+        async with PeerClient(endpoint.url, PeerDeadline(TimeoutPolicy(TIMEOUT))) as client:
             await client.complete("negotiate", "step0", encode_step0(step0_exchange()))
             await client.complete("negotiate", "config_proposal", encode_proposal(proposal()))
             await client.complete("negotiate", "config_lock", encode_lock(lock_evidence()))

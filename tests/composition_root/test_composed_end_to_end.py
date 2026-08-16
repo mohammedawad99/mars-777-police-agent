@@ -16,6 +16,7 @@ from live_server import LiveServer
 from peer_ops import step0_exchange
 from r16_builders import GROUP_A, GROUP_B
 
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.app.protocol_errors import AuthFailureError, StaleMessageError
 from mars777_police.app.sealed_record_values import ActorRole, Intent
 from mars777_police.app.turn_cursor import TurnCursor
@@ -44,7 +45,7 @@ def bind_sub_game(composition: object, role: ActorRole) -> None:
 
 async def held_runner(composition: object, url: str) -> tuple[object, object]:
     """Enter a real session and return the runner bound to it."""
-    client = await PeerClient(url, timeout=20.0).__aenter__()
+    client = await PeerClient(url, PeerDeadline(TimeoutPolicy(20.0))).__aenter__()
     transport = FastMcpPeerTransport(client)
     import dataclasses
 
@@ -85,7 +86,7 @@ def test_a_fresh_session_cannot_continue_the_composed_conversation(pair: tuple) 
         runner, client = await held_runner(a, url_b)
         await runner.send_step0(a.identity.declaration)
         await client.__aexit__(None, None, None)
-        async with PeerClient(url_b, timeout=20.0) as fresh:
+        async with PeerClient(url_b, PeerDeadline(TimeoutPolicy(20.0))) as fresh:
             with pytest.raises(AuthFailureError):
                 await FastMcpPeerTransport(fresh).send_commitment(turn_builders.commitment())
 

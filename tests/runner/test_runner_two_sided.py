@@ -14,6 +14,7 @@ import runner_builders as build
 import turn_builders
 from r16_builders import GROUP_A, GROUP_B
 
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.app.protocol_errors import AuthFailureError, StaleMessageError
 from mars777_police.app.sealed_record_values import ActorRole, Intent, SealedState
 from mars777_police.app.turn_cursor import TurnCursor
@@ -44,7 +45,7 @@ def sealed(role: ActorRole) -> SealedState:
 
 async def step0_on(peer: object, url: str) -> FastMcpPeerTransport:
     """Authenticate a held session and return the transport bound to it."""
-    client = await PeerClient(url, timeout=TIMEOUT).__aenter__()
+    client = await PeerClient(url, PeerDeadline(TimeoutPolicy(TIMEOUT))).__aenter__()
     transport = FastMcpPeerTransport(client)
     await peer.runner(transport).send_step0(peer.own)
     return transport
@@ -119,10 +120,10 @@ def test_a_fresh_session_cannot_continue_an_authenticated_conversation(pair: tup
     a, b = pair
 
     async def run() -> None:
-        client = PeerClient(b.url, timeout=TIMEOUT)
+        client = PeerClient(b.url, PeerDeadline(TimeoutPolicy(TIMEOUT)))
         async with client:
             await a.runner(FastMcpPeerTransport(client)).send_step0(a.own)
-        async with PeerClient(b.url, timeout=TIMEOUT) as fresh:
+        async with PeerClient(b.url, PeerDeadline(TimeoutPolicy(TIMEOUT))) as fresh:
             with pytest.raises(AuthFailureError):
                 await FastMcpPeerTransport(fresh).send_commitment(turn_builders.commitment())
 

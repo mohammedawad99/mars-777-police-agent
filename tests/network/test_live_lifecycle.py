@@ -15,6 +15,7 @@ from net_builders import declaration_at
 from peer_ops import reveal
 from peer_process import free_port
 
+from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.app.protocol_errors import (
     AuthFailureError,
     MalformedMessageError,
@@ -74,7 +75,11 @@ def test_an_unreachable_public_route_is_a_transport_failure_not_a_legality_false
     _, endpoint, _peer = public_peer
     assert endpoint.url != UNREACHABLE
     with pytest.raises(Exception) as raised:
-        asyncio.run(PeerClient(UNREACHABLE, timeout=10.0).outcome(encode_reveal(reveal())))
+        asyncio.run(
+            PeerClient(UNREACHABLE, PeerDeadline(TimeoutPolicy(10.0))).outcome(
+                encode_reveal(reveal())
+            )
+        )
     assert not isinstance(
         raised.value, AuthFailureError | MalformedMessageError | ReportDisagreeError
     )
