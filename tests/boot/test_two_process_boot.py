@@ -64,7 +64,6 @@ def test_the_real_cli_plays_a_whole_series_against_a_non_counted_opponent(tmp_pa
         f"http://{process.HOST}:{ours_port}/mcp",
         theirs_root,
         trace=trace,
-        loop=process.EXPERIMENTAL_LOOP,
     )
     try:
         assert process.await_application(child, ours_port) == process.NOT_ACCEPTABLE

@@ -9,6 +9,7 @@ refusing to choose when they cannot.
 """
 
 import asyncio
+import contextlib
 import json
 import socket
 from pathlib import Path
@@ -1236,3 +1237,111 @@ def test_the_client_report_names_the_real_cli_loop(tmp_path: Path) -> None:
 
     assert "real CLI event loop: ProactorEventLoop" in text
     assert "WindowsProactorEventLoopPolicy" in text
+
+
+def test_the_heartbeat_ticks_and_records_only_when_it_ticked(tmp_path: Path) -> None:
+    """It says a tick happened and when; it says nothing about the game."""
+    trace = _trace(tmp_path)
+
+    async def run() -> None:
+        beat = asyncio.ensure_future(process_trace._beat(trace, 0.01))
+        await asyncio.sleep(0.08)
+        beat.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await beat
+
+    asyncio.run(run())
+
+    ticks = [one for one in process_trace.events(trace.path) if one["event"] == "heartbeat_tick"]
+    assert len(ticks) >= 2
+    assert [one["tick"] for one in ticks] == list(range(1, len(ticks) + 1))
+    assert all(one["family"] == "lifecycle" for one in ticks)
+    written = trace.path.read_text(encoding="utf-8")
+    assert SECRET not in written
+    for forbidden in ("payload", "nonce", "sub_game", "h_commit", "MARS777"):
+        assert forbidden not in written
+
+
+def test_the_heartbeat_stops_cleanly_and_orphans_nothing(tmp_path: Path) -> None:
+    trace = _trace(tmp_path)
+    stopped: list[bool] = []
+
+    async def run() -> None:
+        beat = asyncio.ensure_future(process_trace._beat(trace, 0.01))
+        await asyncio.sleep(0.03)
+        beat.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await beat
+        stopped.append(beat.cancelled() or beat.done())
+
+    asyncio.run(run())
+
+    assert stopped == [True]
+
+
+def _ticks(*stamps: int) -> list[dict[str, object]]:
+    return [
+        {
+            "event": "heartbeat_tick",
+            "family": "lifecycle",
+            "layer": "asgi",
+            "seq": index,
+            "monotonic_ns": at,
+            "tick": index,
+        }
+        for index, at in enumerate(stamps, start=1)
+    ]
+
+
+def test_ticks_continuing_through_the_stall_mean_the_loop_is_alive() -> None:
+    """Sixty ticks half a second apart across a thirty-second send."""
+    stamps = [index * 500_000_000 for index in range(80)]
+    verdict, facts = process_trace.heartbeat_shape(_ticks(*stamps), (5_000_000_000, 35_000_000_000))
+
+    assert verdict == "F1"
+    assert facts["ticks_inside"] >= 50
+
+
+def test_a_silence_covering_the_stall_means_the_loop_stopped() -> None:
+    stamps = [0, 500_000_000, 1_000_000_000, 32_000_000_000, 32_500_000_000]
+    verdict, facts = process_trace.heartbeat_shape(_ticks(*stamps), (1_500_000_000, 31_500_000_000))
+
+    assert verdict == "F2"
+    assert facts["widest_gap_inside_ns"] >= facts["stall_ns"] * 0.8
+
+
+def test_abnormal_but_partial_gaps_are_degradation_not_either_verdict() -> None:
+    stamps = [0, 500_000_000, 1_000_000_000, 1_500_000_000]
+    stamps += [12_000_000_000, 12_500_000_000, 24_000_000_000, 31_500_000_000]
+    verdict, _ = process_trace.heartbeat_shape(_ticks(*stamps), (1_000_000_000, 31_000_000_000))
+
+    assert verdict == "F3"
+
+
+def test_no_heartbeat_or_no_window_is_not_classified() -> None:
+    assert process_trace.heartbeat_shape([], (0, 1))[0] == "FX"
+    assert process_trace.heartbeat_shape(_ticks(0, 1), None)[0] == "FX"
+
+
+def test_the_heartbeat_report_survives_a_run_without_ticks() -> None:
+    assert "no ticks recorded" in process_trace.heartbeat_report([], 0)
+
+
+def test_teardown_events_do_not_corrupt_the_stall_window() -> None:
+    """The window comes from the send pair, not from whatever happened last."""
+    found = [
+        *_ticks(0, 500_000_000, 31_000_000_000),
+        _send(100, 500_000_000, "enter", receivers=1),
+        _send(101, 30_800_000_000, "exit"),
+        {
+            "event": "teardown_start",
+            "family": "lifecycle",
+            "layer": "asgi",
+            "seq": 200,
+            "monotonic_ns": 40_000_000_000,
+        },
+    ]
+
+    text = process_trace.heartbeat_report(found, 0)
+
+    assert "stall window: 0.500s -> 30.800s" in text

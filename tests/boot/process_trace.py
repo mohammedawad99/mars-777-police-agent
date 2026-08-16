@@ -26,10 +26,12 @@ cursor - a projection the wire already carries - and an error is recorded by
 its class name. No secret, no auth proof, no nonce, no digest, no payload.
 """
 
+import asyncio
 import itertools
 import json
 import time
 from collections.abc import Awaitable, Callable
+from contextlib import suppress
 from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
@@ -463,8 +465,13 @@ def install_streams(trace: HandlerTrace) -> None:
 SELECTOR = "selector"
 """The one alternative loop this experiment is allowed to select."""
 
-_NOTED: set[int] = set()
-"""Processes whose loop has already been recorded; the note is wanted once."""
+_NOTED: set[str] = set()
+"""Traces whose loop has already been recorded; the note is wanted once.
+
+Keyed by path rather than object identity: `id()` is reused once an object is
+collected, so a later trace could inherit an earlier one's "already noted"
+and silently lose the evidence.
+"""
 
 
 def wanted_policy(choice: str) -> tuple[str, Any]:
@@ -514,13 +521,13 @@ def note_loop(trace: HandlerTrace) -> None:
     """
     import asyncio
 
-    if id(trace) in _NOTED:
+    if str(trace.path) in _NOTED:
         return
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:  # pragma: no cover - only outside a running loop
         return
-    _NOTED.add(id(trace))
+    _NOTED.add(str(trace.path))
     trace.event(
         "loop_kind",
         "lifecycle",
@@ -528,6 +535,51 @@ def note_loop(trace: HandlerTrace) -> None:
         loop=type(loop).__name__,
         policy=type(asyncio.get_event_loop_policy()).__name__,
     )
+
+
+HEARTBEAT_SECONDS = 0.5
+"""Slow enough to add no load, fast enough that a thirty-second gap is obvious."""
+
+
+async def _beat(trace: HandlerTrace, interval: float) -> None:
+    """Tick, and record nothing but that a tick happened and when.
+
+    It touches no application state, opens no socket, holds no lock and calls
+    nothing of the agent's. Its only claim is about the loop that runs it.
+    """
+    tick = 0
+    while True:
+        await asyncio.sleep(interval)
+        tick += 1
+        trace.event("heartbeat_tick", "lifecycle", layer=ASGI, tick=tick)
+
+
+def install_heartbeat(trace: HandlerTrace, interval: float = HEARTBEAT_SECONDS) -> None:
+    """Run one heartbeat for the life of the opponent's autonomous boot.
+
+    The measurements so far all watch the task that stalls. None of them can
+    say whether the loop carrying it kept running. One independent task that
+    only sleeps answers that: ticks continuing through the stall mean the loop
+    is alive and something is wrong with one task; ticks stopping mean the loop
+    itself is not running anything.
+
+    Its lifetime is owned here, not by the agent: it is cancelled in a `finally`
+    so no production shutdown depends on it and no task is orphaned.
+    """
+    from mars777_police.autonomous_boot import AutonomousBoot
+
+    original = AutonomousBoot.run
+
+    async def run(self: Any, *args: Any, **kwargs: Any) -> Any:
+        beat = asyncio.ensure_future(_beat(trace, interval))
+        try:
+            return await original(self, *args, **kwargs)
+        finally:
+            beat.cancel()
+            with suppress(asyncio.CancelledError):
+                await beat
+
+    AutonomousBoot.run = run  # type: ignore[method-assign]
 
 
 def declared_lengths(found: list[dict[str, Any]]) -> dict[int, int]:
@@ -763,6 +815,100 @@ def stream_verdict(
     return "EX - no first-handoff send could be matched"
 
 
+def heartbeat_gaps(ticks: list[dict[str, Any]]) -> list[int]:
+    """The interval between consecutive ticks, in nanoseconds."""
+    stamps = [int(one["monotonic_ns"]) for one in sorted(ticks, key=lambda i: int(i["seq"]))]
+    return [later - earlier for earlier, later in itertools.pairwise(stamps)]
+
+
+def heartbeat_shape(
+    ticks: list[dict[str, Any]], window: tuple[int, int] | None
+) -> tuple[str, dict[str, Any]]:
+    """Say whether the loop kept running through the stall, and how confidently.
+
+    The distinction is coarse on purpose. Ticks continuing at roughly their
+    usual cadence mean the loop scheduled this task repeatedly while another
+    one waited. A silence covering most of the stall means the loop was not
+    running this task either. Anything in between is degradation rather than
+    either, and is reported as such rather than rounded to whichever is more
+    convenient.
+    """
+    if len(ticks) < 2 or window is None:
+        return "FX", {"reason": "no heartbeat evidence to correlate"}
+    started, ended = window
+    stall = ended - started
+    inside = [one for one in ticks if started <= int(one["monotonic_ns"]) <= ended]
+    outside = [
+        gap
+        for one, gap in zip(
+            sorted(ticks, key=lambda i: int(i["seq"]))[:-1], heartbeat_gaps(ticks), strict=False
+        )
+        if not (started <= int(one["monotonic_ns"]) <= ended)
+    ]
+    widest_inside = max(heartbeat_gaps(inside), default=0) if len(inside) > 1 else stall
+    facts = {
+        "ticks_inside": len(inside),
+        "stall_ns": stall,
+        "widest_gap_inside_ns": widest_inside,
+        "typical_gap_ns": sorted(outside)[len(outside) // 2] if outside else None,
+        "widest_gap_outside_ns": max(outside, default=None),
+    }
+    if len(inside) < 2 or widest_inside >= stall * 0.8:
+        return "F2", facts
+    typical = facts["typical_gap_ns"] or HEARTBEAT_SECONDS * 1e9
+    if widest_inside > max(typical * 5, 5_000_000_000):
+        return "F3", facts
+    return "F1", facts
+
+
+def heartbeat_report(found: list[dict[str, Any]], base: int) -> str:
+    """Heartbeat cadence, and what it says about the loop during the stall."""
+    ticks = [one for one in found if one.get("event") == "heartbeat_tick"]
+    if not ticks:
+        return "    heartbeat: no ticks recorded"
+    slow = slow_stream_sends(found)
+    window = None
+    if slow:
+        started, ended = slow[0]
+        window = (int(started["monotonic_ns"]), int(ended["monotonic_ns"]))
+    verdict, facts = heartbeat_shape(ticks, window)
+    gaps = heartbeat_gaps(ticks)
+    lines = [
+        f"    heartbeat: {len(ticks)} ticks",
+        f"      cadence overall: median={_seconds(sorted(gaps)[len(gaps) // 2]) if gaps else 'n/a'}"
+        f" max={_seconds(max(gaps)) if gaps else 'n/a'}",
+    ]
+    if window is None:
+        lines.append("      no pathological send to correlate against")
+    else:
+        started, ended = window
+        before = [one for one in ticks if int(one["monotonic_ns"]) < started]
+        after = [one for one in ticks if int(one["monotonic_ns"]) > ended]
+        last_before = _at(before[-1], base) if before else "none"
+        first_after = _at(after[0], base) if after else "none"
+        lines.extend(
+            [
+                f"      stall window: {(started - base) / 1e9:.3f}s ->"
+                f" {(ended - base) / 1e9:.3f}s ({_seconds(ended - started)})",
+                f"      ticks inside stall: {facts['ticks_inside']}",
+                f"      widest gap inside stall: {_seconds(facts['widest_gap_inside_ns'])}",
+                f"      typical gap outside: {_seconds(facts['typical_gap_ns'])}",
+                f"      last tick before stall: {last_before}",
+                f"      first tick after stall: {first_after}",
+            ]
+        )
+    lines.append(f"      LOOP VERDICT: {verdict}")
+    return "\n".join(lines)
+
+
+def _seconds(value: int | None) -> str:
+    return "n/a" if value is None else f"{value / 1e9:.3f}s"
+
+
+def _at(one: dict[str, Any], base: int) -> str:
+    return f"{(int(one['monotonic_ns']) - base) / 1e9:.3f}s"
+
+
 def loop_report(found: list[dict[str, Any]]) -> str:
     """The loop class this process actually ran on, read from the live loop."""
     notes = [one for one in found if one.get("event") == "loop_kind"]
@@ -956,6 +1102,7 @@ def stall_report(found: list[dict[str, Any]], keep: int = 10) -> str:
     lines.append(session_report(found, base))
     lines.append(stream_report(found, base))
     lines.append(loop_report(found))
+    lines.append(heartbeat_report(found, base))
     return "\n".join(lines)
 
 
