@@ -109,7 +109,15 @@ def test_only_the_transport_package_imports_the_framework_stack() -> None:
 
 
 def test_the_transport_package_is_where_the_framework_actually_lives() -> None:
-    """The converse: the confinement above is not vacuous."""
+    """The converse: the confinement above is not vacuous.
+
+    An inventory, not a prohibition - the rule is that the framework stays
+    *inside* this package, and the list records who currently relies on that
+    allowance. `session_deadline` joined it when the held session's response
+    deadline had to follow the locked configuration: it builds the framework's
+    own `StreamableHttpTransport` through the documented client-factory seam,
+    which is precisely the kind of adapter this package exists to hold.
+    """
     src = Path(__file__).resolve().parents[2] / "src"
     users = [
         path.name
@@ -120,4 +128,9 @@ def test_the_transport_package_is_where_the_framework_actually_lives() -> None:
             for line in path.read_text(encoding="utf-8").splitlines()
         )
     ]
-    assert sorted(users) == ["client.py", "server.py", "wire_errors.py"]
+    assert sorted(users) == [
+        "client.py",
+        "server.py",
+        "session_deadline.py",
+        "wire_errors.py",
+    ]

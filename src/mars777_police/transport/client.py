@@ -36,6 +36,7 @@ from ..app.peer_supervision import PeerDeadline
 from ..app.protocol_errors import MalformedMessageError
 from ..app.protocol_values import InvalidDigestError, Sha256Digest
 from .codec_turn import decode_outcome
+from .session_deadline import session_transport
 from .wire_errors import TransportFailureError, inbound
 from .wire_turn import TurnOutcomeWire
 
@@ -66,6 +67,11 @@ class PeerClient:
         self._stack: AsyncExitStack | None = None
 
     @property
+    def deadline(self) -> PeerDeadline:
+        """The authority this client and its held session both answer to."""
+        return self._deadline
+
+    @property
     def timeout(self) -> float:
         """The deadline a call made now would carry.
 
@@ -80,7 +86,8 @@ class PeerClient:
         return self._url
 
     def _client(self) -> Client[StreamableHttpTransport]:
-        return Client(StreamableHttpTransport(self._url), timeout=self.timeout)
+        """One session whose read budget follows the lock it was opened before."""
+        return Client(session_transport(self._url, self._deadline), timeout=self.timeout)
 
     async def __aenter__(self) -> "PeerClient":
         """Hold one session open for every call made inside this context."""
