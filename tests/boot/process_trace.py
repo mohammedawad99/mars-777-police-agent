@@ -273,6 +273,80 @@ def install_dispatch(trace: HandlerTrace) -> None:
     AgentRuntime.stop = stop  # type: ignore[method-assign]
 
 
+SESSION = "session"
+"""The MCP layer below our tool: transport, session loop and lowlevel dispatch."""
+
+
+def timed_library(
+    original: Callable[..., Awaitable[Any]], event: str, trace: HandlerTrace, describe: Any = None
+) -> Callable[..., Awaitable[Any]]:
+    """Bracket one installed MCP coroutine without changing anything it does.
+
+    Called exactly once with exactly its own arguments; its result and its
+    exception both leave unchanged. No buffer, timeout, lock or task is created
+    here, so the stream capacities and the cancellation behaviour under test
+    remain the ones the library ships.
+    """
+
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        about = {} if describe is None else describe(*args, **kwargs)
+        trace.event(f"{event}_enter", "mcp", layer=SESSION, **about)
+        try:
+            result = await original(*args, **kwargs)
+        except BaseException as failure:
+            trace.event(
+                f"{event}_error",
+                "mcp",
+                layer=SESSION,
+                error_type=type(failure).__name__,
+                **about,
+            )
+            raise
+        trace.event(f"{event}_exit", "mcp", layer=SESSION, **about)
+        return result
+
+    return wrapper
+
+
+def _post_about(_self: Any, scope: Any = None, *_rest: Any, **_kw: Any) -> dict[str, Any]:
+    """Only the method and path: the body is never read for a diagnostic."""
+    return {"method": (scope or {}).get("method"), "path": (scope or {}).get("path")}
+
+
+def _message_about(_self: Any, message: Any = None, *_rest: Any, **_kw: Any) -> dict[str, Any]:
+    """The message's own class name, and a tool name when it already decoded one."""
+    request = getattr(getattr(message, "request", None), "root", None)
+    return {
+        "message_type": type(message).__name__,
+        "request_type": type(request).__name__ if request is not None else None,
+        "tool": getattr(getattr(request, "params", None), "name", None),
+    }
+
+
+def install_session(trace: HandlerTrace) -> None:
+    """Time the MCP session path the ledger narrowed the delay down to.
+
+    Four boundaries, each a coroutine the installed packages define: the POST
+    handler, the session's hand-off of a decoded request, and the lowlevel
+    dispatch that starts a tool task. Between them they say whether the first
+    zero-buffer send is what waits, or whether the single receive loop is held
+    by the message before it.
+    """
+    from mcp.server.lowlevel.server import Server
+    from mcp.server.session import ServerSession
+    from mcp.server.streamable_http import StreamableHTTPServerTransport
+
+    StreamableHTTPServerTransport._handle_post_request = timed_library(  # type: ignore[method-assign]
+        StreamableHTTPServerTransport._handle_post_request, "post", trace, _post_about
+    )
+    ServerSession._handle_incoming = timed_library(  # type: ignore[method-assign]
+        ServerSession._handle_incoming, "handoff", trace, _message_about
+    )
+    Server._handle_message = timed_library(  # type: ignore[method-assign]
+        Server._handle_message, "dispatch", trace, _message_about
+    )
+
+
 def events(path: Path) -> list[dict[str, Any]]:
     """Read the trace back, tolerating a final line a dying process cut short."""
     if not path.exists():
@@ -420,7 +494,83 @@ def stall_report(found: list[dict[str, Any]], keep: int = 10) -> str:
     lines.append(f"    POSTs held >= 10s ({len(held)}):")
     lines.extend(_row(one, base) for one in sorted(held, key=lambda r: r["seq"]))
     lines.append(f"    CLASSIFICATION: {stall_verdict(rows)}")
+    lines.append(session_report(found, base))
     return "\n".join(lines)
+
+
+def session_report(found: list[dict[str, Any]], base: int) -> str:
+    """Where the MCP session path spent the wait, and which await owned it.
+
+    Two shapes are distinguishable. A hand-off that itself takes the whole wait
+    means the single receive loop was held by the message before ours. A gap
+    between one hand-off finishing and the next beginning means the loop was
+    idle and the POST had not yet been given to it, which puts the wait on the
+    first zero-buffer send instead.
+    """
+    session = [one for one in found if one.get("layer") == SESSION]
+    if not session:
+        return "    mcp session path: not instrumented in this run"
+    ordered = sorted(session, key=lambda one: int(one.get("seq", 0)))
+    lines = ["    mcp session path:"]
+    slowest, slowest_at = 0, None
+    opened: dict[str, dict[str, Any]] = {}
+    for one in ordered:
+        event = str(one.get("event"))
+        name, _, phase = event.rpartition("_")
+        if phase == "enter":
+            opened[name] = one
+        elif name in opened:
+            held = int(one.get("monotonic_ns", 0)) - int(opened[name]["monotonic_ns"])
+            if held > slowest:
+                slowest, slowest_at = held, (name, opened.pop(name, one), one)
+            else:
+                opened.pop(name, None)
+    gap, gap_at = 0, None
+    handoffs = [one for one in ordered if str(one.get("event")).startswith("handoff_")]
+    for earlier, later in itertools.pairwise(handoffs):
+        if (
+            str(earlier.get("event")) == "handoff_exit"
+            and str(later.get("event")) == "handoff_enter"
+        ):
+            between = int(later.get("monotonic_ns", 0)) - int(earlier.get("monotonic_ns", 0))
+            if between > gap:
+                gap, gap_at = between, (earlier, later)
+    lines.append(f"    session events: {len(session)}")
+    if slowest_at is not None:
+        name, started, ended = slowest_at
+        lines.append(
+            f"      slowest {name}: {slowest / 1e9:.3f}s"
+            f" start={(int(started['monotonic_ns']) - base) / 1e9:.3f}s"
+            f" end={(int(ended['monotonic_ns']) - base) / 1e9:.3f}s {_about(started)}"
+        )
+    if gap_at is not None:
+        earlier, later = gap_at
+        lines.append(
+            f"      widest idle gap between hand-offs: {gap / 1e9:.3f}s"
+            f" after={(int(earlier['monotonic_ns']) - base) / 1e9:.3f}s"
+            f" next={(int(later['monotonic_ns']) - base) / 1e9:.3f}s {_about(later)}"
+        )
+    lines.append(f"      BLOCKER: {blocker_verdict(slowest, slowest_at, gap)}")
+    return "\n".join(lines)
+
+
+def _about(one: dict[str, Any]) -> str:
+    keys = ("method", "path", "message_type", "request_type", "tool")
+    return " ".join(f"{key}={one[key]}" for key in keys if one.get(key) is not None)
+
+
+def blocker_verdict(slowest: int, slowest_at: Any, gap: int) -> str:
+    """Name the owning await only when one of the two shapes clearly dominates."""
+    if slowest < STALL_NS and gap < STALL_NS:
+        return "BX - no session-path await or gap held the wait"
+    if slowest_at is not None and slowest >= STALL_NS and slowest >= gap:
+        name = slowest_at[0]
+        if name == "handoff":
+            return "B3 - the session hand-off of the previous message held the receive loop"
+        if name == "dispatch":
+            return "B4 - lowlevel dispatch of the previous message held it"
+        return "B1 - the POST handler itself held it, before the receive loop saw it"
+    return "B1 - the receive loop was idle; the POST had not yet crossed the first send"
 
 
 def _held(one: dict[str, Any]) -> int:

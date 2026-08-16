@@ -545,3 +545,93 @@ def test_asgi_events_do_not_change_the_handler_classification() -> None:
     assert process_trace.classify(
         [*handled, {"event": "asgi_end", "family": "http", "layer": "asgi", "seq": 3}]
     ).startswith("H3")
+
+
+def test_the_library_wrapper_is_exact_once_and_transparent(tmp_path: Path) -> None:
+    """It must not change buffers, timeouts, cancellation or task structure."""
+    trace = _trace(tmp_path)
+    calls = []
+
+    async def original(one: object, two: object = None) -> str:
+        calls.append((one, two))
+        return "library result"
+
+    wrapped = process_trace.timed_library(original, "handoff", trace)
+
+    assert asyncio.run(wrapped("a", two="b")) == "library result"
+    assert calls == [("a", "b")]
+    assert [one["event"] for one in process_trace.events(trace.path)] == [
+        "handoff_enter",
+        "handoff_exit",
+    ]
+    assert all(one["layer"] == "session" for one in process_trace.events(trace.path))
+
+
+def test_the_library_wrapper_preserves_cancellation(tmp_path: Path) -> None:
+    """Cancellation must pass through: the release mechanism is under study."""
+    trace = _trace(tmp_path)
+
+    async def original() -> None:
+        raise asyncio.CancelledError
+
+    wrapped = process_trace.timed_library(original, "handoff", trace)
+
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(wrapped())
+
+    assert process_trace.events(trace.path)[1]["error_type"] == "CancelledError"
+
+
+def _session(event: str, seq: int, at: int, **fields: object) -> dict[str, object]:
+    return {
+        "event": event,
+        "family": "mcp",
+        "layer": "session",
+        "seq": seq,
+        "monotonic_ns": at,
+        **fields,
+    }
+
+
+def test_a_long_handoff_names_the_receive_loop_holder() -> None:
+    found = [
+        _session("handoff_enter", 1, 0, message_type="RequestResponder"),
+        _session("handoff_exit", 2, 31_000_000_000),
+    ]
+
+    assert process_trace.blocker_verdict(31_000_000_000, ("handoff", found[0], found[1]), 0) == (
+        "B3 - the session hand-off of the previous message held the receive loop"
+    )
+
+
+def test_a_long_idle_gap_puts_the_wait_on_the_first_send() -> None:
+    assert process_trace.blocker_verdict(1_000, None, 31_000_000_000).startswith("B1")
+
+
+def test_no_long_await_or_gap_is_not_forced_into_a_verdict() -> None:
+    assert process_trace.blocker_verdict(1_000, None, 2_000).startswith("BX")
+
+
+def test_the_session_report_survives_an_uninstrumented_run() -> None:
+    assert "not instrumented" in process_trace.session_report([], 0)
+
+
+def test_the_session_report_never_prints_a_payload(tmp_path: Path) -> None:
+    """Only class names, a tool name, method and path are ever described."""
+    found = [
+        _session(
+            "handoff_enter",
+            1,
+            0,
+            message_type="RequestResponder",
+            request_type="CallToolRequest",
+            tool="receive_turn",
+        ),
+        _session("handoff_exit", 2, 31_000_000_000),
+    ]
+
+    text = process_trace.session_report(found, 0)
+
+    assert "receive_turn" in text and SECRET not in text
+    for forbidden in ("payload", "nonce", "h_commit", "params="):
+        assert forbidden not in text
