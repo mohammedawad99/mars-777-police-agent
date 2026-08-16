@@ -767,3 +767,144 @@ def test_the_client_report_names_the_slowest_write(tmp_path: Path) -> None:
 
     assert "slowest single write: 31.000s" in text
     assert "content_length=10" in text
+
+
+def _recv(
+    seq: int,
+    request_id: int,
+    at: int,
+    body_len: int | None,
+    more: bool | None,
+    kind: str = "http.request",
+) -> dict[str, object]:
+    return {
+        "event": "receive_return",
+        "family": "http",
+        "layer": "asgi",
+        "seq": seq,
+        "request_id": request_id,
+        "monotonic_ns": at,
+        "message_type": kind,
+        "body_len": body_len,
+        "more_body": more,
+    }
+
+
+def _held_request(seq: int, start: int, end: int, method: str = "POST") -> list[dict[str, object]]:
+    return _asgi(seq, method, start, end)
+
+
+def test_a_delayed_request_prints_every_one_of_its_receive_events() -> None:
+    """Selection is by request, so later traffic cannot evict the evidence."""
+    found = [
+        *_held_request(71, 0, 100_000_000),
+        _recv(500, 71, 50_000_000, 284, False),
+        *_held_request(72, 200_000_000, 31_000_000_000),
+        _recv(501, 72, 30_900_000_000, 284, False),
+        *_held_request(73, 31_000_000_000, 31_000_000_000, "DELETE"),
+    ]
+
+    text = process_trace.body_report(found, 0, {})
+
+    assert "#72 POST" in text and "#71 POST" in text
+    assert "body_len=284 more_body=False" in text
+    assert "D1 - no body byte arrived for" in text
+
+
+def test_late_first_bytes_are_a_delivery_shape() -> None:
+    found = [*_held_request(72, 0, 31_000_000_000), _recv(500, 72, 30_500_000_000, 284, False)]
+
+    account = process_trace.body_account(found, 72, 284)
+
+    assert process_trace.body_shape(account).startswith("D1")
+
+
+def test_prompt_bytes_with_late_end_of_body_is_a_framing_shape() -> None:
+    """The bytes were there; only the end of the request was withheld."""
+    found = [
+        *_held_request(72, 0, 31_000_000_000),
+        _recv(500, 72, 1_000_000, 284, True),
+        _recv(501, 72, 30_500_000_000, 0, False),
+    ]
+
+    account = process_trace.body_account(found, 72, 284)
+
+    assert process_trace.body_shape(account).startswith("D2")
+
+
+def test_a_split_body_with_a_late_remainder_is_its_own_shape() -> None:
+    found = [
+        *_held_request(72, 0, 31_000_000_000),
+        _recv(500, 72, 1_000_000, 100, True),
+        _recv(501, 72, 30_500_000_000, 184, False),
+    ]
+
+    account = process_trace.body_account(found, 72, 284)
+
+    assert process_trace.body_shape(account).startswith("D3")
+
+
+def test_a_prompt_complete_body_contradicts_the_body_model() -> None:
+    found = [
+        *_held_request(72, 0, 31_000_000_000),
+        _recv(500, 72, 1_000_000, 284, False),
+    ]
+
+    account = process_trace.body_account(found, 72, 284)
+
+    assert process_trace.body_shape(account, handoff_ns=30_900_000_000).startswith("D4")
+
+
+def test_a_length_mismatch_is_never_reported_as_an_ordinary_shape() -> None:
+    """A framing mismatch would be the finding, not a footnote to one."""
+    found = [*_held_request(72, 0, 31_000_000_000), _recv(500, 72, 30_500_000_000, 200, False)]
+
+    account = process_trace.body_account(found, 72, 284)
+    shape = process_trace.body_shape(account)
+
+    assert shape.startswith("DX") and "284" in shape and "200" in shape
+
+
+def test_multiple_chunks_aggregate_to_the_declared_length() -> None:
+    found = [
+        *_held_request(72, 0, 1_000_000_000),
+        _recv(500, 72, 100_000, 100, True),
+        _recv(501, 72, 200_000, 100, True),
+        _recv(502, 72, 300_000, 84, False),
+    ]
+
+    account = process_trace.body_account(found, 72, 284)
+
+    assert account["total"] == 284
+    assert account["messages"] == 3
+    assert account["ended_ns"] == 300_000
+
+
+def test_a_disconnect_message_is_not_counted_as_body() -> None:
+    found = [
+        *_held_request(72, 0, 1_000_000_000),
+        _recv(500, 72, 100_000, 284, False),
+        _recv(501, 72, 200_000, None, None, kind="http.disconnect"),
+    ]
+
+    assert process_trace.body_account(found, 72, 284)["messages"] == 1
+
+
+def test_the_body_report_prints_lengths_and_never_content() -> None:
+    """Bytes were never recorded, so none can be printed; lengths are counts."""
+    leaky = _recv(500, 72, 30_500_000_000, 284, False)
+    leaky["body"] = b"the-secret-payload-bytes"
+    found = [*_held_request(72, 0, 31_000_000_000), leaky]
+
+    text = process_trace.body_report(found, 0, {})
+
+    assert "body_len=284" in text
+    assert SECRET not in text
+    for forbidden in ("the-secret-payload-bytes", "b'", "payload", "nonce", "h_commit"):
+        assert forbidden not in text
+
+
+def test_no_slow_request_needs_no_body_section() -> None:
+    found = _held_request(71, 0, 100_000_000)
+
+    assert "no request was held long enough" in process_trace.body_report(found, 0, {})

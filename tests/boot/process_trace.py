@@ -411,6 +411,143 @@ def install_client(trace: HandlerTrace) -> None:
     )
 
 
+def declared_lengths(found: list[dict[str, Any]]) -> dict[int, int]:
+    """Any `Content-Length` the trace itself carries, keyed by request.
+
+    The server side does not record headers, so this is normally empty and the
+    accounting is reported without a declared figure rather than inventing one.
+    """
+    return {
+        int(one["request_id"]): int(one["content_length"])
+        for one in found
+        if one.get("request_id") is not None and one.get("content_length") is not None
+    }
+
+
+def body_events(found: list[dict[str, Any]], request_id: int) -> list[dict[str, Any]]:
+    """Every receive boundary belonging to one request, in order."""
+    return [
+        one
+        for one in sorted(found, key=lambda item: int(item.get("seq", 0)))
+        if one.get("layer") == ASGI
+        and str(one.get("event")).startswith("receive_")
+        and int(one.get("request_id", -1)) == request_id
+    ]
+
+
+def body_account(
+    found: list[dict[str, Any]], request_id: int, length: int | None = None
+) -> dict[str, Any]:
+    """Reconstruct one request's body arrival from what the channel returned.
+
+    Only lengths and flags are used; the bytes themselves were never recorded.
+    `total` is the sum of what actually arrived, so it can be checked against a
+    declared `Content-Length` rather than assumed equal to it.
+    """
+    rows = ledger(found)
+    start = rows.get(request_id, {}).get("start_ns")
+    returns = [
+        one for one in body_events(found, request_id) if one.get("event") == "receive_return"
+    ]
+    chunks = [one for one in returns if one.get("message_type") == "http.request"]
+    carrying = [one for one in chunks if int(one.get("body_len") or 0) > 0]
+    ended = [one for one in chunks if one.get("more_body") is False]
+    return {
+        "request_id": request_id,
+        "method": rows.get(request_id, {}).get("method"),
+        "asgi_start_ns": start,
+        "asgi_end_ns": rows.get(request_id, {}).get("end_ns"),
+        "content_length": length,
+        "messages": len(chunks),
+        "total": sum(int(one.get("body_len") or 0) for one in chunks),
+        "first_body_ns": int(carrying[0]["monotonic_ns"]) if carrying else None,
+        "final_body_ns": int(carrying[-1]["monotonic_ns"]) if carrying else None,
+        "ended_ns": int(ended[0]["monotonic_ns"]) if ended else None,
+        "rows": chunks,
+    }
+
+
+def body_shape(account: dict[str, Any], handoff_ns: int | None = None) -> str:
+    """Name the body shape: late bytes, late end-of-body, split, or prompt.
+
+    The distinction matters more than the wait itself. Bytes that arrive late
+    put the question below the framing; bytes that arrive promptly while the
+    end of the body does not put it squarely *in* the framing.
+    """
+    length, total = account.get("content_length"), account.get("total")
+    if length is not None and total is not None and total != length:
+        return f"DX - declared {length} bytes but {total} arrived; accounting does not close"
+    start, first = account.get("asgi_start_ns"), account.get("first_body_ns")
+    ended = account.get("ended_ns")
+    if start is None or first is None or ended is None:
+        return "DX - the request has no complete body record"
+    to_first, to_end = first - start, ended - start
+    if to_first >= STALL_NS:
+        return f"D1 - no body byte arrived for {to_first / 1e9:.3f}s"
+    if to_end >= STALL_NS:
+        if account.get("messages", 0) > 1 and (account["final_body_ns"] - start) >= STALL_NS:
+            return f"D3 - part of the body arrived promptly, the rest {to_end / 1e9:.3f}s later"
+        return (
+            f"D2 - bytes arrived in {to_first / 1e9:.3f}s but end-of-body took {to_end / 1e9:.3f}s"
+        )
+    if handoff_ns is not None and (handoff_ns - ended) >= STALL_NS:
+        return "D4 - the whole body arrived promptly; the wait is after it"
+    return "D4 - the whole body arrived promptly"
+
+
+def body_report(found: list[dict[str, Any]], base: int, lengths: dict[int, int]) -> str:
+    """Print every receive event of the delayed request, and of its predecessor.
+
+    R9 printed a twelve-event tail, so the very events recorded to answer this
+    question fell outside it. Selection is by request now, not by recency: no
+    amount of teardown traffic can evict them.
+    """
+    rows = ledger(found)
+    slow = sorted(one["seq"] for one in rows.values() if _held(one) >= STALL_NS)
+    if not slow:
+        return "    body delivery: no request was held long enough to examine"
+    handoffs = [
+        int(one["monotonic_ns"])
+        for one in found
+        if one.get("layer") == SESSION and str(one.get("event")) == "handoff_enter"
+    ]
+    lines = []
+    for request_id in sorted({*slow, *(one - 1 for one in slow)}):
+        if request_id not in rows:
+            continue
+        account = body_account(found, request_id, lengths.get(request_id))
+        after = [
+            one for one in handoffs if account["asgi_start_ns"] and one >= account["asgi_start_ns"]
+        ]
+        lines.append(
+            f"      #{request_id} {account['method']}"
+            f" asgi_start={(account['asgi_start_ns'] - base) / 1e9:.3f}s"
+            f" content_length={account['content_length']}"
+            f" messages={account['messages']} total_body={account['total']}"
+        )
+        for one in account["rows"]:
+            lines.append(
+                f"        {(int(one['monotonic_ns']) - base) / 1e9:9.3f}s receive_return"
+                f" body_len={one.get('body_len')} more_body={one.get('more_body')}"
+            )
+        for label, key in (
+            ("first body", "first_body_ns"),
+            ("final body", "final_body_ns"),
+            ("more_body false", "ended_ns"),
+            ("asgi end", "asgi_end_ns"),
+        ):
+            when = account.get(key)
+            lines.append(
+                f"        {label}: {'absent' if when is None else f'{(when - base) / 1e9:.3f}s'}"
+            )
+        lines.append(
+            f"        first handoff after start:"
+            f" {'none' if not after else f'{(after[0] - base) / 1e9:.3f}s'}"
+        )
+        lines.append(f"        SHAPE: {body_shape(account, after[0] if after else None)}")
+    return "\n".join(["    body delivery:", *lines])
+
+
 def client_report(path: Path, keep: int = 12) -> str:
     """When the sending side actually wrote each request, and for how long."""
     found = events(path)
@@ -589,6 +726,7 @@ def stall_report(found: list[dict[str, Any]], keep: int = 10) -> str:
     lines.append(f"    POSTs held >= 10s ({len(held)}):")
     lines.extend(_row(one, base) for one in sorted(held, key=lambda r: r["seq"]))
     lines.append(f"    CLASSIFICATION: {stall_verdict(rows)}")
+    lines.append(body_report(found, base, declared_lengths(found)))
     lines.append(session_report(found, base))
     return "\n".join(lines)
 
