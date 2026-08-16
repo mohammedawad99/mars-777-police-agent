@@ -908,3 +908,154 @@ def test_no_slow_request_needs_no_body_section() -> None:
     found = _held_request(71, 0, 100_000_000)
 
     assert "no request was held long enough" in process_trace.body_report(found, 0, {})
+
+
+class State:
+    """A stand-in for the state the two stream halves share."""
+
+    def __init__(self, capacity: int = 0, receivers: int = 0) -> None:
+        self.max_buffer_size = capacity
+        self.buffer: list[object] = []
+        self.waiting_receivers = {index: index for index in range(receivers)}
+        self.waiting_senders: dict[object, object] = {}
+
+
+class Half:
+    def __init__(self, state: State) -> None:
+        self._state = state
+
+
+def test_the_stream_description_names_the_shared_state_and_nothing_secret() -> None:
+    state = State(capacity=0, receivers=1)
+    sender, receiver = Half(state), Half(state)
+
+    about = process_trace._stream_about(sender, "an item")
+
+    assert about["stream"] == process_trace._stream_about(receiver)["stream"] == id(state)
+    assert about["capacity"] == 0 and about["waiting_receivers"] == 1
+    assert about["item_type"] == "str"
+    assert SECRET not in str(about)
+
+
+def test_two_streams_are_distinguished_by_their_state() -> None:
+    first, second = Half(State()), Half(State())
+
+    assert (
+        process_trace._stream_about(first)["stream"]
+        != process_trace._stream_about(second)["stream"]
+    )
+
+
+def test_the_stream_wrapper_awaits_send_exactly_once_and_preserves_it(tmp_path: Path) -> None:
+    trace = _trace(tmp_path)
+    calls = []
+
+    async def send(self: object, item: object) -> str:
+        calls.append((self, item))
+        return "sent"
+
+    wrapped = process_trace.timed_library(send, "memory_send", trace, process_trace._stream_about)
+    half = Half(State())
+
+    assert asyncio.run(wrapped(half, "payloadish")) == "sent"
+    assert calls == [(half, "payloadish")]
+    found = process_trace.events(trace.path)
+    assert [one["event"] for one in found] == ["memory_send_enter", "memory_send_exit"]
+    assert all(one["layer"] == "stream" for one in found)
+    assert "payloadish" not in trace.path.read_text(encoding="utf-8")
+
+
+def test_the_stream_wrapper_preserves_cancellation(tmp_path: Path) -> None:
+    trace = _trace(tmp_path)
+
+    async def send(self: object, item: object) -> None:
+        raise asyncio.CancelledError
+
+    wrapped = process_trace.timed_library(send, "memory_send", trace, process_trace._stream_about)
+
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(wrapped(Half(State()), "x"))
+
+    assert process_trace.events(trace.path)[1]["error_type"] == "CancelledError"
+
+
+def _send(seq: int, at: int, phase: str, stream: int = 7, receivers: int = 0) -> dict[str, object]:
+    return {
+        "event": f"memory_send_{phase}",
+        "family": "mcp",
+        "layer": "stream",
+        "seq": seq,
+        "monotonic_ns": at,
+        "stream": stream,
+        "waiting_receivers": receivers,
+        "item_type": "SessionMessage",
+    }
+
+
+def test_a_send_that_waits_with_a_receiver_present_is_a_rendezvous_verdict() -> None:
+    found = [_send(1, 0, "enter", receivers=1), _send(2, 31_000_000_000, "exit")]
+
+    assert process_trace.stream_report(found, 0).count("E2") == 1
+
+
+def test_a_send_that_waits_with_no_receiver_corrects_the_ownership_model() -> None:
+    found = [_send(1, 0, "enter", receivers=0), _send(2, 31_000_000_000, "exit")]
+
+    assert "E3" in process_trace.stream_report(found, 0)
+
+
+def test_a_send_entered_late_is_a_scheduling_verdict() -> None:
+    found = [
+        {
+            "event": "receive_return",
+            "family": "http",
+            "layer": "asgi",
+            "seq": 1,
+            "request_id": 72,
+            "monotonic_ns": 0,
+            "message_type": "http.request",
+            "body_len": 284,
+            "more_body": False,
+        },
+        _send(2, 30_500_000_000, "enter"),
+        _send(3, 30_500_100_000, "exit"),
+    ]
+
+    assert "E1" in process_trace.stream_report(found, 0)
+
+
+def test_prompt_sends_with_a_downstream_delay_are_not_forced() -> None:
+    found = [
+        {
+            "event": "receive_return",
+            "family": "http",
+            "layer": "asgi",
+            "seq": 1,
+            "request_id": 72,
+            "monotonic_ns": 0,
+            "message_type": "http.request",
+            "body_len": 284,
+            "more_body": False,
+        },
+        _send(2, 1_000_000, "enter"),
+        _send(3, 1_100_000, "exit"),
+        {
+            "event": "handoff_enter",
+            "family": "mcp",
+            "layer": "session",
+            "seq": 4,
+            "monotonic_ns": 31_000_000_000,
+        },
+    ]
+
+    assert "E4" in process_trace.stream_report(found, 0)
+
+
+def test_an_uninstrumented_run_reports_no_stream_section() -> None:
+    assert "not instrumented" in process_trace.stream_report([], 0)
+
+
+def test_the_first_handoff_stream_ids_are_reported() -> None:
+    found = [_send(1, 0, "enter", stream=99), _send(2, 1_000, "exit", stream=99)]
+
+    assert "first-handoff stream ids: [99]" in process_trace.stream_report(found, 0)

@@ -75,6 +75,7 @@ def main(
         process_trace.install(InboundPeerOperations, recorder)
         process_trace.install_dispatch(recorder)
         process_trace.install_session(recorder)
+        process_trace.install_streams(recorder)
 
     composition = compose_agent(settings, compose.identity_for(GROUP_B, "group_b"), GROUP_B)
     runtime = AgentRuntime(composition, settings.local.host, port)

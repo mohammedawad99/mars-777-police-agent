@@ -311,7 +311,8 @@ def timed_library(
 
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
         about = {} if describe is None else describe(*args, **kwargs)
-        trace.event(f"{event}_enter", "mcp", layer=SESSION, **about)
+        depth = STREAM if event.startswith("memory_") else SESSION
+        trace.event(f"{event}_enter", "mcp", layer=depth, **about)
         try:
             result = await original(*args, **kwargs)
         except BaseException as failure:
@@ -323,7 +324,7 @@ def timed_library(
                 **about,
             )
             raise
-        trace.event(f"{event}_exit", "mcp", layer=SESSION, **about)
+        trace.event(f"{event}_exit", "mcp", layer=depth, **about)
         return result
 
     return wrapper
@@ -408,6 +409,49 @@ def install_client(trace: HandlerTrace) -> None:
     )
     AsyncHTTP11Connection._send_request_body = timed_library(  # type: ignore[method-assign]
         AsyncHTTP11Connection._send_request_body, "client_body", trace, _request_about
+    )
+
+
+STREAM = "stream"
+"""The AnyIO memory-object hand-off itself: the narrowest boundary left."""
+
+
+def _stream_about(channel: Any, item: Any = None, **_kw: Any) -> dict[str, Any]:
+    """Which stream, how deep its buffer, and what class of thing crossed it.
+
+    The sending and receiving halves share one `_MemoryObjectStreamState`, so
+    its identity is what proves a waiting receiver is waiting on *this* stream
+    rather than one of the several others in this stack. It is a local token
+    only: nothing derived from it is transmitted or persisted.
+    """
+    state = getattr(channel, "_state", None)
+    waiting = getattr(state, "waiting_receivers", None)
+    senders = getattr(state, "waiting_senders", None)
+    return {
+        "stream": id(state) if state is not None else None,
+        "capacity": getattr(state, "max_buffer_size", None),
+        "buffered": len(getattr(state, "buffer", ()) or ()),
+        "waiting_receivers": len(waiting) if waiting is not None else None,
+        "waiting_senders": len(senders) if senders is not None else None,
+        "item_type": type(item).__name__ if item is not None else None,
+    }
+
+
+def install_streams(trace: HandlerTrace) -> None:
+    """Time the memory hand-off on both halves, in the opponent process only.
+
+    `send` and `receive` each begin with `await checkpoint()` in the installed
+    AnyIO, so entering either one already yields to the event loop. Bracketing
+    them is therefore the only way to separate "the task never got back here"
+    from "the rendezvous itself waited".
+    """
+    from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
+
+    MemoryObjectSendStream.send = timed_library(  # type: ignore[method-assign]
+        MemoryObjectSendStream.send, "memory_send", trace, _stream_about
+    )
+    MemoryObjectReceiveStream.receive = timed_library(  # type: ignore[method-assign]
+        MemoryObjectReceiveStream.receive, "memory_receive", trace, _stream_about
     )
 
 
@@ -546,6 +590,102 @@ def body_report(found: list[dict[str, Any]], base: int, lengths: dict[int, int])
         )
         lines.append(f"        SHAPE: {body_shape(account, after[0] if after else None)}")
     return "\n".join(["    body delivery:", *lines])
+
+
+SESSION_MESSAGE = "SessionMessage"
+"""What crosses the first hand-off: the transport's decoded request envelope."""
+
+
+def slow_stream_sends(found: list[dict[str, Any]]) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+    """Every memory send that took at least the stall threshold, paired enter/exit."""
+    ordered = [
+        one
+        for one in sorted(found, key=lambda i: int(i.get("seq", 0)))
+        if one.get("layer") == STREAM
+    ]
+    pending: list[dict[str, Any]] = []
+    slow = []
+    for one in ordered:
+        event = str(one.get("event"))
+        if event == "memory_send_enter":
+            pending.append(one)
+        elif event in {"memory_send_exit", "memory_send_error"} and pending:
+            started = pending.pop()
+            if int(one["monotonic_ns"]) - int(started["monotonic_ns"]) >= STALL_NS:
+                slow.append((started, one))
+    return slow
+
+
+def stream_report(found: list[dict[str, Any]], base: int) -> str:
+    """Say whether the first hand-off was reached late, or waited once reached.
+
+    The two readings point in opposite directions. A send entered thirty
+    seconds after the body was complete means the task never got back to it,
+    and the question is scheduling. A send entered promptly and returning
+    thirty seconds later means the rendezvous itself waited, and the question
+    is the stream.
+    """
+    streams = [one for one in found if one.get("layer") == STREAM]
+    if not streams:
+        return "    memory streams: not instrumented in this run"
+    body = [
+        one
+        for one in found
+        if one.get("event") == "receive_return" and (one.get("body_len") or 0) > 0
+    ]
+    handoffs = [
+        one
+        for one in found
+        if one.get("layer") == SESSION and str(one.get("event")) == "handoff_enter"
+    ]
+    envelopes = [
+        one
+        for one in streams
+        if one.get("event") == "memory_send_enter" and one.get("item_type") == SESSION_MESSAGE
+    ]
+    lines = [
+        f"    memory streams: {len(streams)} events,"
+        f" {len(envelopes)} first-handoff sends ({SESSION_MESSAGE})",
+    ]
+    tokens = {one.get("stream") for one in envelopes}
+    lines.append(f"      first-handoff stream ids: {sorted(one for one in tokens if one)}")
+    slow = slow_stream_sends(found)
+    lines.append(f"      memory sends held >= 10s: {len(slow)}")
+    for started, ended in slow[:4]:
+        held = (int(ended["monotonic_ns"]) - int(started["monotonic_ns"])) / 1e9
+        lines.append(
+            f"        enter={(int(started['monotonic_ns']) - base) / 1e9:.3f}s"
+            f" exit={(int(ended['monotonic_ns']) - base) / 1e9:.3f}s held={held:.3f}s"
+            f" {_about(started)}"
+        )
+    last_body = max((int(one["monotonic_ns"]) for one in body), default=None)
+    first_late = envelopes[-1] if envelopes else None
+    lines.append(f"      VERDICT: {stream_verdict(slow, last_body, first_late, handoffs)}")
+    return "\n".join(lines)
+
+
+def stream_verdict(
+    slow: list[tuple[dict[str, Any], dict[str, Any]]],
+    last_body: int | None,
+    last_envelope: dict[str, Any] | None,
+    handoffs: list[dict[str, Any]],
+) -> str:
+    """Choose between "never reached the send" and "the send waited"."""
+    if slow:
+        started, _ = slow[0]
+        waiting = started.get("waiting_receivers")
+        if waiting:
+            return (
+                f"E2 - a send waited >= 10s with {waiting} receiver(s) already on the same stream"
+            )
+        return "E3 - a send waited >= 10s with no receiver waiting on that stream"
+    if last_body is not None and last_envelope is not None:
+        gap = int(last_envelope["monotonic_ns"]) - last_body
+        if gap >= STALL_NS:
+            return f"E1 - the send was not entered until {gap / 1e9:.3f}s after the body completed"
+    if handoffs:
+        return "E4 - sends were prompt; the delay is downstream of the hand-off"
+    return "EX - no first-handoff send could be matched"
 
 
 def client_report(path: Path, keep: int = 12) -> str:
@@ -728,6 +868,7 @@ def stall_report(found: list[dict[str, Any]], keep: int = 10) -> str:
     lines.append(f"    CLASSIFICATION: {stall_verdict(rows)}")
     lines.append(body_report(found, base, declared_lengths(found)))
     lines.append(session_report(found, base))
+    lines.append(stream_report(found, base))
     return "\n".join(lines)
 
 
