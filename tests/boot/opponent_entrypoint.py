@@ -79,6 +79,14 @@ def main(
 
     composition = compose_agent(settings, compose.identity_for(GROUP_B, "group_b"), GROUP_B)
     runtime = AgentRuntime(composition, settings.local.host, port)
+
+    import os
+
+    import process_trace
+
+    applied = process_trace.select_event_loop(os.environ.get("MARS777_TEST_EVENT_LOOP", ""))
+    print(f"test event loop policy: {applied}", file=sys.stderr)
+
     asyncio.run(AutonomousBoot(runtime, settings, config, role).run())
     return 0
 

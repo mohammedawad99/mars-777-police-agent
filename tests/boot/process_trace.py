@@ -147,6 +147,7 @@ class Timed:
         if scope.get("type") != "http":
             await self.app(scope, receive, send)
             return
+        note_loop(self.trace)
         request_id = next(self.counter)
         seen: list[int] = []
 
@@ -404,11 +405,15 @@ def install_client(trace: HandlerTrace) -> None:
     """
     from httpcore._async.http11 import AsyncHTTP11Connection
 
+    def about(connection: Any, request: Any = None, **kwargs: Any) -> dict[str, Any]:
+        note_loop(trace)
+        return _request_about(connection, request, **kwargs)
+
     AsyncHTTP11Connection._send_request_headers = timed_library(  # type: ignore[method-assign]
-        AsyncHTTP11Connection._send_request_headers, "client_headers", trace, _request_about
+        AsyncHTTP11Connection._send_request_headers, "client_headers", trace, about
     )
     AsyncHTTP11Connection._send_request_body = timed_library(  # type: ignore[method-assign]
-        AsyncHTTP11Connection._send_request_body, "client_body", trace, _request_about
+        AsyncHTTP11Connection._send_request_body, "client_body", trace, about
     )
 
 
@@ -452,6 +457,57 @@ def install_streams(trace: HandlerTrace) -> None:
     )
     MemoryObjectReceiveStream.receive = timed_library(  # type: ignore[method-assign]
         MemoryObjectReceiveStream.receive, "memory_receive", trace, _stream_about
+    )
+
+
+SELECTOR = "selector"
+"""The one alternative loop this experiment is allowed to select."""
+
+_NOTED: set[int] = set()
+"""Processes whose loop has already been recorded; the note is wanted once."""
+
+
+def select_event_loop(choice: str) -> str:
+    """Apply a **test-only** event-loop policy and report what actually happened.
+
+    The experiment changes one variable, so it says plainly whether it managed
+    to: `selector` when the policy was applied, `unavailable` where the class
+    does not exist, `default` when nothing was asked for. Nothing infers the
+    running loop from this - that is read from the loop itself later.
+    """
+    import asyncio
+
+    if choice != SELECTOR:
+        return "default"
+    policy = getattr(asyncio, "WindowsSelectorEventLoopPolicy", None)
+    if policy is None:
+        return "unavailable"
+    asyncio.set_event_loop_policy(policy())
+    return SELECTOR
+
+
+def note_loop(trace: HandlerTrace) -> None:
+    """Record the loop class this process is really running on, once.
+
+    The configured policy is not evidence: only the class of the loop that
+    ended up running is, so this reads the live object rather than the setting
+    that was meant to produce it.
+    """
+    import asyncio
+
+    if id(trace) in _NOTED:
+        return
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:  # pragma: no cover - only outside a running loop
+        return
+    _NOTED.add(id(trace))
+    trace.event(
+        "loop_kind",
+        "lifecycle",
+        layer=ASGI,
+        loop=type(loop).__name__,
+        policy=type(asyncio.get_event_loop_policy()).__name__,
     )
 
 
@@ -688,6 +744,16 @@ def stream_verdict(
     return "EX - no first-handoff send could be matched"
 
 
+def loop_report(found: list[dict[str, Any]]) -> str:
+    """The loop class this process actually ran on, read from the live loop."""
+    notes = [one for one in found if one.get("event") == "loop_kind"]
+    if not notes:
+        return "    event loop: not recorded"
+    return "\n".join(
+        f"    event loop: {one.get('loop')} (policy {one.get('policy')})" for one in notes
+    )
+
+
 def client_report(path: Path, keep: int = 12) -> str:
     """When the sending side actually wrote each request, and for how long."""
     found = events(path)
@@ -869,6 +935,7 @@ def stall_report(found: list[dict[str, Any]], keep: int = 10) -> str:
     lines.append(body_report(found, base, declared_lengths(found)))
     lines.append(session_report(found, base))
     lines.append(stream_report(found, base))
+    lines.append(loop_report(found))
     return "\n".join(lines)
 
 

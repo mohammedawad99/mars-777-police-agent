@@ -258,7 +258,7 @@ def test_the_asgi_wrapper_brackets_a_request_and_forwards_every_message(
         "http.response.body",
     ]
     assert [one.get("body") for one in sent[1:]] == [b"chunk-one", b"chunk-two"]
-    found = process_trace.events(trace.path)
+    found = [one for one in process_trace.events(trace.path) if one["event"] != "loop_kind"]
     assert [one["event"] for one in found] == ["asgi_start", "asgi_end"]
     assert found[0]["method"] == "POST" and found[0]["path"] == "/mcp"
     assert found[1]["status"] == 200
@@ -301,7 +301,7 @@ def test_an_asgi_failure_is_recorded_and_re_raised(tmp_path: Path) -> None:
     with pytest.raises(KeyError):
         asyncio.run(_drive(wrapped, {"type": "http", "method": "POST", "path": "/mcp"}))
 
-    found = process_trace.events(trace.path)
+    found = [one for one in process_trace.events(trace.path) if one["event"] != "loop_kind"]
     assert [one["event"] for one in found] == ["asgi_start", "asgi_error"]
     assert found[1]["error_type"] == "KeyError"
     assert process_trace.REQUEST_ID.get() is None
@@ -1059,3 +1059,76 @@ def test_the_first_handoff_stream_ids_are_reported() -> None:
     found = [_send(1, 0, "enter", stream=99), _send(2, 1_000, "exit", stream=99)]
 
     assert "first-handoff stream ids: [99]" in process_trace.stream_report(found, 0)
+
+
+def test_no_flag_leaves_the_event_loop_policy_alone() -> None:
+    """Absent the experiment, the test opponent behaves exactly as before."""
+    before = asyncio.get_event_loop_policy()
+
+    assert process_trace.select_event_loop("") == "default"
+    assert process_trace.select_event_loop("proactor") == "default"
+    assert asyncio.get_event_loop_policy() is before
+
+
+def test_the_selector_choice_is_honest_about_this_platform() -> None:
+    """On Linux the Windows policy does not exist; nothing is faked for it."""
+    applied = process_trace.select_event_loop("selector")
+
+    if hasattr(asyncio, "WindowsSelectorEventLoopPolicy"):  # pragma: no cover - Windows only
+        assert applied == "selector"
+        assert isinstance(asyncio.get_event_loop_policy(), asyncio.WindowsSelectorEventLoopPolicy)
+    else:
+        assert applied == "unavailable"
+
+
+def test_the_loop_is_read_from_the_running_loop_not_the_policy(tmp_path: Path) -> None:
+    trace = _trace(tmp_path)
+
+    async def run() -> None:
+        process_trace.note_loop(trace)
+
+    asyncio.run(run())
+
+    notes = [one for one in process_trace.events(trace.path) if one["event"] == "loop_kind"]
+    assert len(notes) == 1
+    assert notes[0]["loop"] == "_UnixSelectorEventLoop" or notes[0]["loop"].endswith("EventLoop")
+    assert "Policy" in notes[0]["policy"]
+
+
+def test_the_loop_is_noted_once_per_process(tmp_path: Path) -> None:
+    trace = _trace(tmp_path)
+
+    async def run() -> None:
+        process_trace.note_loop(trace)
+        process_trace.note_loop(trace)
+        process_trace.note_loop(trace)
+
+    asyncio.run(run())
+
+    assert (
+        len([one for one in process_trace.events(trace.path) if one["event"] == "loop_kind"]) == 1
+    )
+
+
+def test_noting_outside_a_running_loop_is_silent(tmp_path: Path) -> None:
+    trace = _trace(tmp_path)
+
+    process_trace.note_loop(trace)
+
+    assert process_trace.events(trace.path) == []
+
+
+def test_the_loop_report_names_both_recorded_loops() -> None:
+    found = [
+        {
+            "event": "loop_kind",
+            "family": "lifecycle",
+            "layer": "asgi",
+            "seq": 1,
+            "loop": "ProactorEventLoop",
+            "policy": "WindowsProactorEventLoopPolicy",
+        },
+    ]
+
+    assert "ProactorEventLoop" in process_trace.loop_report(found)
+    assert "not recorded" in process_trace.loop_report([])

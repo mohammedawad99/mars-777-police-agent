@@ -57,6 +57,16 @@ READY_TIMEOUT = 30.0
 POLL_SECONDS = 0.05
 
 
+EXPERIMENTAL_LOOP = "selector"
+"""The one variable of the R12 experiment: the **synthetic opponent's** loop.
+
+The shipped CLI is untouched and keeps its default Windows loop, because the
+thirty-second scheduling stall was measured in the opponent's process. Naming
+it here keeps the experiment in test infrastructure and out of any shipped
+setting, launch input or negotiated config.
+"""
+
+
 BOOTSTRAP = Path(__file__).with_name("client_bootstrap")
 """Where the test-only `sitecustomize` that times the CLI's HTTP writes lives."""
 
@@ -96,6 +106,7 @@ def spawn_opponent(
     root: Path,
     variant: str = "same",
     trace: Path | None = None,
+    loop: str = "",
 ) -> "subprocess.Popen[str]":
     """Start the **synthetic, non-counted** distinct-group opponent process.
 
@@ -108,9 +119,10 @@ def spawn_opponent(
     arguments = [role, str(port), opponent_url, str(root), variant]
     if trace is not None:
         arguments.append(str(trace))
+    chosen = {"MARS777_TEST_EVENT_LOOP": loop} if loop else {}
     return subprocess.Popen(
         [sys.executable, str(script), *arguments],
-        env={**os.environ},
+        env={**os.environ, **chosen},
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
