@@ -26,15 +26,27 @@ cursor - a projection the wire already carries - and an error is recorded by
 its class name. No secret, no auth proof, no nonce, no digest, no payload.
 """
 
+import itertools
 import json
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 
 ACKNOWLEDGEMENT = "acknowledgement"
 COMMITMENT = "commitment"
 REVEAL = "reveal"
+
+REQUEST_ID: ContextVar[int | None] = ContextVar("diagnostic_request_id", default=None)
+"""Set by the ASGI wrapper, read wherever the execution context still carries it.
+
+It is expected to be **absent** below the transport. The server session hands a
+decoded request to a task started from its own receive loop, not from the task
+serving the HTTP request, so the context copied into the tool is that loop's -
+not this one's. A null id there is evidence about the architecture, not a
+failure of the instrument, and correlation then rests on order instead.
+"""
 
 TRACED = {
     "on_commitment": COMMITMENT,
@@ -104,6 +116,127 @@ def install(operations: type, trace: HandlerTrace) -> None:
         setattr(operations, name, traced(getattr(operations, name), family, trace))
 
 
+class Timed:
+    """ASGI middleware that times a request and touches nothing else.
+
+    It reads the status off `http.response.start` as it goes past and forwards
+    every message unchanged. Nothing is buffered and no body is consumed, so a
+    streamed response still streams: the point is to know *when* the server
+    application received a request relative to when the tool below it ran.
+    """
+
+    def __init__(self, app: Any, trace: HandlerTrace) -> None:
+        self.app, self.trace = app, trace
+        self.counter = itertools.count(1)
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+        request_id = next(self.counter)
+        seen: list[int] = []
+
+        async def watched(message: Any) -> None:
+            if message.get("type") == "http.response.start":
+                seen.append(int(message["status"]))
+            await send(message)
+
+        self.trace.event(
+            "asgi_start",
+            "http",
+            request_id=request_id,
+            method=scope.get("method"),
+            path=scope.get("path"),
+        )
+        token = REQUEST_ID.set(request_id)
+        try:
+            await self.app(scope, receive, watched)
+        except BaseException as failure:
+            self.trace.event(
+                "asgi_error", "http", request_id=request_id, error_type=type(failure).__name__
+            )
+            raise
+        else:
+            self.trace.event(
+                "asgi_end", "http", request_id=request_id, status=seen[0] if seen else None
+            )
+        finally:
+            REQUEST_ID.reset(token)
+
+
+def timed_async(
+    original: Callable[..., Awaitable[Any]], event: str, family: str, trace: HandlerTrace
+) -> Callable[..., Awaitable[Any]]:
+    """Bracket one awaited callable, carrying whatever request id is in scope."""
+
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        trace.event(f"{event}_start", family, request_id=REQUEST_ID.get())
+        try:
+            result = await original(*args, **kwargs)
+        except BaseException as failure:
+            trace.event(
+                f"{event}_error",
+                family,
+                request_id=REQUEST_ID.get(),
+                error_type=type(failure).__name__,
+            )
+            raise
+        trace.event(f"{event}_success", family, request_id=REQUEST_ID.get())
+        return result
+
+    return wrapper
+
+
+def timed_router(original: Callable[..., Any], trace: HandlerTrace) -> Callable[..., Any]:
+    """Bracket the turn router, naming only the request kind it dispatches on."""
+
+    def wrapper(operations: Any, request: Any, session: Any) -> Any:
+        kind = getattr(request, "kind", None)
+        trace.event("router_start", str(kind), request_id=REQUEST_ID.get())
+        try:
+            result = original(operations, request, session)
+        except BaseException as failure:
+            trace.event(
+                "router_error",
+                str(kind),
+                request_id=REQUEST_ID.get(),
+                error_type=type(failure).__name__,
+            )
+            raise
+        trace.event("router_success", str(kind), request_id=REQUEST_ID.get())
+        return result
+
+    return wrapper
+
+
+def install_dispatch(trace: HandlerTrace) -> None:
+    """Time the whole opponent ingress, from ASGI arrival down to the handler.
+
+    Four seams, each the narrowest one reachable without touching `src`: the
+    ASGI application, the tool body's first await, the turn router, and the
+    handler the previous checkpoint already traced. Between them they say which
+    interval holds the thirty seconds.
+
+    The middleware is added to the real Starlette application rather than
+    replacing it, because `run_http_async` reads `app.state` off what
+    `http_app` returned and a bare callable would not have it.
+    """
+    from fastmcp import FastMCP
+
+    from mars777_police.transport import server
+
+    original_app = FastMCP.http_app
+
+    def http_app(self: Any, *args: Any, **kwargs: Any) -> Any:
+        app = original_app(self, *args, **kwargs)
+        app.add_middleware(Timed, trace=trace)
+        return app
+
+    FastMCP.http_app = http_app  # type: ignore[method-assign]
+    server.inbound = timed_async(server.inbound, "tool", "receive_any", trace)
+    server.route_receive_turn = timed_router(server.route_receive_turn, trace)
+
+
 def events(path: Path) -> list[dict[str, Any]]:
     """Read the trace back, tolerating a final line a dying process cut short."""
     if not path.exists():
@@ -147,6 +280,90 @@ def classify(found: list[dict[str, Any]]) -> str:
     )
 
 
+STALL_NS = 10_000_000_000
+"""Ten seconds: far above a healthy turn, far below the thirty being explained."""
+
+
+def dispatch_timeline(found: list[dict[str, Any]]) -> str:
+    """Say which interval of the ingress holds the long wait, if any does.
+
+    The intervals are read off the last stretch of the trace in order, because
+    the request id does not survive below the transport - the tool runs in a
+    task the session's receive loop started, not in the one serving the HTTP
+    request. Order is sound here only while requests do not overlap, so the
+    overlap is reported next to the verdict rather than assumed away.
+    """
+    ordered = sorted(found, key=lambda one: int(one.get("seq", 0)))
+    marks = {
+        "asgi_start": "T1 asgi arrival",
+        "tool_start": "T2 tool body",
+        "router_start": "T3 router",
+        "inbound_start": "T4 handler start",
+        "inbound_success": "T5 handler success",
+        "asgi_end": "T6 asgi end",
+    }
+    last: dict[str, int] = {}
+    for one in ordered:
+        event = str(one.get("event"))
+        if event in marks:
+            last[event] = int(one.get("monotonic_ns", 0))
+    lines = ["    dispatch timeline (last observed of each boundary):"]
+    for event, label in marks.items():
+        lines.append(f"      {label}: {last.get(event, 'absent')}")
+    gaps = [
+        ("T1->T2 mcp dispatch", "asgi_start", "tool_start"),
+        ("T2->T3 tool first await", "tool_start", "router_start"),
+        ("T3->T4 router to handler", "router_start", "inbound_start"),
+        ("T4->T5 handler body", "inbound_start", "inbound_success"),
+        ("T5->T6 response return", "inbound_success", "asgi_end"),
+    ]
+    widest, widest_name = 0, "none"
+    for label, start, end in gaps:
+        if start in last and end in last:
+            delta = last[end] - last[start]
+            lines.append(f"      {label}: {delta / 1e9:.3f}s")
+            if delta > widest:
+                widest, widest_name = delta, label
+        else:
+            lines.append(f"      {label}: unmeasured")
+    verdict = {
+        "T1->T2 mcp dispatch": "A2 - the server application had it; MCP dispatch held it",
+        "T2->T3 tool first await": "A3 - the tool body was entered and its first await held it",
+        "T3->T4 router to handler": "A3 - the router held it",
+        "T4->T5 handler body": "A3 - the handler body held it",
+        "T5->T6 response return": "A4 - the handler finished and the response return held it",
+    }
+    if widest < STALL_NS:
+        lines.append("      CLASSIFICATION: A1 - no interval below ASGI holds the wait")
+    else:
+        lines.append(f"      CLASSIFICATION: {verdict[widest_name]}")
+    return "\n".join(lines)
+
+
+def concurrency(found: list[dict[str, Any]]) -> str:
+    """How many ASGI requests were open when the last one arrived."""
+    ordered = sorted(found, key=lambda one: int(one.get("seq", 0)))
+    starts = [one for one in ordered if one.get("event") == "asgi_start"]
+    if not starts:
+        return "    asgi requests: none recorded"
+    final = starts[-1]
+    before = {
+        int(one["request_id"])
+        for one in ordered
+        if one.get("event") == "asgi_start" and int(one.get("seq", 0)) < int(final.get("seq", 0))
+    }
+    closed = {
+        int(one["request_id"])
+        for one in ordered
+        if one.get("event") in {"asgi_end", "asgi_error"}
+        and int(one.get("seq", 0)) < int(final.get("seq", 0))
+    }
+    return (
+        f"    asgi requests: {len(starts)} started;"
+        f" still open when the last arrived: {sorted(before - closed)}"
+    )
+
+
 def summary(path: Path, keep: int = 12) -> str:
     """The tail of the trace, what it implies, and the numbers behind it."""
     found = events(path)
@@ -161,6 +378,8 @@ def summary(path: Path, keep: int = 12) -> str:
         f"    last acknowledgement start: {starts[-1] if starts else 'none'}",
         f"    last acknowledgement completed: {done[-1] if done else 'none'}",
         f"    CLASSIFICATION: {classify(found)}",
+        concurrency(found),
+        dispatch_timeline(found),
         f"    last {keep} events:",
     ]
     lines.extend(f"      {one}" for one in found[-keep:])

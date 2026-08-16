@@ -8,6 +8,7 @@ watch. And the reading has to name only the explanation the events can carry,
 refusing to choose when they cannot.
 """
 
+import asyncio
 import json
 from pathlib import Path
 
@@ -210,3 +211,241 @@ def test_the_trace_records_no_secret(tmp_path: Path) -> None:
     assert SECRET not in written
     for forbidden in ("h_commit", "nonce", "secret", "proof", "payload"):
         assert forbidden not in written
+
+
+class Recorder:
+    """A minimal ASGI application that records what it was handed."""
+
+    def __init__(self, status: int = 200) -> None:
+        self.calls, self.status, self.received = 0, status, []
+
+    async def __call__(self, scope: object, receive: object, send: object) -> None:
+        self.calls += 1
+        self.received.append((scope, receive, send))
+        await send({"type": "http.response.start", "status": self.status})
+        await send({"type": "http.response.body", "body": b"chunk-one", "more_body": True})
+        await send({"type": "http.response.body", "body": b"chunk-two"})
+
+
+async def _drive(app: object, scope: dict[str, object]) -> list[dict[str, object]]:
+    sent: list[dict[str, object]] = []
+
+    async def send(message: dict[str, object]) -> None:
+        sent.append(message)
+
+    async def receive() -> dict[str, object]:
+        return {"type": "http.request"}
+
+    await app(scope, receive, send)
+    return sent
+
+
+def test_the_asgi_wrapper_brackets_a_request_and_forwards_every_message(
+    tmp_path: Path,
+) -> None:
+    """Nothing is buffered: each body chunk goes past untouched, in order."""
+    trace = _trace(tmp_path)
+    inner = Recorder(status=200)
+    wrapped = process_trace.Timed(inner, trace)
+
+    sent = asyncio.run(_drive(wrapped, {"type": "http", "method": "POST", "path": "/mcp"}))
+
+    assert inner.calls == 1
+    assert [one["type"] for one in sent] == [
+        "http.response.start",
+        "http.response.body",
+        "http.response.body",
+    ]
+    assert [one.get("body") for one in sent[1:]] == [b"chunk-one", b"chunk-two"]
+    found = process_trace.events(trace.path)
+    assert [one["event"] for one in found] == ["asgi_start", "asgi_end"]
+    assert found[0]["method"] == "POST" and found[0]["path"] == "/mcp"
+    assert found[1]["status"] == 200
+    assert found[0]["request_id"] == found[1]["request_id"] == 1
+
+
+def test_the_asgi_wrapper_passes_a_non_http_scope_straight_through(tmp_path: Path) -> None:
+    trace = _trace(tmp_path)
+    inner = Recorder()
+    wrapped = process_trace.Timed(inner, trace)
+
+    async def run() -> None:
+        await wrapped({"type": "lifespan"}, None, _swallow)
+
+    async def _swallow(message: object) -> None:
+        return None
+
+    asyncio.run(run())
+
+    assert inner.calls == 1
+    assert process_trace.events(trace.path) == []
+
+
+def test_the_request_id_is_reset_after_each_request(tmp_path: Path) -> None:
+    wrapped = process_trace.Timed(Recorder(), _trace(tmp_path))
+
+    asyncio.run(_drive(wrapped, {"type": "http", "method": "POST", "path": "/mcp"}))
+
+    assert process_trace.REQUEST_ID.get() is None
+
+
+def test_an_asgi_failure_is_recorded_and_re_raised(tmp_path: Path) -> None:
+    trace = _trace(tmp_path)
+
+    async def broken(scope: object, receive: object, send: object) -> None:
+        raise KeyError("the original asgi failure")
+
+    wrapped = process_trace.Timed(broken, trace)
+
+    with pytest.raises(KeyError):
+        asyncio.run(_drive(wrapped, {"type": "http", "method": "POST", "path": "/mcp"}))
+
+    found = process_trace.events(trace.path)
+    assert [one["event"] for one in found] == ["asgi_start", "asgi_error"]
+    assert found[1]["error_type"] == "KeyError"
+    assert process_trace.REQUEST_ID.get() is None
+
+
+def test_the_awaited_wrapper_is_exact_once_and_transparent(tmp_path: Path) -> None:
+    trace = _trace(tmp_path)
+    calls = []
+
+    async def original(first: object, second: object = None) -> str:
+        calls.append((first, second))
+        return "the original result"
+
+    wrapped = process_trace.timed_async(original, "tool", "receive_any", trace)
+
+    assert asyncio.run(wrapped("a", second="b")) == "the original result"
+    assert calls == [("a", "b")]
+    assert [one["event"] for one in process_trace.events(trace.path)] == [
+        "tool_start",
+        "tool_success",
+    ]
+
+
+def test_the_awaited_wrapper_preserves_the_original_exception(tmp_path: Path) -> None:
+    trace = _trace(tmp_path)
+    failure = ValueError("the original await failure")
+
+    async def original() -> None:
+        raise failure
+
+    wrapped = process_trace.timed_async(original, "tool", "receive_any", trace)
+
+    with pytest.raises(ValueError) as raised:
+        asyncio.run(wrapped())
+
+    assert raised.value is failure
+    assert process_trace.events(trace.path)[1]["error_type"] == "ValueError"
+
+
+def test_the_router_wrapper_is_exact_once_and_names_only_the_kind(tmp_path: Path) -> None:
+    trace = _trace(tmp_path)
+    calls = []
+
+    def original(operations: object, request: object, session: object) -> str:
+        calls.append((operations, request, session))
+        return "routed"
+
+    class Request:
+        kind = "acknowledgement"
+
+    wrapped = process_trace.timed_router(original, trace)
+    request = Request()
+
+    assert wrapped("ops", request, "session") == "routed"
+    assert calls == [("ops", request, "session")]
+    found = process_trace.events(trace.path)
+    assert [one["event"] for one in found] == ["router_start", "router_success"]
+    assert all(one["family"] == "acknowledgement" for one in found)
+
+
+def test_the_router_wrapper_preserves_the_original_exception(tmp_path: Path) -> None:
+    trace = _trace(tmp_path)
+    failure = TypeError("the original routing failure")
+
+    def original(operations: object, request: object, session: object) -> None:
+        raise failure
+
+    class Request:
+        kind = "reveal"
+
+    with pytest.raises(TypeError) as raised:
+        process_trace.timed_router(original, trace)("ops", Request(), "session")
+
+    assert raised.value is failure
+    assert process_trace.events(trace.path)[1]["error_type"] == "TypeError"
+
+
+def _timeline(**at: int) -> list[dict[str, object]]:
+    order = [
+        "asgi_start",
+        "tool_start",
+        "router_start",
+        "inbound_start",
+        "inbound_success",
+        "asgi_end",
+    ]
+    return [
+        {"event": event, "family": "x", "seq": index, "monotonic_ns": at[event], "request_id": 1}
+        for index, event in enumerate(order, start=1)
+        if event in at
+    ]
+
+
+def test_a_healthy_timeline_holds_no_long_interval() -> None:
+    found = _timeline(
+        asgi_start=0,
+        tool_start=1_000_000,
+        router_start=2_000_000,
+        inbound_start=3_000_000,
+        inbound_success=4_000_000,
+        asgi_end=5_000_000,
+    )
+
+    assert "CLASSIFICATION: A1" in process_trace.dispatch_timeline(found)
+
+
+def test_a_long_wait_before_the_tool_body_is_mcp_dispatch() -> None:
+    found = _timeline(
+        asgi_start=0,
+        tool_start=30_000_000_000,
+        router_start=30_000_100_000,
+        inbound_start=30_000_200_000,
+        inbound_success=30_000_300_000,
+        asgi_end=30_000_400_000,
+    )
+
+    assert "CLASSIFICATION: A2" in process_trace.dispatch_timeline(found)
+
+
+def test_a_long_wait_after_the_handler_is_response_return() -> None:
+    found = _timeline(
+        asgi_start=0,
+        tool_start=1_000_000,
+        router_start=2_000_000,
+        inbound_start=3_000_000,
+        inbound_success=4_000_000,
+        asgi_end=31_000_000_000,
+    )
+
+    assert "CLASSIFICATION: A4" in process_trace.dispatch_timeline(found)
+
+
+def test_an_unmeasured_boundary_is_named_rather_than_guessed() -> None:
+    text = process_trace.dispatch_timeline(_timeline(asgi_start=0, inbound_start=5_000_000))
+
+    assert "T1->T2 mcp dispatch: unmeasured" in text
+    assert "T2 tool body: absent" in text
+
+
+def test_open_requests_are_reported_next_to_the_verdict() -> None:
+    found = [
+        {"event": "asgi_start", "seq": 1, "request_id": 1, "monotonic_ns": 0},
+        {"event": "asgi_start", "seq": 2, "request_id": 2, "monotonic_ns": 1},
+        {"event": "asgi_end", "seq": 3, "request_id": 2, "monotonic_ns": 2},
+        {"event": "asgi_start", "seq": 4, "request_id": 3, "monotonic_ns": 3},
+    ]
+
+    assert "still open when the last arrived: [1]" in process_trace.concurrency(found)

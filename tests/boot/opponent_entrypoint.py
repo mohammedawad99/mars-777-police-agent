@@ -71,7 +71,9 @@ def main(
 
         from mars777_police.transport.peer_operations import InboundPeerOperations
 
-        process_trace.install(InboundPeerOperations, process_trace.HandlerTrace(Path(trace)))
+        recorder = process_trace.HandlerTrace(Path(trace))
+        process_trace.install(InboundPeerOperations, recorder)
+        process_trace.install_dispatch(recorder)
 
     composition = compose_agent(settings, compose.identity_for(GROUP_B, "group_b"), GROUP_B)
     runtime = AgentRuntime(composition, settings.local.host, port)
