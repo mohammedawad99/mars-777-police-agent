@@ -31,6 +31,7 @@ import boot_builders as build
 import r7_builders as r7
 from r16_builders import GROUP_A, GROUP_B
 
+from mars777_police.app.config_rules import hints_of
 from mars777_police.app.sealed_record_values import ActorRole
 from mars777_police.app.sub_game_driver import SubGameDriver
 from mars777_police.app.turn_service import LocalTurnService
@@ -80,7 +81,7 @@ def driver_for(series: SeriesRuntime, role: ActorRole) -> SubGameDriver:
         role=role,
         turns=LocalTurnService(limits=LIMITS, quota=QUOTA),
         config_sha256=r7.DIGEST,
-        hint_words=r7.CONFIG.world.hint_max_words,
+        hints=hints_of(r7.CONFIG, role),
         sub_game=1,
         truth=LocalTruth(board=r7.board(), own_position=r7.POSITIONS[role]),
         deadline=30.0,

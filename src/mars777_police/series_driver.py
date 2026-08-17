@@ -40,7 +40,7 @@ from dataclasses import dataclass
 
 from .app import artifact_store as artifacts
 from .app.audit_runtime import AuditRuntime
-from .app.config_rules import limits_of, opening_truth, rules_of
+from .app.config_rules import hints_of, limits_of, opening_truth, rules_of
 from .app.outbound_evidence_runtime import OutboundEvidenceRuntime
 from .app.round_opening import open_round_for
 from .app.sealed_record_values import ActorRole
@@ -130,7 +130,7 @@ class SeriesDriver:
             role=self.role,
             turns=LocalTurnService(limits_of(self.config), rules_of(self.config).quota),
             config_sha256=evidence.context.config_sha256,
-            hint_words=self.config.world.hint_max_words,
+            hints=hints_of(self.config, self.role),
             sub_game=sub_game,
             truth=opening_truth(self.config, self.role),
             deadline=self.deadline,

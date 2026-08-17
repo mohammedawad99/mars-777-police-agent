@@ -80,6 +80,32 @@ def identity(document: dict[str, object]) -> tuple[str, str, int, str]:
     )
 
 
+def _intent(entry: dict[str, object]) -> str:
+    """The one classification this entry carries, however the peer spelled it.
+
+    **C-08, enforced rather than assumed.** The book's English code comment says
+    `verdict` and its Hebrew prose says *intent classification*; the two lists
+    are position-for-position identical, so they name the same commit-time
+    value and the sealed payload carries `intent` alone. The reference
+    implementation nonetheless writes both keys with the same value, which is
+    lawful - and PRD04-FR-018 requires that when both arrive they agree.
+
+    A contradiction is refused **as a malformed document**, on the refusal path
+    every other reader here already uses. It is not tampering, not a technical
+    loss and not a sanction: two keys that disagree describe no game at all, and
+    accepting either one would be inventing the dual truth C-08 forbids.
+
+    `verdict` remains a non-input in every other respect - absent, it changes
+    nothing, and no verdict field is ever added to what we send.
+    """
+    intent = text(entry, "intent")
+    if "verdict" not in entry:
+        return intent
+    if entry.get("verdict") != intent:
+        raise refuse("entry carries a 'verdict' that contradicts its 'intent'")
+    return intent
+
+
 def turns(document: dict[str, object]) -> tuple[DisclosedTurn, ...]:
     """Every disclosed entry, copied out as immutable values."""
     listing = document.get("entries")
@@ -98,7 +124,7 @@ def turns(document: dict[str, object]) -> tuple[DisclosedTurn, ...]:
                 sub_game=whole(entry, "sub_game"),
                 role=text(entry, "role"),
                 move=_action(entry.get("move")),
-                intent=text(entry, "intent"),
+                intent=_intent(entry),
                 hint=text(entry, "hint"),
                 commit=text(entry, "commit"),
                 self_pos=point(state.get("self_pos"), "entry state self_pos"),

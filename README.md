@@ -62,6 +62,13 @@ play a counted match against another group's real agent.
   series over FastMCP against a separate process, writes its fourteen artifacts
   and exits 0, and a legal-but-different boot config is still refused by the
   existing config lock
+- a **deterministic natural-language hint channel** (Stage 7B): every turn seals a
+  truthful pre-written sentence chosen by code - zero tokens, no network, no model.
+  A validator owns every outgoing hint: Unicode NFC, deterministic word counting
+  against the **negotiated** `hint_max_words`, and a narrow detector that refuses
+  direct coordinate syntax such as `(3,4)` or `row 3 col 4` while leaving ordinary
+  numeric prose ("I checked 3 corridors") sayable. A candidate that fails is
+  replaced by a safe template, never sent in violation
 
 **Not yet implemented**
 
@@ -71,9 +78,8 @@ play a counted match against another group's real agent.
   correctly refuses a peer that authors our own participant subtree, so they
   cannot play each other. A counted result needs an externally supplied
   different-group counterparty
-- belief / uncertainty modelling over the opponent's scent
-- the natural-language hint channel (the field is sealed; nothing writes it)
-- accumulated scent-field evolution and full-turn decay
+- **belief-level scent interpretation**: emissions are exchanged, retained and
+  audited, but nothing yet folds them into a signal a strategy reads
 - a user-facing Replay Viewer, the live GUI, and Gmail result reporting
 - public-network play is implemented but **not yet demonstrated end-to-end**;
   its live tests are skipped unless explicitly enabled

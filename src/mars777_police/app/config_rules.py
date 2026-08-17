@@ -25,6 +25,7 @@ from ..domain.config_model import GridConfig
 from ..domain.negotiated_config import NegotiatedConfig
 from ..domain.terminal import TurnLimits
 from ..domain.truth import LocalTruth
+from .hint_policy import TemplateHintPolicy
 from .sealed_record_values import ActorRole
 from .semantic_values import SemanticRules
 
@@ -47,6 +48,16 @@ def limits_of(config: NegotiatedConfig) -> TurnLimits:
     """
     terms = config.movement_and_barriers
     return TurnLimits(max_moves=terms.max_moves, survival_threshold=terms.survival_threshold)
+
+
+def hints_of(config: NegotiatedConfig, role: ActorRole) -> TemplateHintPolicy:
+    """The language policy this sub-game's locked word budget allows *role*.
+
+    `hint_max_words` is NEGOTIABLE (App F T14 #2) and lives in the same locked
+    config every other projection here reads, so the cap reaches the policy the
+    way the board and the quota already reach theirs - never as a constant.
+    """
+    return TemplateHintPolicy(role=role, hint_max_words=config.world.hint_max_words)
 
 
 def opening_truth(config: NegotiatedConfig, role: ActorRole) -> LocalTruth:

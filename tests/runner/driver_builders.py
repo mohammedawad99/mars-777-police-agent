@@ -19,6 +19,7 @@ from r16_builders import GROUP_A, GROUP_B
 
 from mars777_police.app.active_runtime_context import ActiveRuntimeContext
 from mars777_police.app.capture_values import TurnOutcome
+from mars777_police.app.hint_policy import TemplateHintPolicy
 from mars777_police.app.outbound_evidence_runtime import OutboundEvidenceRuntime
 from mars777_police.app.peer_runner import PeerRunner
 from mars777_police.app.peer_turn_messages import Acknowledgement, Commitment, Reveal
@@ -111,7 +112,7 @@ def peer(
         role=role,
         turns=LocalTurnService(limits=LIMITS, quota=QUOTA),
         config_sha256=side.producer.context.config_sha256,
-        hint_words=HINT_WORDS,
+        hints=TemplateHintPolicy(role=role, hint_max_words=HINT_WORDS),
         sub_game=side.producer.context.sub_game,
         truth=LocalTruth(board=board(), own_position=start or STARTS[role]),
         deadline=5.0,

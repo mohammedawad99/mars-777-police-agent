@@ -38,13 +38,13 @@ from ..domain.observation import observation_of
 from ..domain.terminal import Outcome, evaluate_terminal
 from ..domain.truth import LocalTruth
 from .active_runtime_context import ActiveRuntimeContext
+from .hint_policy import HintPort
 from .peer_runner import PeerRunner
 from .protocol_errors import LocalDefectError
 from .protocol_values import Sha256Digest
 from .sealed_record_values import ActorRole, SealedState
 from .strategy_api import StrategyPort
 from .sub_game_truth import caught_in, declared_barriers, merged_truth
-from .t0_hint import t0_hint
 from .turn_cursor import TurnCursor
 from .turn_protocol_runtime import TurnProtocolRuntime
 from .turn_service import LocalTurnService
@@ -60,7 +60,7 @@ class SubGameDriver:
     role: ActorRole
     turns: LocalTurnService
     config_sha256: Sha256Digest
-    hint_words: int
+    hints: HintPort
     sub_game: int
     truth: LocalTruth
     deadline: float
@@ -110,7 +110,7 @@ class SubGameDriver:
         turn = self.context.current_turn()
         start, cursor = self.truth, turn.cursor
         action = self.strategy.choose_action(observation_of(start, self.turns.quota))
-        spoken = t0_hint(self.hint_words)
+        spoken = self.hints.choose(cursor, action)
         prepared = await self.runner.open_turn(
             state=SealedState(
                 self.config_sha256,

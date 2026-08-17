@@ -13,15 +13,31 @@
 ## 2. Status
 
 **APPROVED — PHASE 2 LOCKED.** Approved after Stage 2-CLOSE supervising review.
-**Implementation status: PARTIAL.** `PRD04-FR-005` — the pre-series exchange,
-verification and locking of the agreed scent model — is **implemented and evidenced**
+**Implementation status: PARTIAL.**
+
+**Scent evidence — implemented.** `PRD04-FR-005` (the pre-series exchange,
+verification and locking of the agreed scent model) is **implemented and evidenced**
 at Stage 5-R8 (C-14, JDEC-017): the complete `ScentModelAgreement` travels on the
 existing `ConfigProposal`, is agreed by three independent comparisons, is bound into
 the authenticated `ConfigLockContext` by its own `scent_model_sha256`, is frozen for
-`g01…g06`, and is persisted in `config_<game_id>_g<NN>.json`. Everything else in this
-PRD — the hint channel, `infra.llm`, token/cost accounting, and the live scent
-observation/interpretation of `PRD04-FR-002/003/004` — remains **NOT STARTED**: no
-provider, no dependency, and no live scent is delivered or consumed yet.
+`g01…g06`, and is persisted in `config_<game_id>_g<NN>.json`. Live emission also
+**travels, is retained and is audited** — `RevealWire.scent_emission` under the
+`…_SCENT_V2` posture, kept per turn as `ScentRecord`, and checked against the
+replayed trajectory by `app/scent_truth.py` (JDEC-018).
+
+**Language baseline — implemented at Stage 7B.** The deterministic T0 hint channel
+is live: `app/hint_templates.py` offers truthful pre-written sentences per action
+class, `app/hint_validator.py` owns every outgoing hint (NFC normalisation,
+deterministic word counting, the locked `hint_max_words` cap, and Detector V1 for
+`PRD04-FR-011`), and `app/hint_policy.py` binds them behind `HintPort` with a safe
+fallback. `PRD04-FR-018`'s `verdict`/`intent` consistency is enforced in
+`app/audit_disclosure.py`. Zero tokens, no network, no provider.
+
+**Still NOT STARTED.** Scent **interpretation** (`PRD04-FR-002/003/004`) — no
+belief-level signal reaches strategy yet; that is Stage 7C. `infra.llm` and the
+T1/T2 tiers — no provider, no dependency, no tier machinery; T0 is the only runtime
+path. Token accounting is wired end to end and correctly reports **0**, because
+nothing spends.
 
 ## 3. Purpose
 
@@ -318,4 +334,6 @@ enabled by default.
 - [x] Token accounting, Step-0 lock and budget degradation specified
 - [x] Scent physics/interpretation boundary explicit
 - [ ] Supervising review — **pending**
-- [ ] Implementation — **not started**
+- [x] Deterministic T0 language baseline — **implemented (Stage 7B)**
+- [ ] Scent interpretation (`FR-002/003/004`) — **pending Stage 7C**
+- [ ] Optional LLM tiers T1/T2 — **not started; no provider**
