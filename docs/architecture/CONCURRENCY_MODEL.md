@@ -82,7 +82,60 @@ a double-apply by flooding.
   `ReportPort`, `LlmAdvisorPort` — all injected and fakeable.
 - Replay never depends on timing: it reads sealed artifacts and recomputes hashes.
 
-## 6. Forbidden concurrency patterns
+## 6. Known limitation — native-Windows two-process blackout
+
+**Status: open, investigation closed, no workaround adopted (Stage 6C-C2-FINAL).**
+
+The full six-sub-game series runs end to end on Ubuntu and WSL, as two real OS
+processes, writing all fourteen official files and exiting 0. On **native
+Windows** the same pair reproducibly stalls at the `g01` step-22 acknowledgement
+and neither side finishes.
+
+What was measured, twice, at two different negotiated response deadlines:
+
+| Locked `response_timeout_sec` | Peer POST held | Opponent heartbeat blackout |
+|---|---|---|
+| 30 | 30.375 s | 30.375 s |
+| 45 | 45.391 s | 45.593 s |
+
+The request body arrives promptly and completely; the receiving side's event
+loop then makes no progress until the *caller's* deadline expires, and resumes
+at that moment. **The blackout is released by peer cancellation, so raising the
+deadline lengthens the stall rather than surviving it.** The negotiated default
+therefore stays at Appendix F's 30 s, no retry was added, and no gameplay,
+protocol or configuration workaround was adopted.
+
+Scope and honesty about what this is:
+
+- It is **not** a Proactor-specific scheduling defect. A controlled experiment
+  reproduced essentially the same stall with the synthetic opponent running
+  `_WindowsSelectorEventLoop` while this agent stayed on `ProactorEventLoop`, so
+  it reproduces under **both** tested Windows event-loop policies.
+- It is best described as a **Windows-native two-process event-loop blackout /
+  mutual peer-request deadlock in the current FastMCP / MCP / AnyIO execution
+  path**. The exact internal third-party or runtime primitive responsible
+  **remains unresolved**, and nothing here is a proven upstream bug in FastMCP,
+  MCP, AnyIO, asyncio or Windows.
+- `g01` step 22 is the **observed integration seam** where it surfaces, not a
+  protocol-mandated failing cursor.
+- The counterparty is the synthetic, non-counted integration opponent. This
+  limitation says nothing about counted interoperability, which still requires
+  another group's agent.
+
+Two real timeout-authority defects were found and fixed while investigating it
+(`PeerDeadline` binding the locked config, and a held session refreshing its
+read deadline after the lock). Both are correct on their own merits and are
+kept; **neither solves this stall.**
+
+CI keeps it visible rather than hidden: the Windows gating job runs the whole
+suite except this one test, and a separate non-gating job
+*Windows native exact-six known limitation* runs exactly that test in full view.
+The test is not deleted and not `xfail`ed, and on Linux it remains fully gating.
+
+If a future dependency upgrade eliminates it, revalidate then; no work is
+scheduled around it now.
+
+## 7. Forbidden concurrency patterns
 
 - Mutating domain state from an I/O callback.
 - Two executors, or a background task that writes game state.

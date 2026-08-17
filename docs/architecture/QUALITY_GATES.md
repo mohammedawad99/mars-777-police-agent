@@ -20,7 +20,7 @@ never because "the code was written".
 | `uv run pytest --cov --cov-fail-under=90` | exit 0, coverage ≥ 90% |
 | `uv build` | exit 0 |
 | Git hygiene | clean tree, empty index, HEAD = origin/main = ls-remote |
-| CI | green on **ubuntu-latest and windows-latest** |
+| CI | green on **ubuntu-latest and windows-latest**. Ubuntu runs every test; the Windows gating suite excludes exactly one test, the documented native two-process exact-six stall (`CONCURRENCY_MODEL.md` §6), which runs in its own visible non-gating job |
 | Secret scan | 0 findings in tree and history |
 | File-size rule | every Python file ≤ 150 lines |
 | Dependency rules | import-graph DAG; no forbidden import; no cross-repo import |

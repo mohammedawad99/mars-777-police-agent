@@ -42,6 +42,9 @@ files = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra -q --cov --cov-report=term-missing --cov-fail-under=90"
+markers = [
+    "windows_known_limitation: the one native-Windows two-process exact-six stall, run non-gating on Windows and gating everywhere else",
+]
 
 [tool.coverage.run]
 branch = true

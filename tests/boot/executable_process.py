@@ -16,16 +16,13 @@ import re
 import signal
 import subprocess
 import sys
-import threading
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 import composed_builders as compose
-import process_trace
 import r7_builders as r7
-import stack_attach
 from boot_builders import HOST, SECRET, free_port
 from r16_builders import GROUP_A
 
@@ -59,41 +56,11 @@ READY_TIMEOUT = 30.0
 POLL_SECONDS = 0.05
 
 
-EXPERIMENTAL_LOOP = "selector"
-"""The one variable of the R12 experiment: the **synthetic opponent's** loop.
-
-The shipped CLI is untouched and keeps its default Windows loop, because the
-thirty-second scheduling stall was measured in the opponent's process. Naming
-it here keeps the experiment in test infrastructure and out of any shipped
-setting, launch input or negotiated config.
-"""
-
-
-BOOTSTRAP = Path(__file__).with_name("client_bootstrap")
-"""Where the test-only `sitecustomize` that times the CLI's HTTP writes lives."""
-
-
-def measured(environ: dict[str, str], trace: Path | None) -> dict[str, str]:
-    """Ask the spawned CLI to time its own HTTP writes, without touching `src`.
-
-    The interpreter imports `sitecustomize` at startup, so putting one on the
-    child's `PYTHONPATH` is how a measurement reaches a shipped entrypoint from
-    outside it. Absent the trace variable the module does nothing at all.
-    """
-    if trace is None:
-        return environ
-    existing = os.environ.get("PYTHONPATH", "")
-    joined = os.pathsep.join([str(BOOTSTRAP), existing]) if existing else str(BOOTSTRAP)
-    return {**environ, "PYTHONPATH": joined, "MARS777_CLIENT_TRACE": str(trace)}
-
-
-def spawn(
-    package: str, launch: Path, environ: dict[str, str], trace: Path | None = None
-) -> "subprocess.Popen[str]":
+def spawn(package: str, launch: Path, environ: dict[str, str]) -> "subprocess.Popen[str]":
     """Start the real executable, in its own process group where that is needed."""
     return subprocess.Popen(
         [sys.executable, "-m", package, "--launch", str(launch)],
-        env={**os.environ, **measured(environ, trace)},
+        env={**os.environ, **environ},
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -102,13 +69,7 @@ def spawn(
 
 
 def spawn_opponent(
-    role: str,
-    port: int,
-    opponent_url: str,
-    root: Path,
-    variant: str = "same",
-    trace: Path | None = None,
-    loop: str = "",
+    role: str, port: int, opponent_url: str, root: Path, variant: str = "same"
 ) -> "subprocess.Popen[str]":
     """Start the **synthetic, non-counted** distinct-group opponent process.
 
@@ -118,13 +79,9 @@ def spawn_opponent(
     against without weakening anti-self-play.
     """
     script = Path(__file__).with_name("opponent_entrypoint.py")
-    arguments = [role, str(port), opponent_url, str(root), variant]
-    if trace is not None:
-        arguments.append(str(trace))
-    chosen = {"MARS777_TEST_EVENT_LOOP": loop} if loop else {}
     return subprocess.Popen(
-        [sys.executable, str(script), *arguments],
-        env={**os.environ, **chosen},
+        [sys.executable, str(script), role, str(port), opponent_url, str(root), variant],
+        env=dict(os.environ),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -232,35 +189,7 @@ def snapshot(name: str, root: Path) -> str:
     return "\n".join([*lines, *_log_lines(root, names)])
 
 
-ATTACH = "MARS777_STACK_ATTACH"
-"""Opt-in for the external stack reader; off unless a checkpoint asks for it.
-
-py-spy could not read the Windows target, so leaving the observer armed would
-spend attach attempts on every run for nothing. The code stays; the attempts
-do not happen unless this is set.
-"""
-
-
-def watch_stacks(pid: int, trace: Path) -> "stack_attach.Observer":
-    """Start the parent-side stack observer for *pid*, in a daemon thread.
-
-    It runs beside the test rather than inside the agent: the observed process
-    gains no import, no timer and no task, which is the whole point after an
-    in-process watchdog perturbed a green run.
-    """
-    observer = stack_attach.Observer(pid=pid, trace=trace)
-    if os.environ.get(ATTACH) == "1":
-        threading.Thread(target=observer.run, name="stack-observer", daemon=True).start()
-    return observer
-
-
-def two_process_report(
-    runs: Sequence[Ran],
-    roots: Sequence[tuple[str, Path]],
-    trace: Path | None = None,
-    client: Path | None = None,
-    stacks: Sequence["stack_attach.Attempt"] = (),
-) -> str:
+def two_process_report(runs: Sequence[Ran], roots: Sequence[tuple[str, Path]]) -> str:
     """Everything a failing two-process run knows, with the secret scrubbed.
 
     The scrub is belt and braces: the streams are separately asserted free of
@@ -271,12 +200,6 @@ def two_process_report(
         killed = " (killed after timeout)" if ran.timed_out else ""
         blocks.append(f"  {ran.name}: pid={ran.pid} exit={ran.status}{killed}")
     blocks.extend(snapshot(name, root) for name, root in roots)
-    if trace is not None:
-        blocks.append(process_trace.summary(trace))
-    if client is not None:
-        blocks.append(process_trace.client_report(client))
-    if stacks:
-        blocks.append(stack_attach.attach_report(stacks, _scrubbed))
     sse = [ran.name for ran in runs if "standalone SSE writer" in ran.err]
     accept = [ran.name for ran in runs if "IocpProactor.accept" in ran.err]
     blocks.append(f"  SSE writer error reported by: {sse or 'neither'}")
