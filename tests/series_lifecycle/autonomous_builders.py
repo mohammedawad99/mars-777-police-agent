@@ -31,6 +31,7 @@ import boot_builders as build
 import r7_builders as r7
 from r16_builders import GROUP_A, GROUP_B
 
+from mars777_police.app.baseline_strategy import BaselineStrategy
 from mars777_police.app.config_rules import hints_of
 from mars777_police.app.scent_interpretation import LiveScentBelief
 from mars777_police.app.sealed_record_values import ActorRole
@@ -76,7 +77,9 @@ def driver_for(series: SeriesRuntime, role: ActorRole) -> SubGameDriver:
     """The production driver for one side of sub-game one. No action, no outcome."""
     composition = series.composition
     return SubGameDriver(
-        strategy=composition.strategy,
+        # the frozen reference on purpose: these tests are about terminal
+        # semantics, so the policy must not be whatever composition ships
+        strategy=BaselineStrategy(),
         runner=composition.peer_runner,
         context=composition.runtime_context,
         role=role,

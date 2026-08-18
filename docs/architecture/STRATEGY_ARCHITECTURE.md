@@ -1,10 +1,36 @@
 # Strategy Architecture — group MaRs-777 (POLICE)
 
-**Status: BOUNDARY FROZEN AT STAGE 2A; BASELINE IMPLEMENTED AT STAGE 6B.**
-This document still defines **where strategy plugs in**, not what it decides —
-the boundary below is unchanged. What changed is that the seam is now real:
-`Observation`, `StrategyPort` and one deterministic, zero-token baseline exist
-(§2, §3). Nothing calls them in production yet; wiring is Stage 6C.
+**Status: BOUNDARY FROZEN AT STAGE 2A; BASELINE IMPLEMENTED AT STAGE 6B;
+COMPETITIVE POLICY PROMOTED AT STAGE 7D-B.** This document still defines
+**where strategy plugs in**, not what it decides — the boundary below is
+unchanged, and `StrategyPort` has never changed shape.
+
+Two policies now exist behind that one seam. `BaselineStrategy` is the **frozen
+reference**: it is still shipped in the tree, is the regression oracle for every
+no-evidence corpus, and is what the competitive policy is measured against.
+`CompetitiveStrategy` is what production composes (`composition.py`, one
+construction site), and it is **PROJECT-DERIVED / OPTIONAL COMPETITIVE
+STRATEGY** — the source mandates no algorithm, this is not Bayes, not learning,
+and not a claim of optimality.
+
+**What it adds.** BAR-004 lets the police forgo its move to place a barrier, an
+action the baseline never used. `CompetitiveStrategy` keeps the baseline's move
+as the decision and lets a placement displace it only when the lawful scent
+evidence supporting the placement is *strictly stronger* than the evidence at
+the cell the baseline would have moved to. Support is the stronger of the
+evidence on the target itself (BAR-003 captures a thief standing there) and the
+evidence on any cell the placement would newly corner (GAME-005). Empty,
+uniform or equal evidence reproduces the baseline exactly.
+
+**What it never does.** It creates no `CaptureClaim`: a wrong same-cell
+declaration is a `FALSE_CAPTURE_CLAIM` technical loss for the claimant, while a
+legal barrier that simply misses produces no finding at all — belief may fund a
+barrier, never a declaration. It enumerates candidates only through
+`is_placeable` and `legal_moves`, and `LocalTurnService` still revalidates.
+
+The **thief** side deliberately ships the baseline: its candidate competitive
+policy was implemented, benchmarked and **rejected** at Stage 7D-B for failing
+its promotion gate.
 
 ## 1. The boundary
 

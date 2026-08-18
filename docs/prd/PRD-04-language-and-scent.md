@@ -33,6 +33,14 @@ deterministic word counting, the locked `hint_max_words` cap, and Detector V1 fo
 fallback. `PRD04-FR-018`'s `verdict`/`intent` consistency is enforced in
 `app/audit_disclosure.py`. Zero tokens, no network, no provider.
 
+**Scent put to competitive use — Stage 7D-B.** The police baseline's scent
+tie-break is joined by `CompetitiveStrategy`, which spends a lawful barrier when
+the belief supporting it is strictly stronger than the belief at the cell it
+would otherwise move to (BAR-003 / GAME-005 routes, never a `CaptureClaim`). The
+thief's candidate policy was implemented, benchmarked and **rejected** for
+failing its promotion gate; the thief ships the baseline. Both are
+PROJECT-DERIVED optional strategy.
+
 **Scent interpretation — implemented at Stage 7C.** `PRD04-FR-002/003/004` are
 live: `domain/scent_belief.py` carries a belief-labelled `ScentBelief` with no
 member an opponent position could occupy, `app/scent_interpretation.py` folds the

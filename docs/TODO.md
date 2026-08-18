@@ -101,7 +101,11 @@ tracked once, under Pending.
   folded from the peer emissions already received, through the existing
   `observed_field` authority under the locked model, reaching the baseline
   strategy as a deterministic tie-break. There is no LLM provider: T0 is the only
-  runtime path and token usage is a truthful 0. **Minimum PRD-04 T0 scope is now
+  runtime path and token usage is a truthful 0. Stage 7D-B promoted a police
+  `CompetitiveStrategy` (scent-supported barrier pressure, PROJECT-DERIVED,
+  benchmarked 0 -> 12 captures over 140 deterministic scenarios); the thief
+  candidate was **rejected** for failing its gate and the thief ships the
+  frozen baseline. **Minimum PRD-04 T0 scope is now
   met**; T1/T2, Bayesian belief, opponent modelling and peer-hint interpretation
   remain optional competitive work.
 - [x] PRD-05 public network / tunnel / league - **LOCKED as requirements; NOT IMPLEMENTED.**

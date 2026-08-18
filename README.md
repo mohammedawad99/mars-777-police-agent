@@ -76,6 +76,14 @@ play a counted match against another group's real agent.
   environment, never the opponent's position, and it decides only where the
   accessibility objective ties. With nothing heard yet the agent decides exactly
   as it did before
+- a **competitive barrier policy** (Stage 7D-B): production composes
+  `CompetitiveStrategy`, which keeps the baseline's move and displaces it with a
+  lawful barrier only when the scent evidence supporting that placement is
+  strictly stronger than the evidence where the baseline would have gone. It
+  never declares a capture - a barrier that misses costs a turn, while a wrong
+  claim forfeits the sub-game. `BaselineStrategy` stays shipped as the frozen
+  reference. **PROJECT-DERIVED optional strategy**, promoted on a development,
+  non-counted benchmark; not source-required, not Bayes, not RL
 
 **Not yet implemented**
 

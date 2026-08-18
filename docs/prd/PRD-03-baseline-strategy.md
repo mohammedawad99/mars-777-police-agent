@@ -15,7 +15,16 @@
 then re-scoped for implementation by the Stage-6A contract & design lock, whose
 rulings this document now reflects.
 
-**Implementation status: BASELINE IMPLEMENTED (Stage 6B).** Live in
+**Implementation status: BASELINE IMPLEMENTED (Stage 6B); SCENT TIE-BREAK (7C); COMPETITIVE POLICY PROMOTED (7D-B).**
+`BaselineStrategy` remains shipped as the **frozen reference** and regression
+oracle. Production composes `CompetitiveStrategy`, which keeps the baseline's
+move and may displace it with a lawful `BarrierAction` when the scent evidence
+supporting the placement is strictly stronger than the evidence at the cell the
+baseline would have moved to. It is **PROJECT-DERIVED / OPTIONAL COMPETITIVE
+STRATEGY** - not source-required, not Bayes, not RL - and it earned promotion on
+a development, non-counted benchmark (0 -> 12 captures over 140 deterministic
+7x7 scenarios against a fixed reference opponent). It never creates a
+`CaptureClaim`. Live in
 `domain/observation.py`, `domain/reachability.py`, `app/strategy_api.py` and
 `app/baseline_strategy.py`: a deterministic, LLM-free, belief-free, scent-free
 police baseline behind the documented `StrategyPort`. No dependency was added,

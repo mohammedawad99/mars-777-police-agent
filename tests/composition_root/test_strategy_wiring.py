@@ -13,6 +13,7 @@ import inspect
 import composed_builders as build
 
 from mars777_police.app.baseline_strategy import BaselineStrategy
+from mars777_police.app.competitive_strategy import CompetitiveStrategy
 from mars777_police.app.strategy_api import StrategyPort
 from mars777_police.app.sub_game_driver import SubGameDriver
 from mars777_police.composition_values import AgentComposition
@@ -22,9 +23,19 @@ def test_the_composition_exposes_a_strategy() -> None:
     assert "strategy" in {field.name for field in dataclasses.fields(AgentComposition)}
 
 
-def test_composing_an_agent_wires_the_repositorys_baseline() -> None:
+def test_composing_an_agent_wires_the_promoted_competitive_policy() -> None:
+    """Production composes the policy that earned promotion, not the reference.
+
+    Stage 7D-B benchmarked `CompetitiveStrategy` against the frozen baseline and
+    it won its gate, so this is the one construction site that changed. The
+    baseline is still shipped and still decides the move this policy starts
+    from - which is why it is asserted to be *inside* the wired strategy rather
+    than replaced by it.
+    """
     composition = build.compose()
-    assert isinstance(composition.strategy, BaselineStrategy)
+
+    assert isinstance(composition.strategy, CompetitiveStrategy)
+    assert isinstance(composition.strategy.baseline, BaselineStrategy)
 
 
 def test_the_wired_strategy_satisfies_the_port() -> None:
