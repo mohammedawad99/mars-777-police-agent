@@ -44,14 +44,23 @@ def test_there_are_ten_closed_profile_types() -> None:
     assert len(CLOSED_TYPES) == 10
 
 
-def test_there_are_nineteen_enum_member_memberships() -> None:
-    """Eighteen, plus the fifth compatibility posture V2 added."""
-    assert sum(len(profile_type) for profile_type in CLOSED_TYPES) == 19
+def test_there_are_twenty_one_enum_member_memberships() -> None:
+    """Nineteen, plus the two KIT members Stage 8A-1S added.
+
+    The count is pinned so a vocabulary cannot grow by accident - every member
+    is a token a peer may send us. `KIT_CORE_COMMITMENT_V1` is deliberate: it
+    names the pinned kit's nonce-outside construction so the codec dispatch has
+    something executable to select. It is a *local* selection today; the frozen
+    profile wire cannot carry it and the encoder refuses to try.
+    """
+    assert sum(len(profile_type) for profile_type in CLOSED_TYPES) == 21
 
 
-def test_there_are_eighteen_unique_serialized_tokens() -> None:
+def test_there_are_twenty_unique_serialized_tokens() -> None:
     tokens = {member.value for profile_type in CLOSED_TYPES for member in profile_type}
-    assert len(tokens) == 18
+    assert len(tokens) == 20
+    assert "KIT_CORE_COMMITMENT_V1" in tokens
+    assert "KIT_CORE_RESULT_V1" in tokens
     assert "STRICT_COUNTED_MATCH_TURN_OUTCOME_V1" in tokens, "the legacy token survives"
     assert "STRICT_COUNTED_MATCH_TURN_OUTCOME_SCENT_V2" in tokens
 
@@ -82,8 +91,22 @@ def test_every_serialized_value_equals_its_identifier() -> None:
     ("profile_type", "expected"),
     [
         (SeriesConvention, ["FIXED_ROLE", "REFERENCE_ODD_EVEN_ALTERNATION"]),
-        (CommitmentCodec, ["STRICT_PROJECT_COMMITMENT", "LECTURER_REFERENCE_COMMITMENT"]),
-        (ResultProfile, ["STRICT_PROJECT_RESULT", "LECTURER_ATTACHMENT_COMPATIBILITY"]),
+        (
+            CommitmentCodec,
+            [
+                "STRICT_PROJECT_COMMITMENT",
+                "LECTURER_REFERENCE_COMMITMENT",
+                "KIT_CORE_COMMITMENT_V1",
+            ],
+        ),
+        (
+            ResultProfile,
+            [
+                "STRICT_PROJECT_RESULT",
+                "LECTURER_ATTACHMENT_COMPATIBILITY",
+                "KIT_CORE_RESULT_V1",
+            ],
+        ),
         (
             CompatibilityProfile,
             [

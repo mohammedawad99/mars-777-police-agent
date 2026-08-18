@@ -51,14 +51,38 @@ def decode_profiles(wire: InteropProfileSetWire) -> InteropProfileSet:
     )
 
 
+_WIRE_CODECS = (
+    CommitmentCodec.STRICT_PROJECT_COMMITMENT,
+    CommitmentCodec.LECTURER_REFERENCE_COMMITMENT,
+)
+_WIRE_RESULTS = (
+    ResultProfile.STRICT_PROJECT_RESULT,
+    ResultProfile.LECTURER_ATTACHMENT_COMPATIBILITY,
+)
+"""What the frozen `InteropProfileSetWire` literals can carry today.
+
+The KIT members are deliberately absent from both. Widening a wire literal is a
+schema change, and this stage owns the local authorities rather than the
+transport, so the encoder refuses rather than emitting a token the receiver's
+schema would reject. Transmitting them is Stage 8A-1T's work.
+"""
+
+
 def encode_profiles(profiles: InteropProfileSet) -> InteropProfileSetWire:
     """Render the profile set; every token is its identifier, byte for byte."""
+    codec, result = profiles.commitment_codec, profiles.result_profile
+    for value, carried in ((codec, _WIRE_CODECS), (result, _WIRE_RESULTS)):
+        if value not in carried:
+            raise ValueError(
+                f"{value.value} has no representation in the frozen profile wire;"
+                " transmitting it is Stage 8A-1T's transport work, not this codec's"
+            )
     return InteropProfileSetWire(
         series_convention=profiles.series_convention.value,
         auth_profile=profiles.auth_profile.value,
         key_id=profiles.key_id.value,
-        commitment_codec=profiles.commitment_codec.value,
-        result_profile=profiles.result_profile.value,
+        commitment_codec=codec.value,  # type: ignore[arg-type]
+        result_profile=result.value,  # type: ignore[arg-type]
         compatibility_profile=profiles.compatibility_profile.value,
         tool_name_profile=profiles.tool_name_profile.value,
         canonicalization_profile=profiles.canonicalization_profile.value,

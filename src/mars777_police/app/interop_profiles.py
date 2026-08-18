@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from .auth_values import AuthProfile, KeyId
+from .commitment_codecs import CommitmentCodec as CommitmentCodec
 
 
 class InvalidInteropProfileSetError(ValueError):
@@ -34,18 +35,12 @@ class SeriesConvention(StrEnum):
     REFERENCE_ODD_EVEN_ALTERNATION = "REFERENCE_ODD_EVEN_ALTERNATION"
 
 
-class CommitmentCodec(StrEnum):
-    """Which commitment construction both peers agreed to use."""
-
-    STRICT_PROJECT_COMMITMENT = "STRICT_PROJECT_COMMITMENT"
-    LECTURER_REFERENCE_COMMITMENT = "LECTURER_REFERENCE_COMMITMENT"
-
-
 class ResultProfile(StrEnum):
     """Which result-artifact shape is emitted."""
 
     STRICT_PROJECT_RESULT = "STRICT_PROJECT_RESULT"
     LECTURER_ATTACHMENT_COMPATIBILITY = "LECTURER_ATTACHMENT_COMPATIBILITY"
+    KIT_CORE_RESULT_V1 = "KIT_CORE_RESULT_V1"
 
 
 COUNTED_TURN_PROFILE = "STRICT_COUNTED_MATCH_TURN_OUTCOME_SCENT_V2"
