@@ -538,36 +538,105 @@ The smell grid is retained as the peer's binary64, unconverted. Our physics is
 exact `Decimal`, and converting the peer's cells would assert an equivalence
 that is `MODEL_FORM_MATCH` and **not** vector-exact.
 
-### What still blocks a sparring series
+### Role alternation, and the correction that produced it
 
-Measured on 2026-08-18 against the pinned sparring peer (`serve --peer … --role
-police`) running in an isolated venv, with our KIT ingress serving the
-production `InboundPeerOperations`:
+**Stage 8A-1T reported that the pinned harness supported a fixed-role six-game
+series. That was wrong, and it is corrected here.** `--role` selects only the
+side the harness takes in **sub-game 1**; `netplay.py` then calls
+`role_for(natural, n)` inside its per-sub-game loop, so roles alternate every
+sub-game and there is no fixed-role networked mode (and no `--sub-games` on
+`serve`). Stage 8A-2 stopped on that blocker with zero repository changes.
 
-* the kit's own `doctor` classifies our ingress **PEER LISTENING**;
-* the kit's real greeting — its terms, its signature, its four lock
-  declarations — is **accepted**, `{"ok": true}`;
-* `receive_turn` and `submit_audit` are **refused with `E-AUTH-FAILURE`**;
-* `receive_control` is accepted and settles nothing;
-* the series ends `SPAR-N09` — our counterpart never greeted back.
+Alternation is **reference/de-facto interoperability practice, not a binding
+course-book requirement** - the book's body never states it. We implement it
+because the pinned harness mandates it, under the project's own existing
+`SeriesConvention.REFERENCE_ODD_EVEN_ALTERNATION`.
 
-Two distinct blockers, and neither is a transport fault:
+### One group, two role backends
 
-1. **Auth profile.** `AuthProfile.HMAC_SHA256` Step-0 stays mandatory. The
-   pinned `negotiate` has no place for a keyed proof and its receiver drops
-   unknown keys, so a pinned peer can neither send one nor read ours. It was
-   **not bypassed** to make sparring green.
-2. **Role and turn orchestration.** Nothing drives our KIT outbound side yet:
-   `send_kit` exists and is proved over real HTTP, but no runtime decides when
-   to greet, when to take a turn, or how roles alternate. That is Stage 8A-2.
+`teams.<group>.mcp_endpoint` is **group-level**. `MaRs-777` is one identity with
+one opponent, one `game_id`, one `game_uid` and one six-sub-game series; the
+Police and Thief repositories are two **role backends** behind it, and neither
+ever becomes a dual-role agent.
+
+```
+            one stable MaRs-777 MCP URL
+                        |
+                 group role gateway          transport + series routing only
+                   /           \
+            Police backend    Thief backend  separate processes, separate repos
+```
+
+The gateway owns the live sub-game, the frozen convention, the route lifecycle
+and a bounded handoff gate - and no board, position, legality, strategy, scent,
+digest, audit decision or score. Routing comes from the contract (convention +
+sub-game number + agreed first assignment), never from a source port, a process
+id, an arrival time or a strategy output, and every message goes to exactly one
+backend. Private backend endpoints are never advertised and never appear in a
+declaration artifact.
+
+Handoff is three explicit states - `ACTIVE(n)`, `SETTLING(n)`, `READY(n)` -
+because the middle one is real: the peer greets for `n+1` while `n` is still
+draining its audits. A next-sub-game greeting waits, bounded, until it can
+actually be assigned, so an `ok` means **assigned**. Settlement is *signalled* by
+the backend that played it and never inferred from HTTP silence.
+
+### The terminal-settlement rule, and the defect it fixed
+
+The first live sub-game (2026-08-18) settled `CAPTURE` on our side and `timeout`
+on the peer's - the contradictory-reports shape App. E rule 35 zeroes on both
+teams. Two causes, both fixed:
+
+* **self-capture is the thief's rule.** Rules 46/47 end the game at a position
+  only the thief can see. `BAR-004` lets the police place a barrier on its own
+  cell and legally stand on a blocked one, so applying self-capture to the
+  police manufactured a capture out of a lawful placement.
+* **a terminal answer must ride out before we stop talking.** The opponent
+  cannot see the board; walking away holding the answer makes it wait out its
+  budget. A side that owes nothing still sends nothing - a survival claim that
+  already rode on the turn just sent is not repeated.
+
+### The measured series
+
+2026-08-19, four processes, real FastMCP HTTP, isolated KIT venv, no patched KIT
+source. `serve --peer <group url> --role thief --scent-model
+multiplicative_book_v1`:
+
+| gNN | KIT role | MaRs-777 backend | Outcome, both sides | KIT audit of our chain |
+|---|---|---|---|---|
+| g01 | thief | Police | survival, 35 steps | Verified OK |
+| g02 | police | Thief | survival, 34 steps | Verified OK |
+| g03 | thief | Police | survival, 35 steps | Verified OK |
+| g04 | police | Thief | survival, 34 steps | Verified OK |
+| g05 | thief | Police | survival, 35 steps | Verified OK |
+| g06 | police | Thief | survival, 34 steps | Verified OK |
+
+One identity throughout: `game_id MaRs-777-vs-sparring-local`. **Every row agrees
+on both sides** - no `CAPTURE`-vs-`timeout` divergence. Our crypto gate verified
+the peer's chain in every sub-game. The pinned `tools/check_artifacts.py` passes
+every check over the peer's 14-file set for this series.
+
+### Still not counted, and why
+
+A perfect friendly is `KIT_FRIENDLY_ONLY`, and `counted_capable` is **derived**
+from the run class rather than stored, so nothing can set it. Two independent
+reasons: the source requires keyed producer authentication at Step-0 and the
+pinned peer offers only an unkeyed content agreement, and the sparring group is
+synthetic rather than an enrolled opponent. `AuthProfile.HMAC_SHA256` is
+untouched, there is no fallback from a failed HMAC into friendly mode, and a
+friendly never reaches the counted runtime at all - the inbound KIT path
+branches on the run class, decided before boot.
 
 ### What is still missing
 
-Role alternation, the public-ingress integration, and a counted series.
-`FIXED_ROLE` remains our only executable role convention — alternation is a
-**pre-match convention and a de-facto pairing practice, not a book requirement**
-— and the pinned harness's `--role police|thief` shows fixed-role sparring is
-supported by it, so the gap is ours and is orchestration, not wire.
+**Our own official artifact set for a friendly.** The 14-file pipeline is gated
+on the counted protocol: `record_declaration` needs an authenticated Step-0
+peer, `lock_config` needs a verified strict config lock, `close_sub_game` needs
+the strict sealed evidence and audit runtimes, and `persist_result` needs a
+mutual result agreement. The pinned four-tool surface has **no result-agreement
+operation at all** - the kit writes its own result artifact unilaterally and says
+so. Producing our 14 files from a KIT friendly would mean either fabricating
+counted facts or building a second result engine, and neither is acceptable, so
+neither was done.
 
-Nothing about a sparring run is counted. League diversity evidence still
-requires a real, independently authored, enrolled group.
+Public ingress for a real opponent, and a counted-auth agreement, both remain.

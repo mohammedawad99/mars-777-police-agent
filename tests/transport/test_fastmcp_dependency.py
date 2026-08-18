@@ -130,6 +130,7 @@ def test_the_transport_package_is_where_the_framework_actually_lives() -> None:
     ]
     assert sorted(users) == [
         "client.py",
+        "kit_gateway_server.py",
         "kit_server.py",
         "server.py",
         "session_deadline.py",

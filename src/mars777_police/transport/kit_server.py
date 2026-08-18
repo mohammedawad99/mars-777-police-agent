@@ -74,7 +74,7 @@ def build_kit_tools(operations: PeerOperations, context: KitSessionContext, name
         bound = await inbound(session)
         try:
             reveal = decode_kit_audit(parse_kit(KitAuditPayload, payload))
-            route_kit_audit(operations, reveal, bound)
+            route_kit_audit(operations, context, reveal, bound)
         except BaseException as failure:
             raise outbound(failure) from None
         return KIT_OK

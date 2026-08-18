@@ -21,6 +21,7 @@ changing nothing a game owner owns.
 in the audit, so no `Reveal` can be built from a turn and none is invented.
 """
 
+from ..app.kit_friendly import KitFriendlySession
 from ..app.kit_greeting import KitGreeting, KitPairing
 from ..app.kit_messages import KitAuditReveal, KitControl, KitTurn
 from ..app.kit_session import KitSessionContext
@@ -31,7 +32,11 @@ from .inbound_session import InboundSession
 
 def route_kit_negotiate(context: KitSessionContext, greeting: KitGreeting) -> KitPairing:
     """Establish the pairing, or refuse it on the record. No identity is bound."""
-    return context.accept(greeting)
+    pairing = context.accept(greeting)
+    friendly = _friendly(context)
+    if friendly is not None:
+        friendly.record_pairing(pairing)
+    return pairing
 
 
 def route_kit_turn(
@@ -40,17 +45,40 @@ def route_kit_turn(
     turn: KitTurn,
     session: InboundSession,
 ) -> None:
-    """Deliver the sealed half as the commitment our application already takes."""
+    """Deliver the half-turn: to the friendly session, or to the counted runtime.
+
+    The branch is on the **run class**, decided before boot, and never on what
+    the message happens to contain. A development friendly therefore does not
+    merely fail the counted authentication gate - it never reaches the runtime
+    the gate protects.
+    """
+    friendly = _friendly(context)
+    if friendly is not None:
+        friendly.deliver_turn(turn)
+        return
     operations.on_commitment(turn.commitment(context.sub_game_number), session)
 
 
 def route_kit_audit(
-    operations: PeerOperations, reveal: KitAuditReveal, session: InboundSession
+    operations: PeerOperations,
+    context: KitSessionContext,
+    reveal: KitAuditReveal,
+    session: InboundSession,
 ) -> None:
-    """Deliver the revealed chain as the JSON-native disclosure document."""
+    """Deliver the revealed chain: to the friendly session, or as the document."""
+    friendly = _friendly(context)
+    if friendly is not None:
+        friendly.deliver_audit(reveal)
+        return
     operations.on_audit_disclosure(encode_kit_audit(reveal), session)
 
 
 def route_kit_control(context: KitSessionContext, control: KitControl) -> None:
     """Record a status signal, which is all the pinned contract asks of us."""
     context.last_control = control.kind
+
+
+def _friendly(context: KitSessionContext) -> KitFriendlySession | None:
+    """The development session this context carries, if this run is one."""
+    friendly = context.friendly
+    return friendly if isinstance(friendly, KitFriendlySession) else None

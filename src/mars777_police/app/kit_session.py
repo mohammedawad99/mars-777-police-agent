@@ -42,9 +42,41 @@ class KitSessionContext:
     last_control: KitControlKind | None = field(default=None)
     """The last status signal received. It settles nothing and scores nothing."""
 
+    friendly: object | None = field(default=None)
+    """The development friendly session, present exactly when the run is one.
+
+    Its presence is decided before boot and never by a message. When it is here
+    the inbound KIT path delivers to it and the counted runtime is not merely
+    gated but **unreached**; when it is absent every KIT operation meets the
+    unchanged authentication gate."""
+
     def cursor(self, step: int) -> TurnCursor:
         """The cursor a turn belongs to: its own step, our sub-game."""
         return TurnCursor(self.sub_game_number, step)
+
+    def our_greeting(self, nonce: str, sub_game: int) -> KitGreeting:
+        """The greeting we open a sub-game with, signed over the agreed terms.
+
+        The signature is the kit's **unkeyed content agreement**: anyone holding
+        the terms and the nonce recomputes it, so it proves both sides read the
+        same fourteen values and nothing about who is speaking. It is not, and
+        never becomes, producer authentication.
+
+        The uid is declared only once the opponent is known - it is a pure
+        function of the terms and the two sorted group ids - and omission never
+        refuses in either direction.
+        """
+        peer = self.peer_group
+        return KitGreeting(
+            self.terms,
+            nonce,
+            kit_terms_digest(self.terms.value, nonce),
+            self.our_group,
+            self.our_role,
+            sub_game,
+            None,
+            kit_game_uid(self.terms.value, self.our_group, peer) if peer else None,
+        )
 
     def accept(self, greeting: KitGreeting) -> KitPairing:
         """Check an inbound greeting against what we already hold, or refuse it."""
