@@ -88,7 +88,7 @@ def test_the_observation_is_built_from_the_round_start_truth() -> None:
     assert police.seen[1].own_position == a.driver.truth.own_position.__class__(1, 0)
 
 
-def test_the_observation_still_has_exactly_three_fields() -> None:
+def test_the_observation_still_has_exactly_the_fields_a_decision_may_see() -> None:
     import dataclasses
 
     police, _ = Scripted(Move.S), Scripted(Move.S)
@@ -98,6 +98,7 @@ def test_the_observation_still_has_exactly_three_fields() -> None:
         "board",
         "own_position",
         "quota",
+        "scent",
     )
 
 

@@ -100,5 +100,8 @@ def test_the_driver_module_holds_no_heuristic_and_no_opponent_truth() -> None:
     from mars777_police.app import sub_game_driver
 
     code = inspect.getsource(sub_game_driver)
-    for forbidden in ("opponent", "belief", "heatmap", "semantic_replay", "random"):
+    for forbidden in ("opponent_position", "heatmap", "semantic_replay", "random"):
         assert forbidden not in code.lower().replace("the peer", "")
+    assert "self.scent" in code, "the driver passes a source rather than a folded field"
+    for folding in ("observed_field", "absorbed", "ScentField", "decay"):
+        assert folding not in code, "no scent arithmetic belongs in the turn loop"

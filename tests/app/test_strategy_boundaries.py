@@ -17,6 +17,7 @@ from r16_source import imports_of, tokens_of
 
 from mars777_police.app import baseline_strategy, strategy_api
 from mars777_police.domain import observation, reachability
+from mars777_police.domain.scent_belief import ScentBelief
 
 STRATEGY = (observation, reachability, strategy_api, baseline_strategy)
 
@@ -47,12 +48,45 @@ def test_no_strategy_module_can_see_post_game_or_peer_evidence() -> None:
         assert code.isdisjoint({"Replay", "PlayedTurn", "AuditRuntime", "Reveal", "nonce"})
 
 
+TRUTH_NAMES = (
+    "opponent_position",
+    "true_position",
+    "true_opponent_position",
+    "estimated_opponent_position",
+    "opponent_cell",
+    "target_cell",
+    "exact_target_cell",
+)
+"""What a strategy may never hold: a cell named as the opponent's.
+
+Until Stage 7C the guard below simply banned the word `scent`, because a blind
+baseline had no lawful reason to say it. That proxy expired the moment scent
+became legal partial evidence, so it is replaced by the rule it stood for
+rather than deleted: a **belief field** is allowed and a **truth position** is
+not. The role words stay banned - a policy that branches on who the opponent is
+would be reading a fact it is not given.
+"""
+
+
 def test_no_strategy_module_names_an_opponent_at_all() -> None:
     for module in STRATEGY:
         code = {token.lower() for token in tokens_of(module)}
-        assert code.isdisjoint(
-            {"opponent", "enemy", "peer", "thief", "police", "belief", "scent", "hint"}
-        )
+        assert code.isdisjoint({"opponent", "enemy", "peer", "thief", "police", "hint"})
+
+
+def test_no_strategy_module_can_name_an_opponent_position() -> None:
+    """The structural §20 guard: belief is a field, never a truth cell."""
+    for module in STRATEGY:
+        code = {token.lower() for token in tokens_of(module)}
+        assert code.isdisjoint(set(TRUTH_NAMES))
+
+
+def test_the_belief_a_strategy_reads_exposes_no_position() -> None:
+    """The value itself, not only the modules that read it."""
+    surface = {name.lower() for name in dir(ScentBelief)}
+
+    assert surface.isdisjoint(set(TRUTH_NAMES))
+    assert "intensity_at" in surface
 
 
 def test_the_policy_re_implements_no_part_of_game_legality() -> None:
@@ -90,8 +124,14 @@ def test_reachability_carries_no_geometry_of_its_own() -> None:
 
 
 def test_the_observation_wall_reaches_no_further_than_the_domain() -> None:
+    """Relative imports, plus the two stdlib modules that only describe shape.
+
+    `typing` joins `dataclasses` when the module gained the `Protocol` that says
+    where its scent member comes from: both declare structure and neither can
+    reach a boundary, which is what this wall is about.
+    """
     for imported in imports_of(observation):
-        assert imported.startswith(".") or imported == "dataclasses"
+        assert imported.startswith(".") or imported in {"dataclasses", "typing"}
 
 
 def test_every_new_strategy_module_stays_within_the_line_budget() -> None:

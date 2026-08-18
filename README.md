@@ -38,9 +38,10 @@ play a counted match against another group's real agent.
 - the four official artifact families and the fourteen files a complete
   six-sub-game series produces
 
-- a **baseline physical strategy** (Stage 6B): each agent chooses its own legal,
-  deterministic action from own position, the public board and the locked barrier
-  quota alone — no belief, no scent, no hints, no LLM, no randomness
+- a **baseline physical strategy** (Stage 6B, extended at 7C): each agent chooses
+  its own legal, deterministic action from own position, the public board, the
+  locked barrier quota and — since Stage 7C — the belief the opponent's own
+  disclosed scent implies. No opponent position, no hints, no LLM, no randomness
 - **one autonomous sub-game** (Stage 6C-B): `SubGameDriver` runs the real
   lockstep loop — terminal check, observation, strategy, commit/acknowledge/reveal,
   capture answer, one-time local-truth adoption — and derives the end event from
@@ -69,6 +70,12 @@ play a counted match against another group's real agent.
   direct coordinate syntax such as `(3,4)` or `row 3 col 4` while leaving ordinary
   numeric prose ("I checked 3 corridors") sayable. A candidate that fails is
   replaced by a safe template, never sent in violation
+- **belief-level scent interpretation** (Stage 7C): the emissions the opponent
+  disclosed are folded - by the existing physics, under the model the peers
+  locked - into a `ScentBelief` the strategy reads. It is evidence about the
+  environment, never the opponent's position, and it decides only where the
+  accessibility objective ties. With nothing heard yet the agent decides exactly
+  as it did before
 
 **Not yet implemented**
 
@@ -78,8 +85,6 @@ play a counted match against another group's real agent.
   correctly refuses a peer that authors our own participant subtree, so they
   cannot play each other. A counted result needs an externally supplied
   different-group counterparty
-- **belief-level scent interpretation**: emissions are exchanged, retained and
-  audited, but nothing yet folds them into a signal a strategy reads
 - a user-facing Replay Viewer, the live GUI, and Gmail result reporting
 - public-network play is implemented but **not yet demonstrated end-to-end**;
   its live tests are skipped unless explicitly enabled

@@ -32,6 +32,7 @@ import r7_builders as r7
 from r16_builders import GROUP_A, GROUP_B
 
 from mars777_police.app.config_rules import hints_of
+from mars777_police.app.scent_interpretation import LiveScentBelief
 from mars777_police.app.sealed_record_values import ActorRole
 from mars777_police.app.sub_game_driver import SubGameDriver
 from mars777_police.app.turn_service import LocalTurnService
@@ -82,6 +83,10 @@ def driver_for(series: SeriesRuntime, role: ActorRole) -> SubGameDriver:
         turns=LocalTurnService(limits=LIMITS, quota=QUOTA),
         config_sha256=r7.DIGEST,
         hints=hints_of(r7.CONFIG, role),
+        scent=LiveScentBelief(
+            lambda: composition.runtime_context.current_audit().expected_scent,
+            series.composition.pregame.lock.scent_model.params,
+        ),
         sub_game=1,
         truth=LocalTruth(board=r7.board(), own_position=r7.POSITIONS[role]),
         deadline=30.0,

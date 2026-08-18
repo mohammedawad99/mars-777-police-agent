@@ -97,8 +97,13 @@ tracked once, under Pending.
   retention and audit are done; the deterministic T0 language baseline - template
   catalogue, validator (NFC, word cap, numeric-position Detector V1), `HintPort`
   policy and the `verdict`/`intent` disclosure consistency check - landed at Stage
-  7B. **Scent interpretation is pending Stage 7C**, and there is no LLM provider:
-  T0 is the only runtime path and token usage is a truthful 0.
+  7B. Scent **interpretation** landed at Stage 7C: a belief-labelled `ScentBelief`
+  folded from the peer emissions already received, through the existing
+  `observed_field` authority under the locked model, reaching the baseline
+  strategy as a deterministic tie-break. There is no LLM provider: T0 is the only
+  runtime path and token usage is a truthful 0. **Minimum PRD-04 T0 scope is now
+  met**; T1/T2, Bayesian belief, opponent modelling and peer-hint interpretation
+  remain optional competitive work.
 - [x] PRD-05 public network / tunnel / league - **LOCKED as requirements; NOT IMPLEMENTED.**
 - [x] PRD-06 security & cryptography (commit-reveal, Step-0) - **LOCKED as requirements; NOT IMPLEMENTED.**
 - [x] PRD-07 reporting, GUI, replay (Gmail gatekeeper, Live GUI, Replay Viewer) - **LOCKED as requirements; NOT IMPLEMENTED.**

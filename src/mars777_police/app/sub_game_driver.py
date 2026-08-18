@@ -34,7 +34,7 @@ import asyncio
 from dataclasses import dataclass, field
 
 from ..domain.actions import PhysicalAction
-from ..domain.observation import observation_of
+from ..domain.observation import ScentBeliefSource, observation_of
 from ..domain.terminal import Outcome, evaluate_terminal
 from ..domain.truth import LocalTruth
 from .active_runtime_context import ActiveRuntimeContext
@@ -61,6 +61,7 @@ class SubGameDriver:
     turns: LocalTurnService
     config_sha256: Sha256Digest
     hints: HintPort
+    scent: ScentBeliefSource
     sub_game: int
     truth: LocalTruth
     deadline: float
@@ -109,7 +110,7 @@ class SubGameDriver:
         """One lockstep round: decide, seal, exchange, and adopt exactly once."""
         turn = self.context.current_turn()
         start, cursor = self.truth, turn.cursor
-        action = self.strategy.choose_action(observation_of(start, self.turns.quota))
+        action = self.strategy.choose_action(observation_of(start, self.turns.quota, self.scent))
         spoken = self.hints.choose(cursor, action)
         prepared = await self.runner.open_turn(
             state=SealedState(

@@ -33,11 +33,22 @@ deterministic word counting, the locked `hint_max_words` cap, and Detector V1 fo
 fallback. `PRD04-FR-018`'s `verdict`/`intent` consistency is enforced in
 `app/audit_disclosure.py`. Zero tokens, no network, no provider.
 
-**Still NOT STARTED.** Scent **interpretation** (`PRD04-FR-002/003/004`) — no
-belief-level signal reaches strategy yet; that is Stage 7C. `infra.llm` and the
-T1/T2 tiers — no provider, no dependency, no tier machinery; T0 is the only runtime
-path. Token accounting is wired end to end and correctly reports **0**, because
-nothing spends.
+**Scent interpretation — implemented at Stage 7C.** `PRD04-FR-002/003/004` are
+live: `domain/scent_belief.py` carries a belief-labelled `ScentBelief` with no
+member an opponent position could occupy, `app/scent_interpretation.py` folds the
+peer emissions this side legally received through the **existing**
+`observed_field` authority under the series-locked parameters, and `Observation`
+gained a fourth member so the baseline strategy consumes it — as a deterministic
+**tie-break** only, where the accessibility objective cannot separate two
+destinations. Physics is untouched (`PRD04-FR-001`), no opponent truth is
+derivable, and a side that has heard nothing decides exactly as it did before.
+
+**Still NOT STARTED.** `infra.llm` and the T1/T2 tiers — no provider, no
+dependency, no tier machinery; T0 is the only runtime path. Token accounting is
+wired end to end and correctly reports **0**, because nothing spends. No Bayesian
+belief update, no opponent modelling, no peer-hint interpretation, and no
+competitive scent weighting: those are optional competitive work, not minimum
+scope.
 
 ## 3. Purpose
 
@@ -335,5 +346,5 @@ enabled by default.
 - [x] Scent physics/interpretation boundary explicit
 - [ ] Supervising review — **pending**
 - [x] Deterministic T0 language baseline — **implemented (Stage 7B)**
-- [ ] Scent interpretation (`FR-002/003/004`) — **pending Stage 7C**
+- [x] Scent interpretation (`FR-002/003/004`) — **implemented (Stage 7C)**
 - [ ] Optional LLM tiers T1/T2 — **not started; no provider**

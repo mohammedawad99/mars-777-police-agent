@@ -23,6 +23,17 @@ comparison is between destinations of one actor's legal moves, which share a
 connected region whenever that actor's own cell is traversable - the condition
 under which their totals are commensurable.
 
+**Scent breaks ties, and only ties.** Ch 10 §10.3.3 placed a *blind* module
+here, *"blind in the sense that there is not yet scent"*; that stage is over.
+The thief's own disclosed emissions are legal partial evidence of where it has
+been, so where the accessibility comparison cannot separate two destinations,
+the pursuer prefers the one carrying the stronger evidence. This ordering is
+**PROJECT-DERIVED**: the source mandates no algorithm, and this is not a claim
+of optimality - it is the smallest deterministic way for evidence to reach a
+decision. The objective still decides every case it can, and a neutral belief
+returns zero everywhere, so a sub-game with nothing heard decides exactly as it
+did before. Competitive weighting belongs to a later stage.
+
 **No barriers, deliberately.** Every non-arbitrary placement rule needs a
 benefit measure, and `PRD03-FR-017`'s is belief-supported; the alternatives are
 spending an irreversible quota on a schedule or reading the thief's cell, which
@@ -32,6 +43,7 @@ ready.
 """
 
 from dataclasses import dataclass
+from decimal import Decimal
 
 from ..domain.actions import MoveAction, PhysicalAction
 from ..domain.observation import Observation
@@ -59,7 +71,7 @@ class BaselineStrategy:
                 f"no legal action from {observation.own_position}: an actor with"
                 " none is a terminal the caller settles before asking a strategy",
             )
-        return MoveAction(min(candidates, key=lambda move: self._spread(observation, move)))
+        return MoveAction(min(candidates, key=lambda move: self._rank(observation, move)))
 
     def _spread(self, observation: Observation, move: Move) -> int:
         """Total walking distance from where *move* lands to all it can reach.
@@ -69,3 +81,14 @@ class BaselineStrategy:
         """
         landing = destination_of(observation.own_position, move)
         return sum(reachable_from(observation.board, landing).values())
+
+    def _rank(self, observation: Observation, move: Move) -> tuple[int, Decimal]:
+        """The accessibility score first, then the evidence, then move order.
+
+        The scent term is negated so that `min` prefers the **stronger**
+        reading, and it is second so it can never overrule the objective. Equal
+        scores and equal evidence still fall to `MOVE_ORDER`, which
+        `legal_moves` preserves and `min` keeps.
+        """
+        landing = destination_of(observation.own_position, move)
+        return (self._spread(observation, move), -observation.scent.intensity_at(landing))

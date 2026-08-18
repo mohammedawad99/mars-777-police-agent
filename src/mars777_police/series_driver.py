@@ -40,15 +40,13 @@ from dataclasses import dataclass
 
 from .app import artifact_store as artifacts
 from .app.audit_runtime import AuditRuntime
-from .app.config_rules import hints_of, limits_of, opening_truth, rules_of
 from .app.outbound_evidence_runtime import OutboundEvidenceRuntime
 from .app.round_opening import open_round_for
 from .app.sealed_record_values import ActorRole
 from .app.series_agreements import agree_config, agree_result
 from .app.state_machine import ProtocolPhase
 from .app.strategy_api import StrategyPort
-from .app.sub_game_driver import SubGameDriver
-from .app.turn_service import LocalTurnService
+from .app.sub_game_launch import launch_sub_game
 from .domain.negotiated_config import NegotiatedConfig
 from .domain.terminal import Outcome
 from .series_runtime import SeriesRuntime
@@ -123,17 +121,16 @@ class SeriesDriver:
     async def _play_rounds(self, evidence: OutboundEvidenceRuntime, sub_game: int) -> Outcome:
         """Drive one fresh `SubGameDriver` to its natural terminal."""
         context = self.series.composition.runtime_context
-        driver = SubGameDriver(
-            strategy=self.strategy,
-            runner=self.series.composition.peer_runner,
-            context=context,
-            role=self.role,
-            turns=LocalTurnService(limits_of(self.config), rules_of(self.config).quota),
-            config_sha256=evidence.context.config_sha256,
-            hints=hints_of(self.config, self.role),
-            sub_game=sub_game,
-            truth=opening_truth(self.config, self.role),
-            deadline=self.deadline,
+        driver = launch_sub_game(
+            self.strategy,
+            self.series.composition.peer_runner,
+            context,
+            self.series.composition.pregame,
+            self.config,
+            self.role,
+            evidence.context.config_sha256,
+            sub_game,
+            self.deadline,
         )
         driver.open()
         settled = driver.settled()
