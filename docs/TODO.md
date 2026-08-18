@@ -198,6 +198,8 @@ tracked once, under Pending.
 - [ ] Collaborator (Rawey7) access - pending explicit instruction.
 - [x] **Stage 5-R8 Part 2A-R1 — repository reconciliation + JDEC-018 lock + documentation truth pass** — documentation only, **0 Python**. Resolved the pre-existing uncommitted Police draft; locked **JDEC-018** (`DISHONEST_SCENT_EMISSION`, PROJECT-DERIVED, **not** TAMPERING, scored through the existing technical-loss path) as an **authorized Part-2B contract, not shipped code**; corrected the README status, `PRD-01`/`PRD-02`/`PRD-05`/`PRD-06` status lines and the stale current-tense JDEC ranges. `C-01…C-14` unchanged, **no C-15**. Production still `SemanticVerdict` 8 / `TAMPERING` 5 / `SCORED_AS_TECHNICAL_LOSS` 3.
 
+- [x] **Stage 8A-1T — KIT transport envelopes.** The pinned kit wire (`ad65576`, PROMOTED) is implemented as a **second envelope profile**: four tool names, the `message`/`payload` asymmetry, pinned accept/refuse rows, and the unknown-key extension seam. One surface per process, selected by `--external-mode` **before** boot — no auto-detection, no downgrade. Our published schemas were compared against a running pinned peer's own. Measured against the pinned sparring peer: its `doctor` says **PEER LISTENING**, its greeting is **accepted**, and `receive_turn`/`submit_audit` are **refused `E-AUTH-FAILURE`** — the unchanged HMAC gate, not bypassed. **Sparring remains blocked** by (1) the auth profile and (2) role/turn orchestration (Stage 8A-2). No alternation, no public ingress, no counted play.
+
 _Phases 1 and 2 are specification and requirements only; all seven PRDs remain
 APPROVED — PHASE 2 LOCKED. Phase 3 implementation is well advanced: the
 deterministic domain, the protocol state machine, Commit-Reveal cryptography,

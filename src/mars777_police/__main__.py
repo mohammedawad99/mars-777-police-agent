@@ -10,6 +10,13 @@ opponent is a bounded startup step inside the coordinator, because two teams
 start their agents independently and the first one up finds nothing to reach.
 No Step-0, no action and no config leaves this module.
 
+**One compatibility option, not eight.** `--external-mode` is the whole external
+selection: it resolves a frozen profile set, the tool surface this process
+registers, and the arguments its client sends. It defaults to the internal wire,
+so nothing changes for a series that does not ask for the change, and it is
+never inferred from a message - a wire cannot be negotiated by the messages
+whose encoding it governs. No secret is passed on the command line.
+
 **Exit status is a classification, not a summary.** A local operator refusal
 (settings, launch document) is 2, an opponent that never became reachable is 4,
 and a peer that refused us for a protocol reason is 5 with its own frozen error
@@ -30,6 +37,7 @@ from pathlib import Path
 
 from . import GROUP_CODE
 from .agent_runtime import AgentRuntime
+from .app.kit_preset import ExternalMode
 from .app.protocol_errors import LocalDefectError, PeerProtocolError
 from .app.sealed_record_values import ActorRole
 from .autonomous_boot import AutonomousBoot
@@ -49,14 +57,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Read the command line. This touches nothing and starts nothing."""
     parser = argparse.ArgumentParser(prog=f"python -m {__package__}")
     parser.add_argument("--launch", required=True, type=Path, help="series launch document")
+    parser.add_argument(
+        "--external-mode",
+        type=ExternalMode,
+        choices=tuple(ExternalMode),
+        default=ExternalMode.STRICT_INTERNAL,
+        help="which wire to speak; the external choice is made here, never negotiated",
+    )
     return parser.parse_args(argv)
 
 
-async def play(launch: Path) -> Path:
+async def play(launch: Path, mode: ExternalMode) -> Path:
     """Compose the agent and let the boot coordinator run its whole life."""
     settings = load_runtime_settings(os.environ, expected_role=ROLE)
     document = read_launch_document(launch)
-    composition = compose_agent(settings, document.identity, GROUP_CODE)
+    composition = compose_agent(settings, document.identity, GROUP_CODE, mode, document.kit_terms)
     runtime = AgentRuntime(composition, settings.local.host, settings.local.port)
     await AutonomousBoot(runtime, settings, document.config, ROLE).run()
     return settings.artifact_root
@@ -66,7 +81,7 @@ def main(argv: list[str] | None = None) -> int:
     """Run the agent; return the process status."""
     arguments = parse_args(argv)
     try:
-        root = asyncio.run(play(arguments.launch))
+        root = asyncio.run(play(arguments.launch, arguments.external_mode))
     except (SettingsError, LaunchInputError) as failure:
         print(f"cannot start: {failure}", file=sys.stderr)
         return 2

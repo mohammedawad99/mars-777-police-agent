@@ -14,6 +14,7 @@ from r16_builders import (
 )
 
 from mars777_police.app.auth_values import KeyId
+from mars777_police.app.kit_preset import ExternalMode, external_profiles
 from mars777_police.app.public_endpoint_values import (
     LocalPeerEndpoint,
     OpponentPublicPeerEndpoint,
@@ -41,14 +42,21 @@ def settings_for(role: ActorRole, opponent: str, port: int = 8080) -> RuntimeSet
     )
 
 
-def identity_for(group_id: str, slot: str) -> SeriesIdentity:
+KIT_TERMS: dict[str, object] = {"board_size": 7, "max_steps": 35, "setting": "Haifa"}
+"""A flat signed set standing in for one an external pairing agreed out of band."""
+
+
+def identity_for(
+    group_id: str, slot: str, mode: ExternalMode = ExternalMode.STRICT_INTERNAL
+) -> SeriesIdentity:
     """The series facts settings deliberately cannot hold."""
+    profiles = PROFILES if mode is ExternalMode.STRICT_INTERNAL else external_profiles(mode, KEY_ID)
     return SeriesIdentity(
         GAME_ID,
         GAME_UID,
         FIRST_SUB_GAME,
         partial(group_id, COMMITS[group_id], slot),
-        PROFILES,
+        profiles,
         config().network_and_league.token_budget_per_series,
     )
 
@@ -59,9 +67,17 @@ def compose(
     role: ActorRole = ActorRole.POLICE,
     opponent: str = "https://opponent.example/mcp",
     port: int = 8080,
+    mode: ExternalMode = ExternalMode.STRICT_INTERNAL,
 ) -> AgentComposition:
     """One real production agent object graph."""
-    return compose_agent(settings_for(role, opponent, port), identity_for(group_id, slot), group_id)
+    terms = None if mode is ExternalMode.STRICT_INTERNAL else KIT_TERMS
+    return compose_agent(
+        settings_for(role, opponent, port),
+        identity_for(group_id, slot, mode),
+        group_id,
+        mode,
+        terms,
+    )
 
 
 def both(url_a: str, url_b: str) -> tuple[AgentComposition, AgentComposition]:

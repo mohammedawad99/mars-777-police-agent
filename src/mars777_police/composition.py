@@ -21,22 +21,22 @@ whole purpose is to hash the true result.
 """
 
 from .app.active_runtime_context import ActiveRuntimeContext
-from .app.auth_values import AuthProfile
 from .app.competitive_strategy import CompetitiveStrategy
 from .app.config_lock_runtime import ConfigLockRuntime
 from .app.config_negotiation_runtime import ConfigNegotiationRuntime
+from .app.kit_preset import ExternalMode
 from .app.peer_runner import PeerRunner
 from .app.peer_supervision import PeerDeadline, TimeoutPolicy
 from .app.pregame_session_runtime import PregameSessionRuntime
 from .app.series_audit_gate import SeriesAuditGate
 from .app.step0_runtime import Step0Runtime
+from .composition_inputs import KitTerms, keyed_authenticator, opponent_url, select_wire
 from .composition_values import AgentComposition, SeriesIdentity
 from .domain.scent_model_default import default_scent_model
 from .infra.clock import SystemClock
 from .infra.settings import RuntimeSettings
 from .protocol.config_lock import ConfigLockAuthenticator
 from .protocol.declaration import Step0Authenticator
-from .protocol.keyed_auth import HmacSha256Provider, KeyedAuthenticator
 from .protocol.result_core import ResultDigester
 from .transport.client import PeerClient
 from .transport.peer_operations import InboundPeerOperations
@@ -53,22 +53,12 @@ one, and a client that kept this constant would ignore what the peers agreed.
 """
 
 
-def keyed_authenticator(settings: RuntimeSettings) -> KeyedAuthenticator:
-    """The one provisioned keyed authenticator this process trusts.
-
-    Built from the settings key material and never from a peer's claim: the
-    profile is fixed before the first byte arrives, which is what makes an
-    algorithm substitution ineffective rather than merely detectable.
-    """
-    return KeyedAuthenticator(
-        AuthProfile.HMAC_SHA256,
-        settings.key_id,
-        HmacSha256Provider({settings.key_id.value: settings.secret.reveal()}),
-    )
-
-
 def compose_agent(
-    settings: RuntimeSettings, identity: SeriesIdentity, group_id: str
+    settings: RuntimeSettings,
+    identity: SeriesIdentity,
+    group_id: str,
+    mode: ExternalMode = ExternalMode.STRICT_INTERNAL,
+    kit_terms: KitTerms | None = None,
 ) -> AgentComposition:
     """Assemble one agent from the accepted production implementations.
 
@@ -76,7 +66,13 @@ def compose_agent(
     the series facts settings deliberately refuses to hold. The first config
     round is built for `identity.first_sub_game` and no other - later rounds go
     through `PregameSessionRuntime.open_round`.
+
+    *mode* is the operator's out-of-band compatibility choice, defaulting to the
+    internal wire so no existing flow moves. It is resolved **before** the
+    server is registered and before the client exists, because a wire cannot be
+    negotiated by the messages whose encoding it governs.
     """
+    wire = select_wire(mode, settings, identity, group_id, kit_terms)
     keyed = keyed_authenticator(settings)
     lock_auth = ConfigLockAuthenticator(keyed)
     step0 = Step0Runtime(group_id, Step0Authenticator(keyed))
@@ -109,11 +105,16 @@ def compose_agent(
         TimeoutPolicy(PEER_TIMEOUT_SECONDS),
         lambda: pregame.config if pregame.locked_evidence is not None else None,
     )
-    client = PeerClient(_opponent_url(settings), deadline)
+    client = PeerClient(opponent_url(settings), deadline, wire.profile)
     transport = FastMcpPeerTransport(client)
     series = SeriesAuditGate()
     return AgentComposition(
-        build_server(inbound, name=f"{group_id}-{settings.role.value}"),
+        build_server(
+            inbound,
+            name=f"{group_id}-{settings.role.value}",
+            profile=wire.profile,
+            context=wire.kit_context,
+        ),
         client,
         transport,
         PeerRunner(
@@ -133,13 +134,7 @@ def compose_agent(
         group_id,
         SystemClock(),
         ResultDigester(),
+        wire.profile,
+        wire.kit_context,
         CompetitiveStrategy(),
     )
-
-
-def _opponent_url(settings: RuntimeSettings) -> str:
-    """The opponent ingress the operator configured, or a local refusal."""
-    opponent = settings.opponent
-    if opponent is None:
-        raise ValueError("the opponent public endpoint must be configured before composing")
-    return opponent.url

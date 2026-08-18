@@ -16,6 +16,13 @@ The Streamable HTTP application is obtained from the returned server with
 `.http_app(path=...)`; no wrapper is provided for it, because a wrapper that
 only forwards is one more thing to keep true.
 
+**Two registrations, and a process builds exactly one.** The strict tools
+below are this build's own wire; `build_kit_tools` is the pinned external one.
+Both answer to the same four names and both delegate into the same application
+semantics, and neither is ever registered beside the other: a schema carrying
+both argument families would ask a peer to guess which one this run means. The
+choice is the operator's, made before construction and never negotiated.
+
 **The authenticated peer identity lives in FastMCP's own session state.** The
 tools are `async` only for that: `Context.get_state`/`set_state` are
 session-scoped and persist across `call_tool` on one Streamable-HTTP session,
@@ -28,6 +35,8 @@ exactly as unauthenticated as it found it.
 from fastmcp import Context, FastMCP
 from fastmcp.exceptions import ToolError
 
+from ..app.kit_session import KitSessionContext
+from ..app.protocol_errors import LocalDefectError
 from .envelopes import (
     NegotiateRequest,
     ReceiveControlRequest,
@@ -35,37 +44,44 @@ from .envelopes import (
     SubmitAuditRequest,
 )
 from .handlers import PeerOperations
-from .inbound_session import InboundSession
+from .kit_server import build_kit_tools
 from .router import (
     route_negotiate,
     route_receive_control,
     route_receive_turn,
     route_submit_audit,
 )
+from .session_state import AUTH_STATE_KEY, inbound, persist
+from .transport_profiles import TransportEnvelopeProfile
 from .wire_errors import outbound
 from .wire_turn import TurnOutcomeWire
 
 PEER_TOOLS = ("negotiate", "receive_turn", "submit_audit", "receive_control")
 """The complete public surface. There is no fifth peer tool and no alias."""
 
-AUTH_STATE_KEY = "mars777.authenticated_peer"
-"""The one session-state key: an authenticated `group_id`, and nothing else."""
+
+def build_server(
+    operations: PeerOperations,
+    name: str = "mars777-peer",
+    profile: TransportEnvelopeProfile = TransportEnvelopeProfile.STRICT_PROJECT,
+    context: KitSessionContext | None = None,
+) -> FastMCP:
+    """Return the one tool surface *profile* selects, bound to *operations*.
+
+    The default is the internal wire, so every existing flow keeps the exact
+    surface it had. Selecting the external profile requires the out-of-band
+    context a kit process cannot read off its own wire; refusing to build
+    without it is what stops a KIT ingress from inventing a sub-game number.
+    """
+    if profile is TransportEnvelopeProfile.KIT_EXTERNAL:
+        if context is None:
+            raise LocalDefectError("a KIT ingress needs the out-of-band session context")
+        return build_kit_tools(operations, context, name)
+    return build_strict_tools(operations, name)
 
 
-async def inbound(context: Context) -> InboundSession:
-    """Read this session's bound identity, if Step-0 has established one."""
-    bound = await context.get_state(AUTH_STATE_KEY)
-    return InboundSession(context.session_id, bound if isinstance(bound, str) else None)
-
-
-async def persist(context: Context, session: InboundSession) -> None:
-    """Write back a binding the operation just proved. Failures never reach here."""
-    if session.pending is not None:
-        await context.set_state(AUTH_STATE_KEY, session.pending)
-
-
-def build_server(operations: PeerOperations, name: str = "mars777-peer") -> FastMCP:
-    """Return the peer server bound to *operations*, with exactly four tools."""
+def build_strict_tools(operations: PeerOperations, name: str = "mars777-peer") -> FastMCP:
+    """Return the internal peer server bound to *operations*, with four tools."""
     server: FastMCP = FastMCP(name, strict_input_validation=True)
 
     @server.tool
@@ -113,4 +129,13 @@ def build_server(operations: PeerOperations, name: str = "mars777-peer") -> Fast
     return server
 
 
-__all__ = ["AUTH_STATE_KEY", "PEER_TOOLS", "ToolError", "build_server", "inbound", "persist"]
+__all__ = [
+    "AUTH_STATE_KEY",
+    "PEER_TOOLS",
+    "ToolError",
+    "build_kit_tools",
+    "build_server",
+    "build_strict_tools",
+    "inbound",
+    "persist",
+]

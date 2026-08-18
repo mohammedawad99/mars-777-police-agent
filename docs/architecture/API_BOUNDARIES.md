@@ -395,8 +395,9 @@ content. **No error id was added: the inventory stays 20.**
 
 ## 8. External interoperability — the KIT profile
 
-**Status: NON-TRANSPORT CORE IMPLEMENTED (Stage 8A-1R / 8A-1S). Not yet able to
-talk to a KIT peer.**
+**Status: TRANSPORT IMPLEMENTED (Stage 8A-1T). A pinned-KIT peer can reach our
+four tools and be understood. It cannot yet play us — see *What still blocks a
+sparring series*.**
 
 Several groups on this course use a shared interoperability kit
 (`Imreec/copthief-league-protocol`), pinned here at
@@ -416,6 +417,14 @@ wins, and the kit never overrides it.
 | Evidence model | `app/audit_status.py`, `app/audit_provenance.py`, `app/audit_policy.py` |
 | External audit | `app/kit_payload.py`, `app/kit_audit.py` |
 | External preset | `app/kit_preset.py` |
+| Wire messages, as values | `app/kit_messages.py`, `app/kit_greeting.py` |
+| Out-of-band session context | `app/kit_session.py` |
+| Envelope profile (one per process) | `transport/transport_profiles.py` |
+| The four pinned tool arguments | `transport/kit_envelopes.py` |
+| Inbound/outbound codecs | `transport/codec_kit_turn.py`, `transport/codec_kit_pregame.py` |
+| KIT tool registration | `transport/kit_server.py`, `transport/kit_router.py` |
+| Outbound argument construction | `transport/call_arguments.py` |
+| Mode → wire selection | `composition_inputs.py` |
 
 ### Two canonical authorities, on purpose
 
@@ -479,14 +488,86 @@ difference is one ULP of IEEE-754 accumulation against our exact `Decimal`.
 Classification: **`MODEL_FORM_MATCH` + `NUMERIC_VECTOR_MISMATCH`**, not
 vector-exact. No family hash is published on that basis.
 
+### The transport surface, and how it is selected
+
+The pinned wire is `vectors/turn_message.json` at `ad65576`, status **PROMOTED**:
+de-facto interoperability practice between independently written peers, **not
+book law**. Where the book binds a rule the book wins.
+
+Four public tool names, and one argument each — the asymmetry is the kit's and
+it is load-bearing:
+
+| Tool | Argument | Carries |
+|---|---|---|
+| `negotiate` | `message` | flat signed `terms` + `nonce` + `signature` + `group_id`, with pairing and locked-model declarations **beside** the terms |
+| `receive_turn` | `message` | `step`, `sender`, `hint`, `smell_grid`, `commit`, `timestamp` (all required) plus four optional members |
+| `submit_audit` | **`payload`** | `sender`, `records` (payload + nonce + commit), `result_claim` |
+| `receive_control` | `message` | `kind` ∈ {enable, status, restart, quit}, `sender` |
+
+A missing required key is **refused, never defaulted** — a defaulted commit is a
+move the sender never sealed. An unknown key **inside** a message is tolerated
+and ignored: that is the kit's declared extension seam, and it reaches no
+semantic value, so it can mutate nothing.
+
+**Two surfaces, and a process registers exactly one.** `ExternalMode` is chosen
+out of band — `python -m mars777_police --external-mode KIT_CORE_V1` — before the
+server is registered and before the client exists. There is no auto-detection,
+no key sniffing, no "try strict then KIT", and no downgrade after a failure:
+each of those would turn an integrity failure into a silent compatibility story.
+The same selection drives the outbound arguments, so a process cannot serve one
+wire and speak the other.
+
+Our published schemas were compared mechanically against the pinned peer's own,
+read out of a running pinned server on its own FastMCP major (2.14.7). Tool
+names, argument names, requiredness and the free-form message object are
+identical. The one difference is at the *tool argument* level: our
+`strict_input_validation` closes the argument object, so an unknown second
+argument is refused rather than ignored. The kit's extension seam is one level
+down, inside the message, and stays open.
+
+### What a KIT turn is not
+
+A KIT turn carries the sealed `commit` **and** the unsealed adjuncts in one
+message, and never the action — under that wire the action is disclosed only in
+`submit_audit`. So the commitment half maps exactly onto our `Commitment` and is
+delivered to the unchanged `on_commitment`; the adjuncts are held beside it.
+**No `Reveal` is invented**, and no second state machine exists: our own
+commit → acknowledge → reveal cadence has no counterpart on this wire.
+
+The smell grid is retained as the peer's binary64, unconverted. Our physics is
+exact `Decimal`, and converting the peer's cells would assert an equivalence
+that is `MODEL_FORM_MATCH` and **not** vector-exact.
+
+### What still blocks a sparring series
+
+Measured on 2026-08-18 against the pinned sparring peer (`serve --peer … --role
+police`) running in an isolated venv, with our KIT ingress serving the
+production `InboundPeerOperations`:
+
+* the kit's own `doctor` classifies our ingress **PEER LISTENING**;
+* the kit's real greeting — its terms, its signature, its four lock
+  declarations — is **accepted**, `{"ok": true}`;
+* `receive_turn` and `submit_audit` are **refused with `E-AUTH-FAILURE`**;
+* `receive_control` is accepted and settles nothing;
+* the series ends `SPAR-N09` — our counterpart never greeted back.
+
+Two distinct blockers, and neither is a transport fault:
+
+1. **Auth profile.** `AuthProfile.HMAC_SHA256` Step-0 stays mandatory. The
+   pinned `negotiate` has no place for a keyed proof and its receiver drops
+   unknown keys, so a pinned peer can neither send one nor read ours. It was
+   **not bypassed** to make sparring green.
+2. **Role and turn orchestration.** Nothing drives our KIT outbound side yet:
+   `send_kit` exists and is proved over real HTTP, but no runtime decides when
+   to greet, when to take a turn, or how roles alternate. That is Stage 8A-2.
+
 ### What is still missing
 
-The four KIT tool envelopes, delivery contract, pairing declaration, sparring,
-the artifact checker, role alternation, and the public-ingress integration. The
-two KIT profile members dispatch real behaviour locally but **reach no wire** —
-widening a frozen wire literal is a schema change a later stage owns, so the
-encoder refuses to serialize them.
+Role alternation, the public-ingress integration, and a counted series.
+`FIXED_ROLE` remains our only executable role convention — alternation is a
+**pre-match convention and a de-facto pairing practice, not a book requirement**
+— and the pinned harness's `--role police|thief` shows fixed-role sparring is
+supported by it, so the gap is ours and is orchestration, not wire.
 
-`FIXED_ROLE` remains our only executable role convention. Alternation is a
-**pre-match convention and a de-facto pairing practice — not a book
-requirement** — and is not implemented.
+Nothing about a sparring run is counted. League diversity evidence still
+requires a real, independently authored, enrolled group.

@@ -21,6 +21,8 @@ same 30 in one held session all succeeded. Outside one, each call opens its own.
 
 **A dead session is not silently replaced.** It surfaces as `E-TRANSPORT` and is
 never replayed: whether a commitment reached the peer is unknowable here.
+
+**The wire shape belongs to the transport profile**, not here: `call_arguments`.
 """
 
 from contextlib import AsyncExitStack
@@ -35,36 +37,31 @@ from ..app.capture_values import TurnOutcome
 from ..app.peer_supervision import PeerDeadline
 from ..app.protocol_errors import MalformedMessageError
 from ..app.protocol_values import InvalidDigestError, Sha256Digest
+from .call_arguments import strict_arguments as envelope
+from .call_arguments import wire_json as wire_json
 from .codec_turn import decode_outcome
 from .session_deadline import session_transport
+from .transport_profiles import TransportEnvelopeProfile as Envelopes
 from .wire_errors import TransportFailureError, inbound
 from .wire_turn import TurnOutcomeWire
 
-
-def wire_json(model: BaseModel) -> dict[str, object]:
-    """Render a DTO for the wire, **omitting** every absent member.
-
-    `exclude_none=True` is the contract, not a convenience: a member that is
-    absent must not arrive as `null`. That is what keeps a CPU-only
-    participant's `vram_gb` out of the authenticated Step-0 core entirely.
-    """
-    return model.model_dump(mode="json", exclude_none=True)
-
-
-def envelope(kind: str, payload: BaseModel | dict[str, object]) -> dict[str, object]:
-    """Build the one frozen argument: `request = {kind, payload}`."""
-    body = wire_json(payload) if isinstance(payload, BaseModel) else payload
-    return {"request": {"kind": kind, "payload": body}}
+STRICT = Envelopes.STRICT_PROJECT  # the default: every existing flow keeps its own surface
 
 
 class PeerClient:
     """One peer endpoint, one connection lifecycle, no shared global state."""
 
-    def __init__(self, url: str, deadline: PeerDeadline) -> None:
+    def __init__(self, url: str, deadline: PeerDeadline, profile: Envelopes = STRICT) -> None:
         self._url = url
         self._deadline = deadline
+        self._profile = profile
         self._session: Client[StreamableHttpTransport] | None = None
         self._stack: AsyncExitStack | None = None
+
+    @property
+    def profile(self) -> Envelopes:
+        """The one wire this client speaks, fixed when it was constructed."""
+        return self._profile
 
     @property
     def deadline(self) -> PeerDeadline:
@@ -108,7 +105,10 @@ class PeerClient:
 
     async def call(self, tool: str, kind: str, payload: BaseModel | dict[str, object]) -> Any:
         """Invoke *tool* with the frozen envelope and return its raw result."""
-        request = envelope(kind, payload)
+        return await self.invoke(tool, envelope(kind, payload, self._profile))
+
+    async def invoke(self, tool: str, request: dict[str, object]) -> Any:
+        """Send one already-built argument object, inside the held session."""
         try:
             if self._session is not None:
                 result = await self._session.call_tool(tool, request, timeout=self.timeout)

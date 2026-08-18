@@ -51,13 +51,21 @@ class LaunchInputError(ValueError):
 
 
 class LaunchDocumentWire(BaseModel):
-    """The exact launch document: three frozen wire objects and one scalar."""
+    """The exact launch document: three frozen wire objects and two scalars.
+
+    `kit_terms` is the one optional member, and it is operator input rather than
+    a peer contract: the flat signed set an external KIT pairing agreed. It is
+    absent for every internal series, and required only when the operator also
+    selects the external compatibility mode - the two statements are checked
+    against each other at composition, never reconciled silently.
+    """
 
     model_config = WIRE
     declaration: DeclarationWire
     profiles: InteropProfileSetWire
     config: NegotiatedConfigWire
     first_sub_game: int
+    kit_terms: dict[str, object] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +79,7 @@ class LaunchDocument:
 
     identity: SeriesIdentity
     config: NegotiatedConfig
+    kit_terms: dict[str, object] | None = None
 
 
 def parse_launch_document(text: str) -> LaunchDocument:
@@ -101,6 +110,7 @@ def parse_launch_document(text: str) -> LaunchDocument:
             declaration.token_budget_per_series,
         ),
         config,
+        wire.kit_terms,
     )
 
 

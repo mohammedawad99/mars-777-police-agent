@@ -17,6 +17,7 @@ from fastmcp import FastMCP
 from .app.active_runtime_context import ActiveRuntimeContext
 from .app.declaration_values import Declaration
 from .app.interop_profiles import InteropProfileSet
+from .app.kit_session import KitSessionContext
 from .app.peer_runner import PeerRunner
 from .app.peer_transport import PeerTransportPort
 from .app.ports import ResultDigestPort, TimestampPort
@@ -31,6 +32,7 @@ from .app.series_audit_gate import SeriesAuditGate
 from .app.strategy_api import StrategyPort
 from .transport.client import PeerClient
 from .transport.peer_operations import InboundPeerOperations
+from .transport.transport_profiles import TransportEnvelopeProfile
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +84,15 @@ class AgentComposition:
     group_id: str
     clock: TimestampPort
     digester: ResultDigestPort
+    transport_profile: TransportEnvelopeProfile
+    """Which envelope family this process registered and will send.
+
+    Held here rather than re-derived, so the server and the client are provably
+    the same wire: one value decided both, and a later reader can see that."""
+
+    kit_context: KitSessionContext | None
+    """The out-of-band KIT context, present exactly when the external wire is."""
+
     strategy: StrategyPort
     """This agent's decision policy, behind the port so it can be replaced.
 

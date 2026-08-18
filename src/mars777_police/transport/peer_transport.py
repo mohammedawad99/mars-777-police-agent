@@ -24,6 +24,7 @@ from ..app.peer_pregame_messages import (
 from ..app.peer_transport import AuditDocument
 from ..app.peer_turn_messages import Acknowledgement, Commitment, Reveal
 from ..app.protocol_values import Sha256Digest
+from .call_arguments import KitOutbound, kit_call
 from .client import PeerClient
 from .codec_declaration import encode_step0
 from .codec_final import encode_final_nonce, encode_result_agreement
@@ -41,6 +42,17 @@ class FastMcpPeerTransport:
     def url(self) -> str:
         """The peer endpoint this transport speaks to."""
         return self._client.url
+
+    async def send_kit(self, message: KitOutbound) -> None:
+        """Send one pinned kit message, through the client's own held session.
+
+        The tool name and the argument name come from the message's own type,
+        so the pinned asymmetry cannot be spelled wrong at a call site, and a
+        client built for the internal wire refuses to build these arguments at
+        all rather than putting a shape on the wire its own server would reject.
+        """
+        tool, request = kit_call(message, self._client.profile)
+        await self._client.invoke(tool, request)
 
     async def send_step0(self, exchange: Step0DeclarationExchange) -> None:
         """Send our Step-0 declaration and its keyed proof."""
