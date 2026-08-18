@@ -392,3 +392,101 @@ Verified against the installed framework: a `ToolError("E-PROTO-STALE")` is
 observed client-side with `str(exception) == "E-PROTO-STALE"` **exactly**, with
 no prefix or suffix, and the same identity is recoverable from the raw MCP error
 content. **No error id was added: the inventory stays 20.**
+
+## 8. External interoperability — the KIT profile
+
+**Status: NON-TRANSPORT CORE IMPLEMENTED (Stage 8A-1R / 8A-1S). Not yet able to
+talk to a KIT peer.**
+
+Several groups on this course use a shared interoperability kit
+(`Imreec/copthief-league-protocol`), pinned here at
+**`ad6557626587e09146af4283a5e808e7001343c5`**. It is **interoperability
+guidance, not project source**: where the course book binds a rule, the book
+wins, and the kit never overrides it.
+
+### What is implemented
+
+| Surface | Authority |
+|---|---|
+| Compact canonical JSON | `protocol/kit_canonical.py` |
+| Commitment, **nonce outside** after a single `\|` | `protocol/kit_commitment.py` |
+| `game_id` / `game_uid` / terms digest | `protocol/kit_identity.py` |
+| Settlement consensus (**spaced** encoding) | `protocol/kit_consensus.py` |
+| Codec / result dispatch | `protocol/commitment_codec.py`, `protocol/result_profile.py` |
+| Evidence model | `app/audit_status.py`, `app/audit_provenance.py`, `app/audit_policy.py` |
+| External audit | `app/kit_payload.py`, `app/kit_audit.py` |
+| External preset | `app/kit_preset.py` |
+
+### Two canonical authorities, on purpose
+
+`protocol/canonical.py` serves the **strict project domain**: it refuses `None`
+and binary `float` and carries decimals as exact text, because a float `0.10`
+reaching a project hash changes `config_sha256` and makes two honest peers
+refuse each other for a reason neither can see. `kit_canonical` serves the
+JSON-native domain the kit actually uses. Where the domains overlap they emit
+identical bytes; neither may drift into the other.
+
+### Our sealed record is ours, not a universal schema
+
+The eight-member sealed record is **strict/internal**. The kit is explicit that
+payload key sets need not match across teams — each side seals its own record
+and the opponent re-hashes what it revealed. Our outbound KIT payload is
+deliberately *richer* than the kit minimum (step, sub-game, role, move, intent,
+hint, position, barriers) because we already hold that evidence; we require
+none of it back.
+
+### Cryptographic proof is not semantic proof
+
+Two gates. **Gate 1** recomputes the digest and interprets nothing — a
+faithfully sealed illegal move passes it. **Gate 2** weighs semantic evidence
+with four answers:
+
+- `VERIFIED` — evidence exists and the check passed
+- `FAILED` — evidence exists and proves a violation
+- `NOT_APPLICABLE` — the check does not apply
+- `NOT_CHECKABLE` — it applies, but this lawful profile cannot decide it
+
+**Missing evidence is not tampering**, and **an undecidable binding check is not
+clean**. What a gap costs depends on provenance: the book's gameplay rules
+block a counted result when unsettled; our own enrichments (JDEC-018 scent
+truthfulness, which needs a disclosed trajectory a KIT peer never promised) do
+not. Blocking and violations are reported separately so a gap in what we can
+prove is never printed as an accusation.
+
+Role, sub-game and configuration come from the authenticated session, the
+witnessed cursor and the verified lock — a payload carrying them is
+cross-checked, one omitting them has withheld nothing. Intent is read only as
+one of its two sealed words and is never inferred from hint language.
+
+### Authentication is unchanged
+
+The kit's `terms_signature` is an **unkeyed content-agreement digest** — anyone
+holding the terms and nonce recomputes it. It proves both sides read the same
+values and nothing about who is speaking. `AuthProfile.HMAC_SHA256` Step-0
+authentication remains separately mandatory and nothing substitutes for it.
+
+### The scent family is deliberately undeclared
+
+The kit registers `multiplicative_book_v1` beside its own
+`subtractive_chebyshev_v1` (which we refuse — our physics is App F T16 FIXED,
+C-10, JDEC-018). Measured against our production physics at the pinned SHA:
+kernel identical across all 25 weights, parameters identical, update rule,
+cadence, order and clamp identical, both emit vectors and both scalar traces
+exact. But **29 of 90 published field-walk cells differ** — replicating the
+kit's own recurrence in binary floats reproduces its vectors exactly, so every
+difference is one ULP of IEEE-754 accumulation against our exact `Decimal`.
+
+Classification: **`MODEL_FORM_MATCH` + `NUMERIC_VECTOR_MISMATCH`**, not
+vector-exact. No family hash is published on that basis.
+
+### What is still missing
+
+The four KIT tool envelopes, delivery contract, pairing declaration, sparring,
+the artifact checker, role alternation, and the public-ingress integration. The
+two KIT profile members dispatch real behaviour locally but **reach no wire** —
+widening a frozen wire literal is a schema change a later stage owns, so the
+encoder refuses to serialize them.
+
+`FIXED_ROLE` remains our only executable role convention. Alternation is a
+**pre-match convention and a de-facto pairing practice — not a book
+requirement** — and is not implemented.
