@@ -116,6 +116,8 @@ one vocabulary:
 
 - **Stage 9A-1B1 - software version authority and public SDK facade.** Created the one software-version authority at the guideline's own location and initial value, held `pyproject.toml`, `__version__` and the installed distribution metadata to it by test, and made a mismatch refuse the process locally - never coupled to any peer's version. Added `sdk/`, classified as a **public outer facade**: five operations, each a forwarding call, with the three operator command lines migrated to reach nothing but the standard library and the facade. No behaviour changed - every flag, default, exit status and banner line is what it was. **IMPLEMENTED / VERIFIED.**
 
+- **Stage 9A-1B1F - configuration version compatibility.** Closed the distinction the version work had left open: two peers agreeing on a configuration version is not the same as either of them supporting it. `domain/config_schema.py` states what this build can represent, and `NegotiatedConfig` refuses anything else at construction - so an unsupported revision is not a value this code produces, whether it arrives from an operator's launch document, a peer's proposal or the interoperability backend's local document. No configuration digest changed, no wire field was added, no peer software version is consulted, and there is no fallback. **IMPLEMENTED / VERIFIED.**
+
 ## 2. Where the project actually stands
 
 **IMPLEMENTED / VERIFIED.** Deterministic game mechanics; the protocol state

@@ -42,10 +42,17 @@ def declaration_round_trip(declaration: object) -> bool:
 
 
 def other_config() -> object:
-    """A different but valid config - not the one this round locked."""
+    """A different but valid config - not the one this round locked.
+
+    It varies the board size rather than `schema_version`: since Stage 9A-1B1F a
+    configuration at an unsupported schema version is not a representable value,
+    so that member can no longer stand in for "different but valid".
+    """
     import dataclasses
 
-    return dataclasses.replace(CONFIG, schema_version="9.9.9")
+    original = CONFIG.board_and_agents
+    board = dataclasses.replace(original, grid_size=original.grid_size + 1)
+    return dataclasses.replace(CONFIG, board_and_agents=board)
 
 
 def unagreed_result(series: SeriesRuntime) -> object:

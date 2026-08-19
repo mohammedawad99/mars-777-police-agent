@@ -5,14 +5,17 @@ the 33 Appendix-B value keys across the seven frozen sections. Nothing outside
 that core appears here - ``config_sha256`` and ``config_auth`` belong to the lock
 evidence, not to the agreed physics.
 
-This value validates **one proposed configuration**. Byte-identity with the
-opponent, counter-proposal cadence and the token-budget lifecycle are all LIVE
-concerns owned by the application layer.
+This value validates **one proposed configuration**, including whether this build
+supports its `schema_version` at all - `config_schema` owns that question, and a
+configuration this code cannot represent is therefore not a value it constructs.
+Byte-identity with the opponent, counter-proposal cadence and the token-budget
+lifecycle are all LIVE concerns owned by the application layer.
 """
 
 from dataclasses import dataclass
 
 from .config_league_sections import NetworkAndLeagueTerms, PheromoneTerms, RateLimiterTerms
+from .config_schema import require_supported_schema_version
 from .config_sections import (
     BoardAndAgentsTerms,
     InvalidConfigSectionError,
@@ -39,8 +42,7 @@ class NegotiatedConfig:
     rate_limiter_gatekeeper: RateLimiterTerms
 
     def __post_init__(self) -> None:
-        if type(self.schema_version) is not str or not self.schema_version:
-            raise InvalidConfigSectionError("schema_version must be a non-empty str")
+        require_supported_schema_version(self.schema_version)
         if type(self.agreed_between) is not tuple:
             raise InvalidConfigSectionError(
                 f"agreed_between must be a tuple, got {type(self.agreed_between).__name__}",

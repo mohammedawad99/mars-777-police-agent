@@ -39,3 +39,19 @@ structure), its **value affects `config_sha256`** ⇒ both peers must carry an
 **declaration** `schema_version` was **removed** (REMOVE-REDUNDANT, D4) — it is not
 source-required and would enlarge the Step-0 **keyed-authentication** payload
 (`"step0" ‖ core`) for no benefit (K1; NDEC-005).
+
+## Stage 9A-1B1F — local support, added
+
+The two facts above describe what the value *means* between peers. A third was
+missing: what this **build** can represent.
+
+- `SUPPORTED_CONFIG_SCHEMA_VERSIONS` in `domain/config_schema.py` names every
+  revision this code can run — today exactly `"mars777-1"`, the JDEC-003 value.
+- `NegotiatedConfig` refuses any other revision at construction, so an
+  unsupported configuration is not a value this code produces, from any source.
+- This is **local support**, not a negotiated term and not a peer contract. The
+  negotiated semantics recorded above are unchanged, `config_sha256` is
+  unchanged, and no wire field was added.
+- Two peers agreeing on an unsupported revision still cannot run it: agreement
+  is byte-identity, compatibility is representability, and the guideline's
+  startup-validation clause asks for the second.

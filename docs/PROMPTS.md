@@ -1,6 +1,6 @@
 # Prompt Register - group MaRs-777
 
-> **Status: CURRENT.** Backfilled through Stage 9A-1B1.
+> **Status: CURRENT.** Backfilled through Stage 9A-1B1F.
 > **Purpose:** The prompt-engineering log. It records the supervising-reviewer
 > prompts that drove each stage — their goal, their binding constraints, what
 > the AI got wrong, what the human correction was, and what shipped.
@@ -158,7 +158,7 @@ contain no secrets.
 
 ---
 
-## 2. Prompt engineering log (Stages 5 — 9A-1B1)
+## 2. Prompt engineering log (Stages 5 — 9A-1B1F)
 
 Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text.
 
@@ -412,6 +412,37 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
   composition modules below it, three command lines reduced to parse-request-
   classify, and structural tests holding both dependency directions.
 
+### Stage 9A-1B1F — configuration version compatibility
+
+- **Goal.** Close the one part of guideline §8.1 that the version stage had left
+  `PARTIAL`: local support for the configuration schema version.
+- **Constraints.** Do not add software-version comparison to the peer protocol.
+  Do not change `config_sha256` bytes. Do not add a KIT wire field. Do not invent
+  a rate-limit or artifact version. Resolve the supported token mechanically
+  rather than from a historical report.
+- **Finding (the distinction).** `NegotiatedConfig.schema_version` was validated
+  non-empty, hashed and mutually agreed - and never checked against anything this
+  build supports. Agreement is byte-identity between peers; compatibility is a
+  local question about representation. Two peers could agree perfectly on a
+  version neither of them supported.
+- **Finding (the value).** No supported-version constant existed in `src/` at
+  all: the token appeared only in test builders. It was resolved from the
+  project's own contract instead - `VERSIONING.md` records JDEC-003 naming
+  `mars777-1` and NDEC-004 making it a negotiated pre-match term because it sits
+  inside the signed core.
+- **Correction.** One authority, `SUPPORTED_CONFIG_SCHEMA_VERSIONS`, enforced at
+  the single point where a configuration first becomes a value - the domain
+  constructor - so no entry path can route around it and no layer duplicates it.
+  `UnsupportedConfigSchemaError` subclasses the existing section error, so every
+  caller that already classified configuration failures keeps working.
+- **Finding (a fixture, not a defect).** A test fixture built "a different but
+  valid config" by setting `schema_version` to `9.9.9`. That is no longer a
+  representable value, so the fixture varies the board size instead - its intent
+  preserved, and its failure was the first proof the authority works.
+- **Result.** An unsupported revision is refused at the domain boundary and
+  reported at the operator boundary as a local refusal naming the version. The
+  frozen configuration digest vector is unchanged.
+
 ## 3. Practices this project actually learned
 
 1. **Prove it as a process.** Every in-process proof in this project hid at
@@ -431,3 +462,6 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
    drift the clause exists to prevent.
 8. **When code moves, move the guard with it.** A structural test that fails
    because its subject moved is a test to retarget, never one to delete.
+9. **Agreement is not compatibility.** Two parties holding identical bytes is a
+   different fact from either party being able to run them, and only one of the
+   two was ever checked.
