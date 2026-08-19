@@ -13,7 +13,7 @@ simple, reversible representations are preferred.
 | **JDEC-002** | Canonical serialization params: `sort_keys=True`, `separators=(",",":")`, UTF-8, LF, no trailing newline in hashed payload; **`ensure_ascii=False`** *(Stage 4E-R9-R1 pinned the exact value here and in `CANONICALIZATION_CONTRACT.md`/NDEC-003; it was previously written only as "fixed & agreed", which left it an implementation-time choice even though PRD06-FR-005 already carried the value)*; locale-independent number formatting | Ch 5 requires "canonical, sorted keys, fixed separators, UTF-8, byte-identical"; exact params/`ensure_ascii`/line-endings unspecified | reference params vs custom | **reference-code params** + explicit `ensure_ascii`/LF rule | reproduces the book's reference hash behavior; deterministic cross-OS | **critical**: both peers must use identical params or hashes differ | correct hashing prevents false TAMPERED | cross-impl byte-identity test | medium (affects all hashes) |
 | **JDEC-003** | `schema_version` optional, informational (`"mars777-N"`); no version handshake | book prints the key but binds no value/compat rule | mandatory 1.2 / optional project value / omit | optional project value | `1.2` is illustrative; no handshake mandated | none (informational) | none | presence check | trivial |
 | **JDEC-004** | `<NN>` = 2-digit zero-padded (`g01`…`g06`) | book writes `g<NN>` without a width | 1-digit / 2-digit / 3-digit | 2-digit | lexical=numeric order; ≤10 fits 2 | filenames must match opponent's expectation | none | filename regex | low |
-| **JDEC-005** | `game_id` = opaque `[a-z0-9-]` string (e.g., `<a>-vs-<b>-<yyyyww>-<uid>`); `game_uid` short shared token | book requires uniqueness + filename derivation, not a format | freeform / structured | structured, filesystem-safe | uniqueness, no file mixing (App F §2.3) | agreed at declaration | none | uniqueness test | low |
+| **JDEC-005** | `game_id` = opaque `[A-Za-z0-9-]` string *(amended 8A-2G: was `[a-z0-9-]`; see the note below)* (e.g., `<a>-vs-<b>-<yyyyww>-<uid>`); `game_uid` short shared token | book requires uniqueness + filename derivation, not a format | freeform / structured | structured, filesystem-safe | uniqueness, no file mixing (App F §2.3) | agreed at declaration | none | uniqueness test | low |
 | **JDEC-006** | Declaration key names (hardware `os/cpu_cores/cpu_freq_ghz/ram_gb/gpu/vram_gb`, `teams.<g>.*`) | Ch 5/9 require the info, not keys | flat / nested-by-team | nested-by-team | groups per-team data cleanly | shared file → agree keys | none | schema lint | low |
 | **JDEC-007** | Log entry nesting: `entries[]` with `phase` ∈ {commit, ack, reveal}; hashed `sealed_record` is a separate object | Ch 5 names the fields/flow, not JSON layout | one-object-per-turn / event-list | event-list (`entries[]`) | maps Commit→Ack→Reveal→Audit; auditable | replay must parse same shape | must not leak nonce early | replay round-trip test | medium |
 | **JDEC-008** | Result scores: `sub_games[]` array + `cumulative{}` | Ch 9 requires per-sub-game + cumulative, not keys | flat / array+cumulative | array+cumulative | clear per-game + totals | grader parses | none | scoring test | low |
@@ -290,3 +290,27 @@ specifically; an asymmetric signature is an allowed alternative if both peers ag
 - IDs are unique JDEC-001…JDEC-018; no duplicates. `game_uid` is **not** invented —
   it is source-named (D3). JDEC-013 (keyed authentication) fixes only the **primitive**;
   the **requirement** (keyed auth with a pre-supplied key) is SOURCE, not a JDEC.
+
+## JDEC-005 format amendment (Stage 8A-2G)
+
+`game_id`'s alphabet was `[a-z0-9-]`, lowercase only. It is now `[A-Za-z0-9-]`.
+
+**Why the project may amend it at all.** `NAMING_AND_IDENTITY.md` records that
+the book **names** `game_id` and `game_uid` (Ch 9 p.95) and does **not** fix
+their internal format — "Neither is claimed lecturer-specified beyond the names
+themselves." The format is PROJECT-CONTRACT, and this is the project amending
+its own decision.
+
+**Why it had to be amended.** `group_id` is SOURCE-EXPLICIT (App E #45: exactly
+8 characters, no spaces) and ours is `MaRs-777`. The interoperability kit derives
+`game_id` as `"-vs-".join(sorted(pair))`, so our own group code appears inside it
+verbatim, uppercase included. The lowercase rule therefore refused a filename for
+a game we had actually played — discovered during the Stage 8A-2F live friendly,
+when the development evidence writer hit it against a real derived id.
+
+**What did not change.** Every safety property: a separator, a dot segment, an
+absolute prefix, a drive prefix, whitespace, a control character, a NUL or an
+empty value is still refused, and an identifier is **never** rewritten to fit —
+folding case in a filename would silently make two peers hash and compare
+different games. `game_uid`, the terms, the commitment bytes and the result
+consensus are untouched: this is a lexical rule for one identifier, nothing more.

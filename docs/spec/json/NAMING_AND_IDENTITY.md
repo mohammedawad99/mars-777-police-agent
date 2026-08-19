@@ -44,7 +44,9 @@ the shared identifier the four files carry; `game_id` is the identifier from whi
 filenames derive. Stage 1D **refutes** the idea that `game_uid` was a Stage-1C
 invention — it is SOURCE-EXPLICIT and is **kept**. The book does **not** fix their
 internal **format**, so only the format is **PROJECT-CONTRACT** (**JDEC-005**):
-each is an opaque, filesystem-safe, collision-resistant `[a-z0-9-]` string;
+each is an opaque, filesystem-safe, collision-resistant `[A-Za-z0-9-]` string
+(**amended at Stage 8A-2G** from `[a-z0-9-]`, which could not name a game whose
+id contains our own source-legal `MaRs-777` group code);
 `game_uid` is the short shared token embedded in all four files; `game_id` (used in
 filenames) may embed `game_uid` (e.g., `<a>-vs-<b>-<yyyyww>-<game_uid>`). Neither
 is claimed lecturer-specified beyond the names themselves. INV-01 binds all four

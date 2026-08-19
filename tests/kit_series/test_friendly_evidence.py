@@ -329,22 +329,21 @@ def test_each_role_contribution_has_its_own_development_filename() -> None:
     assert police.endswith("_police.json") and thief.endswith("_thief.json")
 
 
-def test_a_development_name_accepts_the_kit_game_id_our_own_group_code_produces() -> None:
-    """A real finding, pinned: the **counted** namer refuses `MaRs-777`.
+def test_the_development_bundle_shares_the_one_identifier_validator() -> None:
+    """One semantic `game_id`, one lexical rule.
 
-    `require_game_id` demands lowercase `[a-z0-9-]`, and the kit derives
-    `game_id` as `"-vs-".join(sorted(pair))` — so our own exact, case-sensitive
-    group code makes a KIT `game_id` the counted namer will not write. That rule
-    is part of the official contract and is left exactly as it is; the
-    development bundle uses its own filesystem-safe check instead.
+    Stage 8A-2F needed a separate development check because the counted namer
+    was lowercase-only and could not express a kit-derived id containing our own
+    `MaRs-777`. Stage 8A-2G amended that format - it is PROJECT-CONTRACT, not
+    source-fixed - so the second validator has no reason to exist and is gone.
+    The development *filenames* stay separate; only the id rule is shared.
     """
-    from mars777_police.app.artifact_store import InvalidArtifactNameError, require_game_id
+    from mars777_police.app.artifact_store import require_game_id
     from mars777_police.app.friendly_evidence import friendly_series_name
 
     kit_game_id = "MaRs-777-vs-sparring-local"
 
-    with pytest.raises(InvalidArtifactNameError):
-        require_game_id(kit_game_id)
+    assert require_game_id(kit_game_id) == kit_game_id
     assert friendly_series_name(kit_game_id) == f"friendly_{kit_game_id}.json"
 
 

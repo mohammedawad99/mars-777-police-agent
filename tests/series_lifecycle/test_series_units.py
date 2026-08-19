@@ -38,8 +38,12 @@ def test_the_official_filenames_are_the_frozen_patterns() -> None:
     assert result_name("g-1") == "result_g-1.json"
 
 
-@pytest.mark.parametrize("bad", ["", "../escape", "a/b", "UPPER", "with space", "dot.json"])
+@pytest.mark.parametrize("bad", ["", "../escape", "a/b", "with space", "dot.json"])
 def test_a_game_id_that_could_leave_the_root_is_refused(bad: str) -> None:
+    """`UPPER` left this list at 8A-2G: JDEC-005's format is the project's, and a
+    lowercase-only rule could not name a game containing our own `MaRs-777`.
+    Every refusal that protects the artifact root is unchanged - see
+    `test_game_id_compatibility.py` for the full traversal set."""
     with pytest.raises(InvalidArtifactNameError):
         require_game_id(bad)
 

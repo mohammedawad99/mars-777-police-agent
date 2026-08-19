@@ -15,5 +15,6 @@ for name in (
     "turn",
     "audit",
     "protocol",
+    "interop",
 ):
     sys.path.insert(0, str(TESTS / name))

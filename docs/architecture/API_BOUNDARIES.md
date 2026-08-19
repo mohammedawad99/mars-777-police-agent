@@ -673,7 +673,42 @@ series, not one.
 The kit's own result artifact is **not** mutual approval and is never read as
 such. Its unilateral write is exactly what its own banner says it is.
 
+### Identifier compatibility (Stage 8A-2G)
+
+`JDEC-005`'s `game_id` alphabet is now `[A-Za-z0-9-]`, amended from `[a-z0-9-]`.
+The book names `game_id`/`game_uid` and does not fix their format, so the format
+is the project's; `group_id` is source-explicit and ours is `MaRs-777`, and the
+kit derives `game_id` as `"-vs-".join(sorted(pair))` — so the lowercase rule
+refused a filename for a game we had played. Case is preserved end to end and an
+identifier is never rewritten: folding it would make two peers hash and compare
+different games. Every traversal refusal is unchanged, and `game_uid`, the terms,
+the commitment bytes and the result consensus are untouched.
+
+One consequence: the development bundle no longer needs its own id validator and
+shares `require_game_id`. Only its **filenames** stay separate.
+
+### The two counted blockers, classified
+
+**Keyed Step-0 authentication.** Unchanged and still required. The exact
+non-secret contract a partner would implement is in
+`docs/reference/KIT_PAIRING_HANDOFF.md`: HMAC-SHA256, a declared non-secret
+`key_id`, `b"step0"` followed immediately by the canonical JSON of the sender's
+own Step-0 core, exchanged with the pre-game greeting, key coordinated out of
+band. It rides the pinned `negotiate` **beside** `terms`, so it cannot invalidate
+`terms_signature` and needs no tool-schema change — but an unmodified kit peer
+drops unknown keys, so both sides must opt in.
+
+**Result agreement — `PARTNER_EXTENSION_REQUIRED`.** `ResultExchange.is_agreed`
+needs four facts: our digest, the peer's digest, our request sent, the peer's
+request handled. In strict mode the peer's digest arrives as the **return value**
+of `receive_control(kind=result_agreement)`. The pinned wire cannot carry that —
+a closed four-word control vocabulary, every tool answering `{"ok": true}` so no
+digest can ride the response, and a driver that never calls `receive_control` at
+all. The seam is already input-driven (`accept_peer_request` → `_verify` closes
+the gate the moment a peer digest arrives by any means), so what is missing is
+transport, not logic.
+
 ### What is still missing
 
-A counted-auth agreement with a real opponent, and the public ingress that
-fronts the group gateway for one. Neither is implemented here.
+A partner who agrees both extensions, and the public ingress that fronts the
+group gateway. Neither is implemented here.

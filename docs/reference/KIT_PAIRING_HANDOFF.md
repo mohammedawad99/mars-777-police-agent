@@ -43,24 +43,76 @@ Nothing here is a secret, a credential, or an endpoint that is live today.
    implement `subtractive_chebyshev_v1`.
 4. **Exactly six sub-games.** A short series is not a series.
 
-## Authentication — the one thing still open
+## Identifiers — case matters
+
+`game_id` is derived exactly as the kit derives it,
+`"-vs-".join(sorted([group_a, group_b]))`, **with the original case preserved**.
+Ours contains `MaRs-777`, which is source-legal (App E #45: exactly 8
+characters, no spaces) and case-sensitive. We do not fold it, and a peer that
+lowercases it will derive a different `game_id` than we do.
+
+`game_uid` is unchanged and unaffected by any of this:
+`UUID(SHA256(canonical(terms) | sorted-pair)[:16])`.
+
+Our official artifact filenames carry that `game_id` verbatim, so all fourteen
+names are derivable by either side from the pair alone.
+
+## Authentication — required for counted play
 
 The course book requires Step-0 to be cryptographically authenticated with a
-**pre-supplied key**. We implement `HMAC_SHA256` and we will not weaken it for a
-counted game.
+**pre-supplied key**. The kit's `terms_signature` is an **unkeyed content
+agreement** — anyone holding the terms and the nonce recomputes it — so it proves
+both sides read the same fourteen values and nothing about who is speaking. It
+is not a substitute, and we will not weaken this for a counted game.
 
-The kit's `terms_signature` is an **unkeyed content agreement**: anyone holding
-the terms and the nonce recomputes it, so it proves both sides read the same
-fourteen values and nothing at all about who is speaking. It is not a substitute.
+For a **development friendly** none of this is needed: we play today with no
+keyed proof and label the whole run non-counted.
 
-So:
+For **counted** play, this is the exact non-secret contract we would need a
+partner to support. Nothing here is frozen as a field name until a real partner
+agrees one.
 
-* **Development friendly** — we can play today, with no keyed proof, and we will
-  label the whole run non-counted.
-* **Counted play** — needs a keyed Step-0 proof both sides can produce and check.
-  Our preferred route is an **agreed keyed extension carried in `negotiate`**: it
-  needs no change to the game wire and no change to the signed `terms`. We are
-  open to an agreed alternative that keeps pre-supplied-key semantics.
+| | |
+|---|---|
+| Algorithm | `HMAC-SHA256`, profile token `HMAC_SHA256` |
+| Key | one pre-supplied shared secret per pairing, exchanged **out of band** before the match. Never on the wire, never in an artifact, never in this document |
+| Key identifier | a short non-secret `key_id` label each side declares, so a proof can never be read under a key it did not name |
+| Authenticated bytes | `b"step0"` immediately followed by the canonical JSON of the sender's own Step-0 core — no separator, no length prefix |
+| The core | `game_id`, `game_uid`, `times.game_start`, the **sender's own** team subtree, `token_budget_per_series` |
+| Canonical form | the same compact, sorted, `ensure_ascii=False` UTF-8 encoding the kit already uses |
+| When | with the pre-game greeting, before the first turn of the series |
+| What the peer sends | its own proof over **its own** core, tagged with its profile and `key_id` |
+| What we send | ours, the same way. Each side authenticates only its own subtree, because at that moment neither has seen the other's |
+| Failure | refused, on the record, with our `E-AUTH-FAILURE` identity. No retry as unauthenticated, and no downgrade |
+
+**How this rides the kit wire.** The pinned `negotiate` message carries pairing
+and locked-model declarations **beside** `terms` rather than inside it, so an
+agreed extra top-level key adds nothing to the signed set and cannot invalidate
+`terms_signature`. It needs no change to the game wire, no change to the tool
+schema, and no change to the required terms. One caveat, and it is the reason
+this needs agreeing rather than assuming: a peer running the kit **unmodified**
+drops unknown keys when it parses a greeting, so it will neither read our proof
+nor produce one. Both sides have to opt in.
+
+If a partner cannot carry it in `negotiate`, an out-of-band pre-match keyed proof
+is the fallback we would discuss.
+
+## Result agreement — required for counted play, and not yet carriable
+
+Our counted result is agreed, not assumed: each side independently builds the
+approval core, computes `result_sha256`, sends exactly one result agreement,
+checks the peer's digest against its own, and only on equality is
+`mutual_agreement` set true. A missing or contradictory report zeroes **both**
+teams (App E #35), which is why we will not shortcut it.
+
+The pinned four-tool surface has **no operation that can carry this**:
+`receive_control` has a closed four-word vocabulary, returns `{"ok": true}` and
+carries no digest back, and the pinned driver never calls it at all. So for a
+counted series a partner would need to agree a way to exchange the two digests —
+the same conversation as the keyed proof above.
+
+For a **development friendly** this is simply absent, and we say so in our own
+evidence rather than inventing an agreement.
 
 ## What we have demonstrated
 

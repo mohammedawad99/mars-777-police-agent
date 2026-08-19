@@ -14,13 +14,12 @@ turn a real defect into a plausible-looking file.
 """
 
 from ..domain.terminal import Outcome
-from .artifact_store import ArtifactDocument
+from .artifact_store import ArtifactDocument, require_game_id
 from .friendly_evidence import (
     ABSENT,
     EVIDENCE_CLASS,
     FRIENDLY_PREFIX,
     SERIES_LENGTH,
-    require_development_id,
     sub_game_document,
 )
 from .friendly_evidence_values import FriendlySubGameEvidence
@@ -33,7 +32,7 @@ from .series_record import cumulative_of, outcome_line
 
 def friendly_contribution_name(game_id: str, role: KitRole) -> str:
     """`friendly_<game_id>_<role>.json` - one per role backend, written by it."""
-    return f"{FRIENDLY_PREFIX}_{require_development_id(game_id)}_{role.value}.json"
+    return f"{FRIENDLY_PREFIX}_{require_game_id(game_id)}_{role.value}.json"
 
 
 def contribution_document(

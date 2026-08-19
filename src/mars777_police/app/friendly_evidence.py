@@ -22,13 +22,12 @@ alternation is a number no contract fixes, so none is published: the rows say
 which side we played."""
 
 from dataclasses import dataclass
-from string import ascii_letters, digits
 
 from .artifact_store import (
     ArtifactDocument,
     ArtifactStorePort,
-    InvalidArtifactNameError,
     StoredArtifact,
+    require_game_id,
 )
 from .friendly_evidence_values import FriendlySeriesEvidence, FriendlySubGameEvidence
 from .interop_profiles import SeriesConvention
@@ -46,30 +45,15 @@ FRIENDLY_PREFIX = "friendly"
 
 SERIES_LENGTH = 6
 
-_DEVELOPMENT_SAFE = frozenset(ascii_letters + digits + "-_.")
-"""Filesystem-safe, and deliberately **not** the counted rule.
-
-`require_game_id` demands lowercase `[a-z0-9-]`, and the kit derives `game_id`
-as `"-vs-".join(sorted(pair))` - so our own case-sensitive `MaRs-777` produces a
-KIT `game_id` the counted namer refuses. That rule is the official contract's
-and is left exactly where it is; this checks its own names instead."""
-
-
-def require_development_id(game_id: str) -> str:
-    """Return *game_id* once it is safe in a filename, or refuse it."""
-    if not game_id or not _DEVELOPMENT_SAFE.issuperset(game_id) or game_id.startswith("."):
-        raise InvalidArtifactNameError(f"{game_id!r} is not a safe development identifier")
-    return game_id
-
 
 def friendly_series_name(game_id: str) -> str:
     """`friendly_<game_id>.json` - one per development series."""
-    return f"{FRIENDLY_PREFIX}_{require_development_id(game_id)}.json"
+    return f"{FRIENDLY_PREFIX}_{require_game_id(game_id)}.json"
 
 
 def friendly_sub_game_name(game_id: str, sub_game: int) -> str:
     """`friendly_<game_id>_gNN.json` - one per sub-game actually played."""
-    return f"{FRIENDLY_PREFIX}_{require_development_id(game_id)}_g{sub_game:02d}.json"
+    return f"{FRIENDLY_PREFIX}_{require_game_id(game_id)}_g{sub_game:02d}.json"
 
 
 def sub_game_document(row: FriendlySubGameEvidence) -> ArtifactDocument:

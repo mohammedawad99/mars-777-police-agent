@@ -7,13 +7,26 @@ patterns and JDEC-004 fixes the two-digit `g<NN>` - so it belongs beside the por
 rather than inside whichever adapter happens to write bytes.
 
 **Names are derived, never accepted.** A caller supplies a `game_id` and a
-sub-game, and the identifier is checked against the frozen `[a-z0-9-]` alphabet
-before it can reach a path: a separator, a dot segment or an absolute prefix
-cannot survive that check, so no `game_id` can escape the artifact root.
+sub-game, and the identifier is checked against the frozen `[A-Za-z0-9-]`
+alphabet before it can reach a path: a separator, a dot segment, an absolute
+prefix, whitespace or a control character cannot survive that check, so no
+`game_id` can escape the artifact root.
+
+**The alphabet is case-preserving, and that is a correction.** JDEC-005 was
+`[a-z0-9-]`, and the book fixes only the *names* `game_id`/`game_uid`, never
+their format (`NAMING_AND_IDENTITY.md`) - so the format is the project's to
+amend. It had to be: `group_id` is SOURCE-EXPLICIT (App E #45, exactly 8
+characters, no spaces) and ours is `MaRs-777`, while a kit-derived `game_id` is
+`"-vs-".join(sorted(pair))` and therefore contains that group code verbatim. The
+lowercase rule could not name a game we had actually played. Nothing is folded
+to fit: an identifier is refused or returned exactly as given, because a
+filename rule that quietly rewrote identity would make two peers hash and
+compare different games.
 """
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from string import ascii_letters, digits
 from typing import Final, Protocol
 
 from ..domain.config_model import FIRST_SUB_GAME, FIXED_NUM_GAMES
@@ -22,7 +35,7 @@ from .protocol_values import Sha256Digest
 ArtifactDocument = Mapping[str, object]
 """One official artifact as JSON-native values, before it is serialized."""
 
-_SAFE: Final[frozenset[str]] = frozenset("abcdefghijklmnopqrstuvwxyz0123456789-")
+_SAFE: Final[frozenset[str]] = frozenset(ascii_letters + digits + "-")
 """JDEC-005's identifier alphabet; anything else is refused, never sanitised."""
 
 
@@ -62,8 +75,8 @@ def require_game_id(game_id: str) -> str:
         raise InvalidArtifactNameError("game_id must not be empty")
     if not _SAFE.issuperset(game_id):
         raise InvalidArtifactNameError(
-            "game_id must be lowercase [a-z0-9-]; separators, dots and uppercase"
-            " are refused rather than rewritten",
+            "game_id must be [A-Za-z0-9-]; separators, dots, whitespace and control"
+            " characters are refused rather than rewritten",
         )
     return game_id
 
