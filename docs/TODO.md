@@ -206,6 +206,8 @@ tracked once, under Pending.
 
 - [x] **Stage 8A-2G — counted identity + artifact compatibility.** Amended **JDEC-005**'s `game_id` alphabet to `[A-Za-z0-9-]` (the book fixes the *names*, not the format), so the official namer can express a kit-derived id containing our own source-legal `MaRs-777`. Case preserved end to end, all traversal refusals kept and now pinned explicitly, `game_uid` and every hash untouched, 14 unique official names proved for a real kit id. Dropped the duplicate development id validator. Classified the second blocker: result agreement is **PARTNER_EXTENSION_REQUIRED** (the pinned wire has no digest return path), and documented the exact non-secret keyed-auth handoff contract. **READY_FOR_PUBLIC_FRIENDLY**; **NOT_READY_FOR_COUNTED_NEGOTIATION** until a partner agrees both extensions.
 
+- [x] **Stage 8B-P — public pre-partner readiness.** Wired the two components that had no production caller (group gateway, `PublicIngressPort`) behind `KitPublicLauncher`, plus two operator commands: `kit_gateway_main` (public front door) and `kit_backend_main` (one role backend, own repo). Framework mechanics moved into `transport` rather than widening the confinement allowlist. **Proved live through a real HTTPS tunnel**: four pinned tools, g01→police / g02→thief routing, URL unchanged, counted readiness still refused, clean teardown. Overhead ~7.8 ms per hop vs a 180 s turn budget — documented, not optimised. Runbook and partner handoff written. **READY_FOR_PARTNER**; no real opponent exists yet.
+
 _Phases 1 and 2 are specification and requirements only; all seven PRDs remain
 APPROVED — PHASE 2 LOCKED. Phase 3 implementation is well advanced: the
 deterministic domain, the protocol state machine, Commit-Reveal cryptography,

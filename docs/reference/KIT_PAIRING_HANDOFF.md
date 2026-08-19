@@ -125,3 +125,36 @@ directions for all six. The pinned artifact checker passes over the peer's set.
 
 No authentication secret, no tunnel credential, no private backend URL, and no
 historical endpoint. The live group URL is exchanged when a match is scheduled.
+
+## Copy-paste message for another group
+
+> **MaRs-777 — interoperability offer (development friendly)**
+>
+> `group_id`: `MaRs-777` (exact, case-sensitive)
+>
+> We implement the shared interoperability kit
+> (`Imreec/copthief-league-protocol`) pinned at
+> `ad6557626587e09146af4283a5e808e7001343c5`, wire `reference-v3`.
+>
+> **Tools** (FastMCP over HTTPS): `negotiate`, `receive_turn`, `submit_audit`,
+> `receive_control`. Note the asymmetry: `submit_audit` takes `payload`, the
+> other three take `message`.
+>
+> **Series**: exactly six sub-games, roles alternate every sub-game, the thief
+> moves first within each sub-game. **We need to agree who takes which side in
+> sub-game 1** — that single choice fixes the whole schedule for both of us.
+>
+> **Terms**: we need the fourteen flat terms byte-exact on both sides; they are
+> what the signature and the `game_uid` derive from.
+>
+> **Endpoint**: one stable group URL, given to you live at match time. It is
+> discovered fresh for each run, so please do not cache it.
+>
+> **First objective**: a **non-counted friendly**. Nothing about it is reported
+> or scored, on either side.
+>
+> **Afterwards, if you want a counted series**, there are exactly two things to
+> settle: a keyed Step-0 proof (we use HMAC-SHA256 with a pre-supplied key
+> exchanged out of band), and a way to exchange the two final `result_sha256`
+> digests — the pinned four-tool wire has no operation for either, so both need
+> an agreed extension. We are happy to work to whatever you can support.

@@ -708,7 +708,47 @@ all. The seam is already input-driven (`accept_peer_request` → `_verify` close
 the gate the moment a peer digest arrives by any means), so what is missing is
 transport, not logic.
 
+### Public deployment (Stage 8B-P)
+
+Two things existed with no production caller: the group gateway and the
+provider-neutral `PublicIngressPort`. `KitPublicLauncher` is the seam, and it is
+deliberately thin — what a public endpoint *is* stays with the existing policy
+(HTTPS, no userinfo, no query or fragment, the exact FastMCP path, a globally
+routable host), and the launcher owns only the order things happen in and the
+guarantee that both are released.
+
+```
+   partner  ──HTTPS──▶  ngrok agent  ──▶  group gateway (public tools)
+                                             │        └── admin surface, loopback only
+                                             ├──▶ Police backend   (private, own repo/venv)
+                                             └──▶ Thief  backend   (private, own repo/venv)
+```
+
+Operator commands — three processes, because the two role backends are separate
+repositories and stay that way:
+
+* `python -m mars777_police.kit_backend_main …` — one per role, in its own repo
+* `python -m mars777_police.kit_gateway_main …` — the group's public front door
+
+**One endpoint is advertised.** The banner prints the group URL and nothing
+else: no private backend address, no admin port, no key, no token. The public
+endpoint is discovered fresh every run and forgotten on close — a remembered
+hostname is a route to somebody else's tunnel.
+
+**Measured live**, through the real HTTPS URL: exactly the four pinned tools with
+the correct argument names (`submit_audit` → `payload`), `g01` routed to the
+police backend, settlement signalled, `g02` routed to the thief backend, the URL
+unchanged throughout, and the real counted-readiness authority still refusing
+while the tunnel was up.
+
+**Overhead** (local, 200 calls each): 6.4 ms direct to a backend, 14.2 ms through
+the gateway — about **7.8 ms** for the extra hop, against a 180 s turn budget.
+Decode 3.1 µs, encode 0.3 µs per turn; ~80 MB peak RSS per gateway process.
+Documented and left alone: optimising 0.004% of a turn budget would be premature.
+
 ### What is still missing
 
-A partner who agrees both extensions, and the public ingress that fronts the
-group gateway. Neither is implemented here.
+A real partner. Nothing in the public path is waiting on us: what remains is an
+agreed keyed Step-0 proof and an agreed result-digest exchange, both of which
+need a partner to opt in, and both of which are specified in
+`docs/reference/KIT_PAIRING_HANDOFF.md`.
