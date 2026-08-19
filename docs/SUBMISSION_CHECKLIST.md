@@ -1,30 +1,114 @@
-# Submission Checklist - group MaRs-777 (POLICE)
+# Submission checklist — group MaRs-777 (POLICE)
 
-> **Status: DRAFT.** All final-project items are **incomplete**. This is a
-> foundation-stage placeholder.
+**Status: CURRENT.** Last verified at Stage 9A-1A against commit
+`23a6db8` (police) and `7597c14` (thief), both green in CI on the exact SHA.
+
+Every row carries one status and its evidence. This is a working gate, not a
+ceremony: a row moves to `VERIFIED` only when the thing is in the repository and
+green in CI on the exact commit.
+
+| Status | Meaning |
+|---|---|
+| `VERIFIED` | done, in the repository, evidenced |
+| `PENDING` | real remaining work, ours to do |
+| `PARTNER_DEPENDENT` | cannot be completed without another group's real agent |
+| `FINAL_FREEZE_PENDING` | deliberately held until the submission freeze |
+| `NOT_APPLICABLE_WITH_REASON` | genuinely does not apply, with the reason stated |
 
 ## Delivery
-- [ ] Both repositories created on GitHub under mohammedawad99.
-- [ ] Collaborator Rawey7 added (when instructed).
-- [ ] Exact competition commit tagged and reproducible.
 
-## Compliance
-- [ ] Full compliance with book v3.0.0 verified against Appendix E.
-- [ ] All Appendix F numeric values sourced with citations.
-- [ ] Four mandatory JSON document types implemented per spec.
-- [ ] Cryptographic / replay / reporting requirements met.
+| Item | Status | Evidence |
+|---|---|---|
+| Both repositories exist on GitHub under `mohammedawad99` | `VERIFIED` | private repos `mars-777-police-agent`, `mars-777-thief-agent` |
+| Collaborator `Rawey7` added | `PENDING` | awaiting an explicit instruction; no collaborator action is taken without one |
+| Exact competition commit tagged and reproducible | `FINAL_FREEZE_PENDING` | 0 tags by design until Stage 9C |
+| Working tree clean, index empty, `HEAD = origin/main = ls-remote` | `VERIFIED` | checked mechanically at every stage entry |
+| Branch protection / rulesets | `NOT_APPLICABLE_WITH_REASON` | unavailable for private repositories on the current GitHub plan (Stage 0D); a platform limitation, not an omission |
 
-## Engineering
-- [ ] Game logic (PRD-01).
-- [ ] Local FastMCP protocol (PRD-02).
-- [ ] Baseline strategy (PRD-03).
-- [ ] Language & scent (PRD-04).
-- [ ] Public network (PRD-05).
-- [ ] Security & cryptography (PRD-06).
-- [ ] Reporting, GUI, replay (PRD-07).
-- [ ] CI green on ubuntu-latest and windows-latest.
-- [ ] Coverage >= 90% maintained.
+## Compliance with the project book
+
+| Item | Status | Evidence |
+|---|---|---|
+| Full 160-page extraction with page coverage | `VERIFIED` | `docs/spec/PAGE_COVERAGE.md` (160/160) |
+| Requirement catalog | `VERIFIED` | `docs/spec/REQUIREMENT_CATALOG.md` — **91** requirements |
+| Appendix E crosswalk | `VERIFIED` | 55/55 entries (45 MUST, 9 MUST NOT, 1 SHOULD) |
+| Appendix F numeric values sourced with citations | `VERIFIED` | `docs/spec/APPENDIX_F_NUMERIC_INVENTORY.md` — 32 rows (14 FIXED / 9 MINIMUM / 9 NEGOTIABLE) |
+| Four mandatory JSON document types | `VERIFIED` | config / declaration / log / result contracts implemented; a complete series writes **14** official files |
+| Commit-reveal cryptography | `VERIFIED` | sealed record, CSPRNG nonce, recomputation, `TAMPERED` on mismatch, golden vectors |
+| Keyed Step-0 and configuration authentication | `VERIFIED` | implemented and covered; never downgraded for convenience |
+| Game rules — movement, barriers, capture, scoring, terminal | `VERIFIED` | deterministic engine, 100% covered |
+| Exactly six sub-games per counted series | `VERIFIED` | structurally enforced; a seventh sub-game is not representable |
+| Public network / tunnel | `VERIFIED` | demonstrated end to end on one stable public route with proven teardown |
+| **Replay Viewer** (`REPLAY-001`) | `PENDING` | an audit-time replay **engine** exists; a user-facing **viewer** does not |
+| **GUI** (`GUI-001/002/003`) | `PENDING` | not implemented |
+| **Gmail reporting** (`REPORT-001`) | `PENDING` | not implemented |
+| **Rate-limit enforcement** (`REPORT-003`) | `PENDING` | terms negotiated, floor-validated and locked; never applied at call time |
+| Counted match against another group | `PARTNER_DEPENDENT` | every run so far used a synthetic non-counted opponent or an explicitly friendly kit run |
+
+## Engineering quality
+
+| Item | Status | Evidence |
+|---|---|---|
+| Ruff lint — zero violations | `VERIFIED` | CI gate |
+| Ruff format check | `VERIFIED` | CI gate |
+| `mypy --strict` | `VERIFIED` | CI gate |
+| Full test suite green | `VERIFIED` | CI on the exact SHA, Ubuntu and Windows |
+| Coverage above the gate | `VERIFIED` | measured **100%**; `fail_under = 90` |
+| `uv build` | `VERIFIED` | CI gate |
+| `uv.lock` committed; `uv sync --frozen` clean | `VERIFIED` | 79 packages checked |
+| `src/**` ≤ 150 code lines per file | `VERIFIED` | 0 violations across 236 files |
+| `tests/**` ≤ 150 code lines per file | `PENDING` | **13** files exceed it; the guideline applies the rule to tests too |
+| CI enforces the line rule automatically | `PENDING` | measured by hand at each audit; no CI guard yet |
+| CI green on `ubuntu-latest` **and** `windows-latest` | `VERIFIED` | both, every push |
+
+## Documentation
+
+| Item | Status | Evidence |
+|---|---|---|
+| `README.md` as a full user manual | `VERIFIED` | install, environment, usage in three modes, CLI flags, configuration, troubleshooting, testing, contributing, security, license & credits, known limitations |
+| Dec-POMDP formulation in the README | `VERIFIED` | README §1.1 |
+| FastMCP description in the README | `VERIFIED` | README §10 |
+| Strategy description in the README | `VERIFIED` | README §11 |
+| Companion-repository link | `VERIFIED` | README header and §1.2 |
+| Learning curve | `PENDING` | nothing learns yet; will follow the Stage-9B experiments or not at all |
+| Screenshots | `PENDING` | blocked on the GUI; no screenshot is fabricated |
+| `docs/PRD.md`, `docs/PLAN.md`, `docs/TODO.md` | `VERIFIED` | all three current |
+| Per-mechanism PRDs | `VERIFIED` | `docs/prd/PRD-01…07` |
+| Architecture documentation | `VERIFIED` | 21 documents under `docs/architecture/` |
+| Architecture **diagrams** | `PENDING` | no diagram of any kind is committed yet |
+| Prompt book | `VERIFIED` | `docs/PROMPTS.md` backfilled through Stage 9A-0, honestly labelled |
+| Guideline alignment document | `VERIFIED` | `docs/GUIDELINE_ALIGNMENT.md`, written against the actual v3.00 PDF |
+| Cost analysis | `VERIFIED` | `docs/COSTS.md`, measured |
+| Decision log | `VERIFIED` | `docs/DECISIONS.md` |
+
+## Configuration and security
+
+| Item | Status | Evidence |
+|---|---|---|
+| `.env` git-ignored | `VERIFIED` | `.gitignore` |
+| `.env.example` committed with placeholders only | `VERIFIED` | added at Stage 9A-1A |
+| No secrets in the repository | `VERIFIED` | secret scan clean at every stage |
+| Secrets from environment only, unprintable in logs | `VERIFIED` | `AuthSecret.__repr__` / `__str__` render `<withheld>` |
+| Tunnel credential never read by this project | `VERIFIED` | the ngrok agent uses the operator's own configuration |
+| `SECURITY.md` and a threat model | `VERIFIED` | `SECURITY.md`; `docs/architecture/SECURITY_ARCHITECTURE.md` (15 threats) |
+| Versioned configuration files | `PENDING` | the binding configuration is negotiated and locked, not shipped; a local versioned configuration surface does not exist yet |
+| Software version authority starting at `1.00` | `PENDING` | `version = "0.0.0"` in `pyproject.toml` and `__init__.py`; a configuration **schema** version exists and is covered by the mutual config-digest comparison, but there is no software-version authority and no boot-time version validation |
+
+## Research and analysis
+
+| Item | Status | Evidence |
+|---|---|---|
+| Systematic parameter study | `PENDING` | Stage 9B |
+| Sensitivity analysis | `PENDING` | Stage 9B |
+| Analysis notebook | `PENDING` | Stage 9B |
+| Result charts | `PENDING` | Stage 9B |
+| Token cost table | `NOT_APPLICABLE_WITH_REASON` | the shipped path uses no model; measured consumption is a structural **0** (`docs/COSTS.md` §1) |
 
 ## Honesty
-- [ ] No fabricated performance, coverage, or win-rate claims.
-- [ ] All rules / values cited to the book.
+
+| Item | Status | Evidence |
+|---|---|---|
+| No fabricated performance, coverage or win-rate claim | `VERIFIED` | every figure in the documentation is measured and reproducible |
+| Development evidence cannot be mistaken for counted evidence | `VERIFIED` | `friendly_` names, `evidence_class: DEVELOPMENT_EVIDENCE`, `counted_eligible: false`, `ABSENT` where authentication and mutual agreement did not happen |
+| Every rule and value cited to the book | `VERIFIED` | `docs/spec/`, `docs/REQUIREMENTS_TRACEABILITY.md` |
+| Stopped stages and rejected candidates recorded, not hidden | `VERIFIED` | Stage 8A-2 stopped with zero changes; the thief competitive candidate is recorded as **rejected** |

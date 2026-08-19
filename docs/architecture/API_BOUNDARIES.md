@@ -247,7 +247,7 @@ Consequences, recorded so no later stage mistakes one for the other:
   stays 21** - the series driver introduces no port, and every collaborator it uses is an
   existing runtime owner.
 - **The permanent CLI reaches the same port at Stage 6C-C2.** `AutonomousBoot`
-  builds the one `SeriesDriver` a process runs, so a real `python -m …` process calls
+  builds the one `SeriesDriver` a process runs, so a real `uv run python -m …` process calls
   `StrategyPort` once per own turn for six sub-games. **The register stays 21**: boot
   adds no port, and `ArtifactStorePort` and `TokenAccountingPort` were already
   registered - it merely supplies their production implementations.
@@ -510,7 +510,7 @@ and ignored: that is the kit's declared extension seam, and it reaches no
 semantic value, so it can mutate nothing.
 
 **Two surfaces, and a process registers exactly one.** `ExternalMode` is chosen
-out of band — `python -m mars777_police --external-mode KIT_CORE_V1` — before the
+out of band — `uv run python -m mars777_police --external-mode KIT_CORE_V1` — before the
 server is registered and before the client exists. There is no auto-detection,
 no key sniffing, no "try strict then KIT", and no downgrade after a failure:
 each of those would turn an integrity failure into a silent compatibility story.
@@ -727,8 +727,8 @@ guarantee that both are released.
 Operator commands — three processes, because the two role backends are separate
 repositories and stay that way:
 
-* `python -m mars777_police.kit_backend_main …` — one per role, in its own repo
-* `python -m mars777_police.kit_gateway_main …` — the group's public front door
+* `uv run python -m mars777_police.kit_backend_main …` — one per role, in its own repo
+* `uv run python -m mars777_police.kit_gateway_main …` — the group's public front door
 
 **One endpoint is advertised.** The banner prints the group URL and nothing
 else: no private backend address, no admin port, no key, no token. The public

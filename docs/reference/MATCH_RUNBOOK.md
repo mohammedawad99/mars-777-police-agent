@@ -32,10 +32,10 @@ available: see the two open items at the end.
 **Start, in this order**
 
 1. Police backend, in the police repo:
-   `python -m mars777_police.kit_backend_main --launch <doc> --port <private> --opponent <their public url> --gateway-admin http://127.0.0.1:<admin>/mcp --first-role <police|thief>`
+   `uv run python -m mars777_police.kit_backend_main --launch <doc> --port <private> --opponent <their public url> --gateway-admin http://127.0.0.1:<admin>/mcp --first-role <police|thief>`
 2. Thief backend, in the thief repo, same shape with its own private port.
 3. The group front door, in either repo:
-   `python -m mars777_police.kit_gateway_main --police-endpoint <private> --thief-endpoint <private> --ngrok <path> --first-role <police|thief>`
+   `uv run python -m mars777_police.kit_gateway_main --police-endpoint <private> --thief-endpoint <private> --ngrok <path> --first-role <police|thief>`
 4. Read the **public endpoint** off the banner and send it to the partner. It is
    discovered fresh every run; never reuse yesterday's.
 

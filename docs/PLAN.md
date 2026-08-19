@@ -1,15 +1,31 @@
 # Project Plan - group MaRs-777 (POLICE)
 
-> **Status: DRAFT.**
+> **Status: CURRENT.** Last reconciled at Stage 9A-1A.
 > **Purpose:** Sequence the work from foundation to a compliant, competitive
-> POLICE agent.
+> POLICE agent, and state where that work actually stands.
 > **Authoritative source:** book v3.0.0 (`.project-spec/police_thief_p2p.pdf`);
 > Appendix E (rules/sanctions); Appendix F (numeric values).
-> **To extract later:** the concrete milestones and acceptance criteria implied
-> by the book once the full 160-page extraction is done.
 > **Note:** No requirement is approved merely because this file exists.
 
-## Phases (provisional)
+## How to read this file
+
+Section 1 is the **historical record**: what was attempted, in order, including
+the stages that were stopped before any code was written. It is not rewritten as
+the work advances — a plan that pretends every capability existed from the
+beginning is worthless as evidence.
+
+Section 2 is the **current state**, and section 3 the **forward plan**. Both use
+one vocabulary:
+
+| Label | Meaning |
+|---|---|
+| `IMPLEMENTED / VERIFIED` | in the repository, covered by tests, green in CI on the exact commit |
+| `CURRENT` | the stage being worked on now |
+| `PLANNED` | approved direction, not started |
+| `PARTNER_DEPENDENT` | cannot be completed without another group's real agent |
+| `FINAL_SUBMISSION_PENDING` | deliberately held until the submission freeze |
+
+## 1. Historical record
 
 - **Stage 0A - Environment audit.** Complete.
 - **Stage 0B / 0B.1 - Local foundation + evidence audit.** Complete.
@@ -77,11 +93,75 @@
 - **Stage 5 - Production application runtime integration.** **In progress**; 5-R1...5-R8 delivered. 5-R1 turn protocol runtime; 5-R2 audit runtime; 5-R3 concrete `PeerOperations`; 5-R4 outbound peer runner; 5-R5 `infra` composition root (D3/D4); 5-R6 BOOT, shutdown and entrypoint; 5-R7 production-owned end-to-end proof. **[Stage 5-R1-R1]** The Stage 5-R1 blocker `TURN-PROTOCOL-RUNTIME: BLOCKED-BY-UNFROZEN-SEMANTICS` is **RESOLVED** - it was a derived documentation ambiguity, not an unfrozen source semantic. Supervising review re-checked the book: Ch 5 §5.3.2 / Figure 6 and Ch 5 §5.4 place commitment recomputation at the **final audit**, after the nonce (event 11) and the full audit material carrying `state` and `intent` (event 12). **Reveal-time hash recomputation is NOT REQUIRED and NOT POSSIBLE by design**; **final-audit hash recomputation is SOURCE-REQUIRED**. `PROTOCOL_TIMELINE.md` event 7 said "recompute vs `H_commit`" under a column named *Later verified*, which read as live enforcement; it now states the deferral explicitly. No primitive, message, sealed field, error identity or register changed. **Stage 5-R1 is READY TO RESUME** - it implements turn ordering, cursor/phase/staleness enforcement and live legality dispatch, and performs no hash verification; that belongs to Stage 5-R2's audit runtime.
 - **Stage 5-R8 - scent pre-game model contract.** **CLOSED / COMMITTED / CI-GREEN** across seven checkpoints: scent domain, model foundation, proposal codec, strict agreement, cryptographic lock, series freeze and config-artifact evidence. The complete agreed model is exchanged on the existing `ConfigProposal`, compared three independent ways, bound into the authenticated `ConfigLockContext` by its own `scent_model_sha256`, frozen for `g01...g06`, and persisted with the config artifact - with the 35-member `NegotiatedConfig` and the meaning of `config_sha256` unchanged. Recorded as **C-14** (the gap) and **JDEC-017** (the representation). The traceability closure that followed is documentation-only. **Reveal V2 / live distributed scent is the next implementation surface and is NOT STARTED.**
 - **Stage 4E-R18-R2 - Independent external network + real-opponent readiness.** **DEFERRED, NOT CANCELLED.** Its requirements and evidence stand unchanged; it now follows Stage 5 and the later token-security gate rather than preceding them, because an independent-network and real-opponent proof needs an executable production agent.
-- **Stage 2 - Game logic & movement legality.** Pending implementation (PRD-01, locked).
-- **Stage 3 - Local FastMCP protocol.** Pending (PRD-02).
-- **Stage 4 - Baseline strategy.** Pending (PRD-03).
-- **Stage 5 - Language & scent.** Pending (PRD-04).
-- **Stage 6 - Public network.** Pending (PRD-05).
-- **Stage 7 - Security & cryptography.** Pending (PRD-06).
-- **Stage 8 - Reporting, GUI, replay.** Pending (PRD-07).
-- **Stage 9 - Submission delivery.** Pending.
+- **Stage 6A - PRD-03 baseline strategy contract and design lock.** Read-only source and contract work; no code.
+- **Stage 6B - PRD-03 baseline strategy implementation.** Tests first. A legal, deterministic action chosen from own position, the public board and the negotiated terms alone - no opponent position, no LLM, no randomness. **IMPLEMENTED / VERIFIED.**
+- **Stage 6C-A / 6C-A-R1 - autonomous game owner contract, design lock and lockstep reconciliation.** Documentation only.
+- **Stage 6C-B - autonomous natural sub-game.** `SubGameDriver` runs the real lockstep loop and derives the end event from `domain.terminal`; two real agents play a whole sub-game to a natural terminal with no fixture supplying an action or an outcome. **IMPLEMENTED / VERIFIED.**
+- **Stage 6C-C1 / 6C-C1-R1 / 6C-C1-R2 - exact-six autonomous production series.** `SeriesDriver` negotiates and locks a config per sub-game, closes each through the final-nonce / audit / semantic-review stack, agrees the result with the peer and persists it - exactly `g01`…`g06` and the fourteen official files. **IMPLEMENTED / VERIFIED.**
+- **Stage 6C-C2 (B / R1 / R2 / R3) - permanent autonomous CLI boot.** The shipped CLI serves, dials the opponent with a bounded startup budget, exchanges Step-0, runs exactly one `SeriesDriver` and stops. Proved as **real OS processes**, not an in-process harness - which is what exposed three defects the in-process proof had hidden (round re-opening destroying an early proposal, closing a sub-game without the peer's audit disclosure, and Step-0 having no awaitable moment). Each was fixed at its owner, none by weakening a guard. **IMPLEMENTED / VERIFIED.**
+- **Windows exact-six investigation - CLOSED.** A native Windows stall was traced through the event loop, the HTTP request body path and the MCP session handoff; the root cause was a session read deadline that was not refreshed after the config lock. Fixed at its owner; the residual native limitation is isolated in its own CI job so it stays visible instead of being hidden by a skip.
+- **Stage 7B - deterministic natural-language hint channel.** Every turn seals a truthful pre-written sentence chosen by code: zero tokens, no network, no model. A validator owns every outgoing hint - Unicode NFC, deterministic word counting against the **negotiated** `hint_max_words`, and a narrow detector that refuses direct coordinate syntax while leaving ordinary numeric prose sayable. **IMPLEMENTED / VERIFIED.**
+- **Stage 7C - belief-level scent interpretation.** The emissions the opponent disclosed are folded, by the existing physics under the locked model, into a `ScentBelief` the strategy reads. It is evidence about the environment, never the opponent's position, and it decides only where the accessibility objective ties. **IMPLEMENTED / VERIFIED.**
+- **Stage 7D-B - competitive barrier policy.** Production composes `CompetitiveStrategy`: the baseline's move, displaced by a lawful barrier only when the scent evidence for that placement is strictly stronger than the evidence where the baseline would have gone. It never declares a capture. **PROJECT-DERIVED**, promoted on a development, non-counted benchmark (0 → 12 captures over 140 deterministic scenarios); `BaselineStrategy` stays shipped as the frozen reference. **IMPLEMENTED / VERIFIED.**
+- **Stage 8A-1R / 8A-1S - interoperability kit core (non-transport).** Implemented against the pinned kit commit `ad65576`: its canonical form, its commitment construction with the nonce **outside**, `game_id`/`game_uid`, the terms digest, spaced result consensus, and an evidence-layered external audit in which missing evidence is never tampering and an undecidable binding check is never clean. **IMPLEMENTED / VERIFIED.**
+- **Stage 8A-1T - kit transport envelopes.** The pinned kit wire became a **second envelope profile** selected before boot, never negotiated and never inferred from a message. **IMPLEMENTED / VERIFIED.**
+- **Stage 8A-2 - fixed-role kit series. STOPPED with zero repository changes.** The stage assumed the pinned harness could run a six-sub-game series with fixed roles. It cannot: it alternates roles every sub-game by construction. The 8A-1T report had claimed otherwise, and that claim was **wrong**; the correction is recorded rather than worked around. No code was written.
+- **Stage 8A-2R - role-split alternation, terminal settlement, full kit friendly.** One stable group URL routes to a police backend and a thief backend through a gateway that does routing only; neither repository became a dual-role agent. Six live sub-games were played against the pinned kit. A live settlement divergence - we settled `CAPTURE`, the peer settled `timeout` - was root-caused to our own defect: the self-capture rule was being applied to the **police**, although `BAR-004` lets the police place a barrier on its own cell and stand on a blocked one, so a lawful placement was manufacturing a capture. Fixed at the rule, plus the missing terminal settlement signal. **IMPLEMENTED / VERIFIED.**
+- **Stage 8A-2F - development evidence artifact path.** A friendly, non-counted run now leaves evidence that is **structurally incapable** of impersonating counted evidence: `friendly_` names, `evidence_class: DEVELOPMENT_EVIDENCE`, `counted_eligible: false`, and `ABSENT` recorded where counted authentication and mutual agreement did not happen. No counted fact was fabricated to preserve a filename. **IMPLEMENTED / VERIFIED.**
+- **Stage 8A-2G - counted identity and artifact compatibility.** The project-owned identifier format (JDEC-005) was **amended** to admit the kit's `game_id` alphabet rather than silently lower-casing the frozen `GROUP_CODE`, and result agreement gained an explicit classification. **IMPLEMENTED / VERIFIED.**
+- **Stage 8A-2G-CI - exact-SHA CI recovery.** No code change was authorized. The failing runs were not a code failure: GitHub had blocked the account for a billing reason. The existing runs were re-run by id once billing was fixed, and both exact SHAs are green.
+- **Stage 8B-P - public production readiness without a partner.** The group gateway and the public ingress adapter, both previously uncalled from production, were wired behind one public route with a ten-check readiness gate and proven teardown. The framework-confinement test was **not** widened to accommodate the launcher; the mechanics moved into the transport package instead. **IMPLEMENTED / VERIFIED.**
+- **Stage 9A-0 - academic excellence gap audit.** Read-only. Produced the master gap matrix against the book, the professional-software guideline and the repository's own contracts, with **zero repository changes**.
+- **Stage 9A-1A - academic truth and guideline foundation closure.** Documentation and hygiene only, against the lecturer's actual guideline v3.00. Reconciled the front-door documents with the repository's real state, backfilled the prompt book, added `.env.example` and `docs/PRD.md`, and produced `docs/GUIDELINE_ALIGNMENT.md`, a complete version-authority audit, an SDK-equivalence audit, a Gatekeeper-equivalence audit and a correct code-line measurement. **CURRENT.**
+
+## 2. Where the project actually stands
+
+**IMPLEMENTED / VERIFIED.** Deterministic game mechanics; the protocol state
+machine and its transition evidence; commit-reveal cryptography and keyed Step-0
+authentication; the FastMCP transport with two envelope profiles; the autonomous
+CLI that plays a whole six-sub-game series against a separate OS process and
+writes fourteen artifacts; the deterministic hint channel; the scent model,
+lock, live emission, audit and belief interpretation; the competitive barrier
+policy; interoperability with the pinned third-party kit proven by six live
+sub-games; and public-network play demonstrated end to end on one stable URL.
+
+**PLANNED — the largest open block is PRD-07.** A user-facing Replay Viewer, the
+live GUI, Gmail result reporting, and **enforcement** of the negotiated
+rate-limiter terms (which are today negotiated, validated and locked, but never
+applied at call time). Alongside them: an SDK façade and a software version
+authority, both required by the professional-software guideline and both audited
+at Stage 9A-1A.
+
+**PLANNED — research.** The systematic parameter study, the analysis notebook and
+the result charts. Deliberately not started, so that no learning curve is
+fabricated.
+
+**PARTNER_DEPENDENT.** A counted match against another group's agent. Every run
+so far used either a synthetic distinct-group non-counted opponent or the
+interoperability kit in an explicitly non-counted friendly mode. Step-0 correctly
+refuses a peer that authors our own participant subtree, so our own two
+repositories cannot play each other for a counted result.
+
+**FINAL_SUBMISSION_PENDING.** The submission tag, the frozen competition commit,
+and the collaborator grant.
+
+## 3. Forward plan
+
+- **Stage 9A-1B - engineering closure.** Split the test files that exceed the
+  guideline's 150-code-line rule; add the SDK façade over the existing
+  application services without moving business logic; create the software
+  version authority and validate it at boot. `PLANNED`.
+- **Stage 9A-1C - external-call control.** A gatekeeper for **provider** calls
+  (tunnel API, and reporting when it exists): rate limits from versioned
+  configuration, a bounded FIFO queue with backpressure, retries and call
+  logging. Peer gameplay calls are explicitly **out of scope** — a generic retry
+  there re-sends a turn the peer already applied, and a queue would break
+  lockstep. `PLANNED`.
+- **Stage 9A-2 - PRD-07 delivery.** Replay Viewer, GUI, Gmail reporting.
+  `PLANNED`.
+- **Stage 9B - competitive optimisation and research.** Parameter study,
+  sensitivity analysis, notebook, charts, and strategy tuning measured against a
+  benchmark. `PLANNED`.
+- **Stage 9C - submission freeze.** Final checklist verification, the exact
+  competition commit and its tag. `FINAL_SUBMISSION_PENDING`.
+- **Real-partner friendly, then counted play.** `PARTNER_DEPENDENT`.

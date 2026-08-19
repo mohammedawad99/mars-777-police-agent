@@ -1,7 +1,8 @@
 # TODO - group MaRs-777 (POLICE)
 
-> **Status: DRAFT.**
-> **Purpose:** Track outstanding foundation and project tasks.
+> **Status: CURRENT.** Last reconciled at Stage 9A-1A.
+> **Purpose:** Track outstanding project tasks. A checked box means the work is
+> in the repository and green in CI; it never means "planned" or "nearly".
 > **Authoritative source:** book v3.0.0.
 > **Note:** No requirement is approved merely because this file exists.
 
@@ -62,25 +63,27 @@
 - [x] Stage 4D-R1 - application port **architecture reconciliation** (documentation only): `app.ports` may now reference immutable `domain` value types and nothing else outward; `API_BOUNDARIES.md` records that any future Python signature is **PROJECT-CONTRACT** (never source- or reference-mandated) and that a port row is not an automatic Protocol mandate; the port count is corrected to **20**. See **D21**. No requirement, PRD, register or Appendix-F value changed. **CLOSED** at Stage 4D-R1-CLOSE (committed + pushed; CI green Ubuntu + Windows).
 
 ## In progress
-**Phase 2 — PRD and architecture — is fully complete.** **Phases 3 and 4 are under
-way:** the deterministic game-rule layer (3A/3B), the local turn-execution step
-(3C), the local protocol phase machine (4A), its transition evidence (4B) and
-the local series orchestrator (4C) exist and are tested. The phase machine
-enforces order only — the phases named COMMIT_SENT, ACKNOWLEDGED, REVEAL and
-FINAL_AUDIT carry no cryptography, message bodies or transport, and the machine
-never applies a local effect. Transition evidence is **structurally valid, not
-authenticated**: it supports ordered **phase-path** replay only, never
-game-state, movement, barrier, score, scent, commitment, nonce, network-message,
-official-artifact or complete-game replay. The orchestrator implements its
-**cursor/guard slice only** — a counted series is exactly 6 sub-games, the
-cursor advances exactly five times and no seventh sub-game is representable.
-**Recording the per-sub-game and cumulative score is also `app.orchestrator`
-state per `STATE_OWNERSHIP.md`, and remains pending** a later stage, because it
-needs truthful terminal facts that do not exist yet. **Not implemented:** score
-recording, turn-service integration, application ports, FastMCP, networking,
-cryptography, logger/replay persistence, JSON artifacts, strategy, belief, GUI
-and reporting. PRD-01 and PRD-02 remain **IN PROGRESS**; the next stage is
-tracked once, under Pending.
+
+**Stage 9A-1A — academic truth and guideline foundation closure** (documentation
+and hygiene only). Everything else is either finished, planned, waiting on a
+real partner, or held for the submission freeze; see `docs/PLAN.md` §2 for the
+current-state summary and this file below for the task-level detail.
+
+**What is implemented and verified:** the deterministic game-rule layer, the
+protocol state machine and its transition evidence, the sub-game cursor and
+orchestrator, commit-reveal cryptography and keyed Step-0 authentication, the
+FastMCP transport with two envelope profiles, the autonomous CLI that plays a
+full six-sub-game series against a separate OS process, the deterministic hint
+channel, the scent model/lock/Reveal-V2/audit chain and its belief
+interpretation, the competitive barrier policy, the four official artifact
+families, interoperability with the pinned third-party kit proven by six live
+sub-games, and public-network play demonstrated end to end.
+
+**What is not:** a counted match against another group's agent
+(`PARTNER_DEPENDENT`), the Replay Viewer, the GUI, Gmail reporting, enforcement
+of the negotiated rate-limiter terms, the SDK façade, the software version
+authority, the test-file split, and the Stage-9B research artifacts.
+
 ## Pending
 - [ ] Branch protection / rulesets - **blocked**: unavailable on the current GitHub
       plan for private repos (Stage 0D). Needs Pro upgrade, org, or public-at-submission.
@@ -118,9 +121,9 @@ tracked once, under Pending.
   field-walk cells differ by one ULP of binary64 vs exact Decimal. Transport
   envelopes, sparring and role alternation remain pending; nothing here yet lets
   the agent talk to a KIT peer.
-- [x] PRD-05 public network / tunnel / league - **LOCKED as requirements; NOT IMPLEMENTED.**
-- [x] PRD-06 security & cryptography (commit-reveal, Step-0) - **LOCKED as requirements; NOT IMPLEMENTED.**
-- [x] PRD-07 reporting, GUI, replay (Gmail gatekeeper, Live GUI, Replay Viewer) - **LOCKED as requirements; NOT IMPLEMENTED.**
+- [x] PRD-05 public network / tunnel / league - **LOCKED as requirements; IMPLEMENTED AND DEMONSTRATED.** The tunnel adapter, the group gateway and the ten-check readiness gate are wired behind one stable public route (Stage 4E-R18-R1 infrastructure, Stage 8B-P production wiring), with proven teardown and live role handoff. League participation against another group's agent remains `PARTNER_DEPENDENT`.
+- [x] PRD-06 security & cryptography (commit-reveal, Step-0) - **LOCKED as requirements; IMPLEMENTED.** Commit-reveal over SHA-256, the sealed record, CSPRNG nonces, keyed Step-0 and configuration authentication, the config lock, final nonce reveal, commitment recomputation, `TAMPERED` on mismatch and golden vectors are all in the repository and covered.
+- [x] PRD-07 reporting, GUI, replay (Gmail gatekeeper, Live GUI, Replay Viewer) - **STILL THE LARGEST OPEN BLOCK; see the remaining-work section at the end of this file.** LOCKED as requirements; NOT IMPLEMENTED.**
 - [x] **Phase 3 — Deterministic Core Implementation** — **STARTED** (Stage 3A closed; the phase itself is **not** complete).
 - [x] **Stage 3B — Deterministic Game Semantics** — **CLOSED** (barriers, capture, terminal/survival, scoring, bounded scent physics).
 - [x] **Stage 3C — Local Application / Turn Orchestration Foundation** — **CLOSED.**
@@ -185,7 +188,7 @@ tracked once, under Pending.
 - [x] **Stage 6C-A / 6C-A-R1 — autonomous game owner contract, design lock and lockstep reconciliation** — read-only, **0 files changed**. Established from Ch 8 §8.3 that the orchestrator *"activates the decision module … but does not itself contain decision logic - its role is to coordinate, not to execute"*, and from Ch 2 §2.3.1 that calling the strategy is the Client Engine's job while *"the legal decision remains the responsibility of the Client Engine and the cryptographic verification"*. Found that **`evaluate_terminal` had zero production callers**, that `SeriesRuntime.close_sub_game(outcome)` took the outcome as a parameter, and that **`LocalTruth` never advanced in production at all** - the sole truth write was adopting a peer's public barrier. R1 then reconciled the high-risk same-step interaction against **JDEC-016 §4**, which already fixes `state.self_pos`/`state.barriers` as pre-action and makes that reading interoperability-binding: **no JDEC-019 and no C-15 were needed**. It produced the three ordering rules R1/R2/R3, the `start_truth` + pending + merge shape, and the `completed_steps == cursor.step - 1` adoption guard.
 - [x] **Stage 6C-B — autonomous natural sub-game** — **IMPLEMENTED AND VERIFIED; awaiting a dedicated commit/push closure.** For the first time production code plays a game: `app/sub_game_driver.py` runs terminal check → `Observation` → `StrategyPort` → real Commit/Ack/Reveal → real capture answer → **one-time adoption** → next lockstep round → `evaluate_terminal`. `app/sub_game_truth.py` reads a finished round into the next round's truth (ordered barrier declaration, the two-sided effect merge, capture detection) and re-validates nothing. `app/t0_hint.py` is an explicitly **temporary** zero-token template producing `Intent.TRUTH` and adapting to the locked `hint_max_words` - Ch 6 §6.5.1 makes the template provider the book's own default. `TurnProtocolRuntime` gained three per-turn `asyncio.Event` milestones, **set only after the state moves**, so the driver waits without polling; `AgentComposition` gained a `strategy: StrategyPort` that `compose_agent` fills with the repository's `BaselineStrategy` - **no loader, register still 21**. **The three ordering rules are load-bearing and tested as such:** R1 (commit before acknowledging) keeps a peer's step-`k` barrier out of the board our emission is projected on; R2 (peer reveal before own adoption) keeps our own move out of the cell we answer a capture question from; R3 (apply against `start_truth`) stops a peer's same-step barrier retroactively invalidating our committed action. **The E2E is the proof**: two independently composed agents over real FastMCP play **35 real lockstep rounds** on source-compliant counted-play parameters, both sealing the same `cursor.step`, and reach **`Outcome.SURVIVAL` naturally** - no fixture supplies a `PhysicalAction` or an `Outcome`. It closes through the existing final-nonce / audit / semantic stack with a **`CONSISTENT`** review and writes exactly **3** official files, with **no `result_` artifact** because the series is unfinished. **Scope boundary, stated precisely:** 6C-B proves autonomous *gameplay* - the driver decides and plays. The surrounding series bookkeeping (`SeriesRuntime.close_turn` per round, the exact-six lifecycle, result agreement, artifacts) is still driven by the lifecycle caller, supplies neither an action nor an outcome, and is composed into production at **6C-C**. **Not started:** six-game production loop, permanent CLI autonomous boot, belief, scent consumption, accumulated decay, police barrier strategy, language/LLM, GUI, Replay Viewer, Gmail, public-network expansion.
 - [x] **Stage 6C-C1 / 6C-C1-R1 / 6C-C1-R2 — exact-six autonomous production series** — **IMPLEMENTED AND VERIFIED IN BOTH REPOSITORIES; awaiting a dedicated commit/push closure.** `series_driver.py` is the production series owner: it records the declaration, then for each sub-game agrees a config, opens one `SubGameDriver`, plays it to a natural terminal, closes it through final-nonce / audit-disclosure / semantic review, and finally builds, agrees and persists the result - **exactly `g01`…`g06`**, six natural outcomes, six `CONSISTENT` audits, six outcome lines and the **fourteen** official files per side, with **no fixture supplying a `PhysicalAction`, an `Outcome` or a lifecycle call**. It sits at the top level, not in `app/`, because `SeriesRuntime` does; putting it under `app/` would need an outward import. Four supporting modules carry it: `app/config_rules.py` becomes the **single** config-projection authority (`config → SemanticRules`, `config → TurnLimits`, `config → opening LocalTruth`) and `semantic_review.rules_for` is **removed**, not duplicated; `app/pregame_rounds.py` opens the next round by `replace`-ing the one field that differs, so no collaborator, key, digest or `NegotiatedConfig` field is ever reconstructed; `app/series_agreements.py` owns **sequencing only** - who opens is still `initial_proposer`'s and `ResultAgreementRuntime.is_proposer`'s call; `app/series_milestones.py` adds `PregameMilestones` / `ResultMilestones` as pure signal values, set **after** their owner mutates state, so a waiter that wakes finds the fact already true. **The g01 blocker and its honest root cause:** the first implementation reported an `E-PROTO-STALE` deadlock, and the initial diagnosis - a `ConfigNegotiationRuntime.accept` guard refusing the peer's proposal - was **wrong**. A test-side diagnostic spy on that very method proved all five of its proposal/stale guards **passed** and it accepted every proposal; the real refusal was `PregameSessionRuntime.accept_lock` (*"lock evidence arrived before this side agreed a config"*), because a round adopted its config only just before sending its own lock, leaving a window in which our lock outran the peer's adoption. The fix is **sequencing, not tolerance**: `SeriesDriver.open()` adopts the series boot config at the moment the round opens. **No guard was weakened.** A second, separate blocker at result agreement (a proposer persisting before the peer answered) was fixed by making both directions wait. **Pre-adoption does not become a rubber stamp, and this is proved negatively:** two peers booted with *different but entirely legal* configs (a NEGOTIABLE `hint_max_words`, App F T14 #2) never both reach a verified lock - the disagreement is refused by the **existing** contract at `ConfigLockRuntime.accept`, which recomputes *our* digest of *our* config and raises the frozen `E-CONFIG-MISMATCH`, and no `config_` artifact is written. The proposal exchange is deliberately **not** the enforcement point (`ConfigNegotiationRuntime.accept` reports validity, and `converges` has no caller); the tests say so explicitly. **Still not implemented and not claimed:** the permanent `__main__` autonomous series invocation, the two-OS-process proof, production startup/listen-race retry and a shell-level autonomous E2E - all Stage 6C-C2 - together with belief, scent consumption, accumulated decay, police barrier strategy, the PRD-04 language system, LLM, GUI, Replay Viewer, Gmail and public-network expansion. **This is not yet a "production-autonomous end-to-end process".**
-- [x] **Stage 6C-C2 (B / R1 / R2 / R3) — permanent autonomous CLI boot** — **IMPLEMENTED AND VERIFIED IN BOTH REPOSITORIES; awaiting a dedicated commit/push closure.** `python -m …` no longer serves and waits: `autonomous_boot.AutonomousBoot` owns process lifecycle and nothing else - serve, a **bounded** outbound connection, `SeriesRuntime.start()`, the Step-0 wait, **exactly one** `SeriesDriver.play_series()`, and a `finally` that stops. `__main__` stays CLI parsing, error classification and the interrupt envelope (`0` success, `2` settings/launch, `4` opponent unreachable, `5` peer refusal printing its frozen `error_id`, and a local defect keeps its traceback). Two operator inputs were added, both reusing frozen contracts: the launch document carries this side's opening candidate as a `NegotiatedConfigWire` decoded by the existing `decode_config` - **no second config schema** - and `MARS777_ARTIFACT_ROOT` is a required local filesystem setting that is never negotiated, hashed, declared or sent. Retry is `TransportFailureError` **only**, pinned by experiment against a closed port, bounded by the locked `watchdog_timeout_sec`, and `connect()` keeps its historical one-shot contract beside the new `connect_until_ready`. **Three real defects the in-process proof had hidden, each fixed at its owner and none by weakening a guard.** (1) `SeriesDriver.open()` re-opened the round it was already on, and `open_round` correctly resets everything a round owns - so an authenticated proposal that arrived first was destroyed and the peer, which proposes once, never sent another. `app/round_opening.py` makes opening the *current* `gNN` idempotent while `gNN+1` still opens fresh, and refuses both a split negotiation/lock identity and a swapped local candidate. (2) Closing a sub-game needs the **peer's** audit disclosure, which sending ours says nothing about; `AuditRuntime` gained one state-first completion signal - sufficient because a disclosure is already refused before the nonce batch - and `SeriesDriver` awaits it before `close_sub_game`. (3) The peer's Step-0 had no awaitable moment at all; `PregameMilestones` gained `step0_seen`, set after the merged declaration and verified peer are installed. **The proof is process-level**: the shipped CLI of each role plays a full `g01`…`g06` series over real FastMCP/HTTP against a **separate OS process**, with six config locks, six verified audits, six `CONSISTENT` logs, six natural `SURVIVAL` outcome lines, a real mutual result agreement, **fourteen** official artifacts and exit 0 on both sides; a legal-but-different boot config is still refused by the existing config lock with no result or config artifact written. **What that proof is not:** the counterparty is a *synthetic distinct-group NON-COUNTED integration opponent*. Our Police and Thief repositories are two roles of **MaRs-777** and Step-0 rightly refuses a peer authoring our own subtree, so they cannot play each other; a counted result still needs an externally supplied different-group agent. **Not started:** live ngrok/public-network proof, external team interop, belief, strategic scent consumption, accumulated decay, police barrier policy, the PRD-04 language system, LLM, GUI, Replay Viewer, Gmail. No JDEC, C-decision, protocol error, peer family, wire kind, FastMCP tool, `NegotiatedConfig` field or artifact family was added.
+- [x] **Stage 6C-C2 (B / R1 / R2 / R3) — permanent autonomous CLI boot** — **IMPLEMENTED AND VERIFIED IN BOTH REPOSITORIES; awaiting a dedicated commit/push closure.** `uv run python -m …` no longer serves and waits: `autonomous_boot.AutonomousBoot` owns process lifecycle and nothing else - serve, a **bounded** outbound connection, `SeriesRuntime.start()`, the Step-0 wait, **exactly one** `SeriesDriver.play_series()`, and a `finally` that stops. `__main__` stays CLI parsing, error classification and the interrupt envelope (`0` success, `2` settings/launch, `4` opponent unreachable, `5` peer refusal printing its frozen `error_id`, and a local defect keeps its traceback). Two operator inputs were added, both reusing frozen contracts: the launch document carries this side's opening candidate as a `NegotiatedConfigWire` decoded by the existing `decode_config` - **no second config schema** - and `MARS777_ARTIFACT_ROOT` is a required local filesystem setting that is never negotiated, hashed, declared or sent. Retry is `TransportFailureError` **only**, pinned by experiment against a closed port, bounded by the locked `watchdog_timeout_sec`, and `connect()` keeps its historical one-shot contract beside the new `connect_until_ready`. **Three real defects the in-process proof had hidden, each fixed at its owner and none by weakening a guard.** (1) `SeriesDriver.open()` re-opened the round it was already on, and `open_round` correctly resets everything a round owns - so an authenticated proposal that arrived first was destroyed and the peer, which proposes once, never sent another. `app/round_opening.py` makes opening the *current* `gNN` idempotent while `gNN+1` still opens fresh, and refuses both a split negotiation/lock identity and a swapped local candidate. (2) Closing a sub-game needs the **peer's** audit disclosure, which sending ours says nothing about; `AuditRuntime` gained one state-first completion signal - sufficient because a disclosure is already refused before the nonce batch - and `SeriesDriver` awaits it before `close_sub_game`. (3) The peer's Step-0 had no awaitable moment at all; `PregameMilestones` gained `step0_seen`, set after the merged declaration and verified peer are installed. **The proof is process-level**: the shipped CLI of each role plays a full `g01`…`g06` series over real FastMCP/HTTP against a **separate OS process**, with six config locks, six verified audits, six `CONSISTENT` logs, six natural `SURVIVAL` outcome lines, a real mutual result agreement, **fourteen** official artifacts and exit 0 on both sides; a legal-but-different boot config is still refused by the existing config lock with no result or config artifact written. **What that proof is not:** the counterparty is a *synthetic distinct-group NON-COUNTED integration opponent*. Our Police and Thief repositories are two roles of **MaRs-777** and Step-0 rightly refuses a peer authoring our own subtree, so they cannot play each other; a counted result still needs an externally supplied different-group agent. **Not started:** live ngrok/public-network proof, external team interop, belief, strategic scent consumption, accumulated decay, police barrier policy, the PRD-04 language system, LLM, GUI, Replay Viewer, Gmail. No JDEC, C-decision, protocol error, peer family, wire kind, FastMCP tool, `NegotiatedConfig` field or artifact family was added.
 - [ ] **Mandatory pre-Stage-4-close security slice — `TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`.** Ch 5 §5.5 requires actual LLM consumption to be **monitored** and **cryptographically locked**; the construction is SOURCE-UNSPECIFIED and **not yet frozen**. **Stage 4 must not be declared complete once transport lands** — this obligation needs its own explicit design and implementation stage.
 - [ ] **Mandatory pre-Stage-4-close security slice — `TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`.** Ch 5 §5.5 requires actual LLM consumption to be **monitored** and **cryptographically locked**; the construction is SOURCE-UNSPECIFIED and **not yet frozen**. R16 aggregates and mutually agrees *reported* token totals and proves nothing about metering. **Stage 4 must not be declared complete once transport lands** — this obligation needs its own explicit design and implementation stage.
 - [ ] **Mandatory pre-Stage-4-close security slice — `TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`.** Ch 5 §5.5 requires actual LLM consumption to be **monitored** and **cryptographically locked**; the construction is SOURCE-UNSPECIFIED and **not yet frozen**. Reported result token totals are what the peers agree was reported, not proof every call was metered. **Stage 4 must not be declared complete once the protocol runtime lands** — this obligation needs its own explicit design + implementation/verification stage.
@@ -194,7 +197,7 @@ tracked once, under Pending.
 - [ ] **Mandatory pre-Stage-4-close security slice — `TOKEN-ACCOUNTING-CRYPTO-EVIDENCE: BLOCKED-BY-CONSTRUCTION`.** Ch 5 §5.5 requires actual LLM consumption to be **monitored** and **cryptographically locked**; the construction is SOURCE-UNSPECIFIED and **not yet frozen**, and `result_sha256` is **not** claimed to satisfy it. **Stage 4 must not be declared complete merely because every peer-family contract reaches READY/IMPLEMENTED** — this obligation needs its own explicit design + implementation/verification stage.
 - [x] **Stage 5-R8 — scent pre-game model contract** — **CLOSED / COMMITTED / CI-GREEN across seven checkpoints.** Scent domain foundation → scent model foundation (canonical bytes + `scent_model_sha256`) → `ConfigProposal` codec carrying the complete model → strict model agreement (values, canonical rendering and independently derived digest, all three before the decision) → cryptographic model lock (`scent_model_sha256` inside `ConfigLockContext`, existing keyed framing untouched, a valid proof over a different model still refused) → series freeze (`g01` establishes the identity after a verified lock and before gameplay; `g02…g06` must match; a **bilaterally agreed and authenticated** mid-series switch is refused before play; a fresh series may agree another valid model) → artifact evidence (`config_<game_id>_g<NN>.json` gains `config_lock` and `scent_model_evidence` beside the unchanged 35-member `config`, with a read-back verifier proving both digest chains). Each checkpoint was committed to both repositories and green on exact-SHA CI (Ubuntu 100.00% statements **and** branches; Windows ≥ 99.82%). **Registers:** `C-14` records the gap the three Appendix-F scalars left open, `JDEC-017` freezes the chosen representation; requirements stay **91**, families **8**, kinds **9**, tools **4**, ports **21**, errors **22**, artifact families **4**. **Not claimed:** live emission, opponent-scent delivery or consumption, `Reveal` V2 (still V1), live scent transcript, scent audit.
 - [x] **Stage 5-R8 — scent pre-game traceability closure** — documentation/requirements only, **0 Python**. `SCENT-001` and `SCENT-003` re-audited clause by clause against the catalog wording; evidence recorded in `REQUIREMENTS_TRACEABILITY.md` (Notes + a pre-game closure matrix); `C-14` and `JDEC-017` added; `CONFIG_CONTRACT.md`, `ARTIFACT_LIFECYCLE.md` and the `PRD-04` status corrected where they had gone stale. No requirement id, modality or count changed.
-- [ ] **Next implementation surface — Reveal V2 / live distributed scent.** **NOT STARTED.** Live `ScentEmission` on the turn, delivery and consumption of the opponent's scent map, the fifth compatibility posture that would name it, the live scent transcript and the scent audit. `SCENT-002`'s domain physics exists; nothing live consumes it yet.
+- [x] **Reveal V2 / live distributed scent — DELIVERED.** Live `ScentEmission` on the turn, delivery and consumption of the opponent's scent map, the live scent transcript, the scent audit and log persistence all landed after this entry was written; belief-level interpretation followed at Stage 7C. Original entry, kept for chronology: Live `ScentEmission` on the turn, delivery and consumption of the opponent's scent map, the fifth compatibility posture that would name it, the live scent transcript and the scent audit. `SCENT-002`'s domain physics exists; nothing live consumes it yet.
 - [ ] Collaborator (Rawey7) access - pending explicit instruction.
 - [x] **Stage 5-R8 Part 2A-R1 — repository reconciliation + JDEC-018 lock + documentation truth pass** — documentation only, **0 Python**. Resolved the pre-existing uncommitted Police draft; locked **JDEC-018** (`DISHONEST_SCENT_EMISSION`, PROJECT-DERIVED, **not** TAMPERING, scored through the existing technical-loss path) as an **authorized Part-2B contract, not shipped code**; corrected the README status, `PRD-01`/`PRD-02`/`PRD-05`/`PRD-06` status lines and the stale current-tense JDEC ranges. `C-01…C-14` unchanged, **no C-15**. Production still `SemanticVerdict` 8 / `TAMPERING` 5 / `SCORED_AS_TECHNICAL_LOSS` 3.
 
@@ -208,13 +211,68 @@ tracked once, under Pending.
 
 - [x] **Stage 8B-P — public pre-partner readiness.** Wired the two components that had no production caller (group gateway, `PublicIngressPort`) behind `KitPublicLauncher`, plus two operator commands: `kit_gateway_main` (public front door) and `kit_backend_main` (one role backend, own repo). Framework mechanics moved into `transport` rather than widening the confinement allowlist. **Proved live through a real HTTPS tunnel**: four pinned tools, g01→police / g02→thief routing, URL unchanged, counted readiness still refused, clean teardown. Overhead ~7.8 ms per hop vs a 180 s turn budget — documented, not optimised. Runbook and partner handoff written. **READY_FOR_PARTNER**; no real opponent exists yet.
 
+## Remaining work
+
+Nothing below is checked, and nothing below may be checked until it is in the
+repository and green in CI on the exact commit.
+
+### Engineering (no partner needed)
+
+- [ ] **Replay Viewer** (`REPLAY-001`, MUST). A **user-facing** viewer that
+      replays a recorded game and cryptographically verifies it step by step.
+      `app/semantic_replay.py` is an audit-time verification **engine**, not a
+      viewer, and does not satisfy this.
+- [ ] **Live GUI** (`GUI-001/002/003`, MUST). No graphical interface exists.
+      Blocks the guideline's screenshot and UI-documentation requirements too.
+- [ ] **Gmail result reporting** (`REPORT-001`, MUST). No mailer exists.
+- [ ] **Rate-limit enforcement** (`REPORT-003`, MUST). `RateLimiterTerms` —
+      requests per minute, concurrency, backoff, max retries, queue depth — is
+      negotiated, floor-validated and cryptographically locked, but **no
+      component applies it at call time**. Closure must cover provider calls
+      only; peer gameplay calls must **not** be wrapped in generic retries or a
+      queue.
+- [ ] **SDK façade** (guideline §4.1). Four external entrypoints reach the
+      application and domain layers directly. A thin façade over the existing
+      services, moving no business logic.
+- [ ] **Software version authority** (guideline §8.1, §14). `pyproject`
+      `version` and `__version__` are `0.0.0`; there is no `rate_limits.version`
+      and no boot-time compatibility validation of a *software* version.
+- [ ] **Test-file 150-code-line split** (guideline §3.2 with §6.1). 13 test
+      files exceed the limit when counted the guideline's way; `src/` has zero
+      violations. Also add the CI guard that measures **both** trees.
+- [ ] **Expected-result reporting** (guideline §6.4). Store the automated
+      pass/fail report rather than relying on CI history alone.
+
+### Research (Stage 9B)
+
+- [ ] Systematic parameter study and sensitivity analysis.
+- [ ] Results-analysis notebook.
+- [ ] Result charts, and the learning curve **if and only if** something is
+      actually learned. Nothing here may be produced before the experiments are.
+- [ ] Competitive strategy tuning, measured against a benchmark.
+
+### Partner-dependent
+
+- [ ] Friendly series against a **real** partner group's agent.
+- [ ] Counted Step-0 negotiation with a real counterparty.
+- [ ] A counted six-sub-game series and its mutual result agreement.
+- [ ] Collaborator (Rawey7) access — pending explicit instruction.
+
+### Final submission
+
+- [ ] Verify every row of `docs/SUBMISSION_CHECKLIST.md`.
+- [ ] Freeze the exact competition commit and tag it.
+- [ ] Final consistency pass over README, PLAN, TODO and GUIDELINE_ALIGNMENT.
+
+---
+
 _Phases 1 and 2 are specification and requirements only; all seven PRDs remain
-APPROVED — PHASE 2 LOCKED. Phase 3 implementation is well advanced: the
-deterministic domain, the protocol state machine, Commit-Reveal cryptography,
-the FastMCP peer transport, the runtime composition, the capture and semantic
-audit, the scent model/lock/Reveal-V2/audit/log chain and the four artifact
-families are all implemented and tested. **Autonomous strategy, a production
-game owner, belief modelling, the Replay Viewer, the GUI and Gmail reporting
-remain unimplemented**, and public-network play is implemented but not yet
-demonstrated end to end — see the README's *Implementation status* section for
-the exact boundary._
+APPROVED — PHASE 2 LOCKED. Phase 3 implementation is complete for PRD-01 through
+PRD-06: the deterministic domain, the protocol state machine, Commit-Reveal
+cryptography, the FastMCP peer transport, the runtime composition, the capture
+and semantic audit, the scent model/lock/Reveal-V2/audit/log chain, autonomous
+strategy, the production game owner, belief interpretation, the four artifact
+families and public-network play are all implemented, tested and demonstrated.
+**PRD-07 — the Replay Viewer, the GUI and Gmail reporting — remains
+unimplemented**, together with rate-limit enforcement. See the README's
+*Implementation status* section for the exact boundary._

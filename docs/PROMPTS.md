@@ -1,9 +1,19 @@
 # Prompt Register - group MaRs-777
 
-> **Status: DRAFT.**
-> **Purpose:** Reference (not necessarily verbatim) the supervising-reviewer
-> prompts that drove each stage, for traceability and academic honesty.
+> **Status: CURRENT.** Backfilled through Stage 9A-1A.
+> **Purpose:** The prompt-engineering log. It records the supervising-reviewer
+> prompts that drove each stage — their goal, their binding constraints, what
+> the AI got wrong, what the human correction was, and what shipped.
+> **Honesty rule:** nothing here is a reconstructed transcript. Rows in section 1
+> are labelled `Referenced` — the prompt existed and drove the named stage, and
+> its text is not reproduced. Entries in section 2 are labelled
+> **`RECONSTRUCTED PROMPT INTENT`**: they summarise the goal and constraints
+> from evidence that exists in this repository (`docs/PLAN.md`,
+> `docs/TODO.md`, `docs/DECISIONS.md`, `docs/AI_WORKFLOW.md`, the commit
+> history). Where the exact wording is not available it is **not invented**.
 > **Note:** Never store secrets, tokens, or credentials here.
+
+## 1. Stage register (Stages 0A — 4E-R18-R1)
 
 | Stage | Summary | Recorded |
 |-------|---------|----------|
@@ -145,3 +155,240 @@
 
 The full prompt texts may be pasted here later if the reviewer approves; they
 contain no secrets.
+
+---
+
+## 2. Prompt engineering log (Stages 5 — 9A-1A)
+
+Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text.
+
+### Stage 5 (5-R1 … 5-R8) — production application runtime integration
+
+- **Goal.** Turn the assembled protocol parts into a production runtime, then
+  give the scent system a pre-game contract: a canonical model, its digest, and
+  agreement on it before a game starts.
+- **Constraints.** No second configuration schema. Exact model agreement — no
+  tolerance, no "close enough" float comparison. The scent model must be inside
+  what the configuration lock covers, or locking is theatre.
+- **Finding.** Canonical decimal text had to become a single shared authority;
+  two independent renderings of the same number are two different sealed bytes.
+- **Correction.** The decimal authority was extracted and shared rather than
+  duplicated at each call site.
+- **Result.** Scent model defined, carried in proposals, agreed exactly, bound
+  into the config lock, frozen across the series, persisted as artifact
+  evidence, and traced closed against `SCENT-001`/`SCENT-003` (C-14, JDEC-018).
+
+### Stage 6A / 6B — baseline strategy
+
+- **Goal.** A separate strategy module that chooses a legal action.
+- **Constraints.** Fully algorithmic. No LLM. No randomness. **No opponent
+  position** — it is not observable, and a strategy that reads it would be
+  cheating even if it were.
+- **Correction.** 6A was held to contract and design only; no code was written
+  until the contract was locked.
+- **Result.** `BaselineStrategy` behind `StrategyPort`, deterministic, covered.
+
+### Stage 6C-A / 6C-B / 6C-C1 — autonomous game owner, sub-game, series
+
+- **Goal.** Something that actually plays: one lockstep sub-game, then exactly
+  six.
+- **Constraints.** No fixture may supply an action, an outcome, or a lifecycle
+  call. The terminal event must be **derived** from the domain, never asserted.
+- **Result.** `SubGameDriver`, then `SeriesDriver` producing `g01`…`g06`, six
+  natural outcomes and the fourteen official files.
+
+### Stage 6C-C2 — permanent autonomous CLI boot
+
+- **Goal.** A real process that boots, plays and exits.
+- **Constraint.** Prove it as **separate OS processes**, not in-process.
+- **Finding — the most valuable of the project.** The in-process proof had
+  hidden three real defects: (1) `SeriesDriver.open()` re-opened the round it
+  was already on, destroying an authenticated proposal that had arrived first;
+  (2) closing a sub-game did not wait for the **peer's** audit disclosure;
+  (3) the peer's Step-0 had no awaitable moment at all.
+- **Correction.** Each was fixed at its owner. None was fixed by weakening a
+  guard or by loosening a test.
+- **Result.** Both roles' shipped CLIs play a full series over real FastMCP/HTTP
+  against a separate process and exit 0.
+
+### Windows exact-six investigation
+
+- **Goal.** Find out why a native Windows run stalled.
+- **Constraint.** Do not "fix" it with a skip.
+- **Finding.** After a long trace through the event loop, the HTTP request-body
+  path and the MCP session handoff, the root cause was a session read deadline
+  that was not refreshed after the configuration lock.
+- **Result.** Fixed at its owner; the residual native limitation runs in its own
+  CI job so it stays visible instead of disappearing behind a skip.
+
+### Stage 7B — deterministic hint channel
+
+- **Goal.** The natural-language half of a turn, at the T0 (no-model) scope.
+- **Constraints.** Zero tokens, no network, no model. Refuse direct coordinate
+  syntax such as `(3,4)` — **while leaving ordinary numeric prose sayable**, so
+  the filter cannot be satisfied by banning digits.
+- **Result.** A template catalogue, an NFC-normalising validator with
+  deterministic word counting against the negotiated cap, and a narrow detector.
+  A failing candidate is replaced by a safe template, never sent in violation.
+
+### Stage 7C — belief-level scent interpretation
+
+- **Goal.** Let the strategy use what the opponent disclosed.
+- **Constraint.** Scent is evidence about the **environment**, never the
+  opponent's position, and it may only decide where the existing objective ties.
+  With nothing heard, behaviour must be byte-identical to before.
+- **Result.** `ScentBelief`, folded through the existing physics under the
+  locked model.
+
+### Stage 7D-B — competitive barrier policy
+
+- **Goal.** A legal competitive edge.
+- **Constraints.** Promote on measured evidence or not at all. Never declare a
+  capture on belief — a missed barrier costs a turn, a wrong claim forfeits.
+- **Finding.** The police candidate cleared its gate (0 → 12 captures over 140
+  deterministic scenarios). The **thief candidate failed its gate.**
+- **Correction.** The thief candidate was **rejected and not shipped**; that
+  repository still runs the frozen baseline. Recording the rejection is the
+  point.
+
+### Stage 8A-1R / 8A-1S — interoperability kit core
+
+- **Goal.** Speak the pinned third party's semantics without vendoring or
+  patching their code.
+- **Constraints.** Pinned SHA only. Never copy their artifacts into either
+  repository.
+- **Finding.** Their scent family could not be declared compatible: the model
+  form matches exactly, but 29 of 90 published field-walk cells differ by one
+  ULP — binary64 against our exact `Decimal`.
+- **Correction.** Declared **undeclared** rather than approximately compatible.
+
+### Stage 8A-1T — kit transport envelopes
+
+- **Goal.** A second envelope profile over the same four tools.
+- **Constraints.** Selected **before boot**; never negotiated, never inferred
+  from a message, never auto-downgraded. Do not weaken authentication.
+- **AI mistake (significant).** The stage report claimed the pinned harness
+  could run a six-sub-game series with **fixed roles**. It cannot.
+- **Result.** The profile shipped; the false claim survived into the next stage
+  and was caught there.
+
+### Stage 8A-2 — fixed-role kit series — **STOPPED**
+
+- **Goal.** Run a six-sub-game fixed-role series against the kit.
+- **Constraint given.** "If full gameplay is blocked by a **new** issue: stop and
+  name the exact blocker. Do not add another workaround in the same checkpoint."
+- **Finding.** The premise was false. The harness alternates roles every
+  sub-game by construction.
+- **Correction.** The stage stopped with **zero repository changes**, and the
+  previous stage's incorrect claim was retracted explicitly rather than quietly
+  worked around.
+
+### Stage 8A-2R — role-split alternation and terminal settlement
+
+- **Goal.** Play the alternating series for real.
+- **Constraints.** Neither repository may become a dual-role agent. No importing
+  the sibling package, no copying its strategy, no changing `GROUP_CODE`.
+- **Finding.** A live divergence: we settled `CAPTURE`, the peer settled
+  `timeout`. The tempting explanation — a missing terminal message — was only
+  half of it.
+- **Correction.** The real root cause was ours: the self-capture rule was being
+  applied to the **police**, although `BAR-004` lets the police place a barrier
+  on its own cell and lawfully stand on a blocked one. A lawful placement was
+  manufacturing a capture. Fixed at the rule **and** the missing settlement
+  signal.
+- **Result.** Six live sub-games against an independent implementation.
+
+### Stage 8A-2F — development evidence path
+
+- **Goal.** Persist evidence from a friendly run without pretending it is
+  counted.
+- **Constraints.** "Do not lie to preserve a filename." "The number 14 is **not**
+  more important than semantic truth." No secret, no live URL, no stale endpoint
+  in any artifact.
+- **Result.** A store that **structurally refuses** any name not beginning
+  `friendly_`, and a series document that records `ABSENT` for counted
+  authentication and mutual agreement, `evidence_class:
+  DEVELOPMENT_EVIDENCE`, `counted_eligible: false`.
+
+### Stage 8A-2G — counted identity and artifact compatibility
+
+- **Goal.** Make the kit's `game_id` writable without corrupting our identity.
+- **Constraint.** "Do not silently lower-case the group id. Do not alter
+  `GROUP_CODE`."
+- **Finding.** Our own identifier alphabet (JDEC-005) rejected the kit-derived
+  id because `MaRs-777` contains capitals.
+- **Correction.** The **project-owned** decision was amended to admit the wider
+  alphabet — the frozen group code was not bent to fit a project rule.
+
+### Stage 8A-2G-CI — exact-SHA CI recovery
+
+- **Goal.** Get green CI on the exact commits.
+- **Constraint.** "No code change is authorized." No empty commit, no amend, no
+  force, no tag, no whitespace push to trigger a run.
+- **Finding.** The three-second failures were **not** a code failure: GitHub had
+  blocked the account for a billing reason.
+- **Result.** Existing runs re-run by id once billing was fixed. Both SHAs green,
+  history untouched.
+
+### Stage 8B-P — public production readiness without a partner
+
+- **Goal.** Wire the gateway and the tunnel adapter — both previously uncalled
+  from production — behind one public route.
+- **Constraints.** Report credentials as `PRESENT`/`ABSENT` only, never their
+  contents. Do not commit live URLs or runtime evidence. Do not start the tunnel
+  prematurely.
+- **Finding.** The framework-confinement test refused the new launcher's FastMCP
+  imports.
+- **Correction.** The allowlist was **deliberately not widened**; the mechanics
+  moved into the transport package instead, where framework imports belong.
+- **Result.** One public route, a ten-check readiness gate, proven teardown, and
+  the counted-readiness authority still correctly refusing while the tunnel was
+  up.
+
+### Stage 9A-0 — academic excellence gap audit
+
+- **Goal.** Audit the repositories against the book, the professional-software
+  guideline and their own contracts, and produce a gap matrix.
+- **Constraints.** Read-only. No code, no strategy, no tag. Do not authorise the
+  closure slices; return them for approval.
+- **Finding.** The largest gaps were deliverable coverage (Replay Viewer, GUI,
+  reporting, rate-limit enforcement) and **document truth** — eight
+  machine-detectable contradictions between the front-door documents and the
+  committed state.
+- **Result.** Zero repository changes; a supervising report.
+
+### Stage 9A-1A — academic truth and guideline foundation closure
+
+- **Goal.** Close the low-risk truth, documentation and hygiene defects, and
+  perform the measurements the heavier slices depend on.
+- **Constraints.** Use the lecturer's **actual** v3.00 PDF, verified by SHA-256,
+  read-only, never committed. No production code. No SDK, no gatekeeper, no test
+  split, no GUI, no replay, no Gmail, no strategy change, no tag.
+- **AI mistake corrected by supervision (three).** (1) Stage 9A-0 proposed
+  narrowing the published 150-line rule to `src/**`; the guideline's §6.1
+  explicitly applies it to test files too, so the rule stands and the tests must
+  be split. (2) 9A-0 counted **physical** lines and reported 29 violating test
+  files; measured the guideline's way — blank and comment lines excluded — the
+  true count is **13**. (3) 9A-0 treated the SDK requirement as satisfied by
+  hexagonal architecture; §4.1 asks for an explicit single public entry
+  boundary, which does not exist, so it is a mapped gap rather than a
+  justified N/A.
+- **Result.** Front-door documents reconciled with reality, the prompt book
+  backfilled, `.env.example` and `docs/PRD.md` added,
+  `docs/GUIDELINE_ALIGNMENT.md` written against the real guideline, and complete
+  version-authority, SDK-equivalence and Gatekeeper-equivalence audits recorded.
+
+## 3. Practices this project actually learned
+
+1. **Prove it as a process.** Every in-process proof in this project hid at
+   least one defect that a separate OS process exposed immediately.
+2. **A stop is a result.** Stage 8A-2 delivered more value by stopping with zero
+   changes than it would have by working around a false premise.
+3. **Fix at the owner.** Every live divergence was traced to a rule or a state
+   owner and fixed there — never at the symptom, never by loosening a guard.
+4. **Never bend an identity to fit a rule you own.** Amend the rule you own;
+   leave the frozen identity alone.
+5. **Measure the way the standard defines the measure.** Counting physical lines
+   against a code-line rule produced a wrong answer by more than a factor of two.
+6. **Name what is absent.** `ABSENT`, `counted_eligible: false` and a rejected
+   strategy candidate are all more useful than a tidy document.

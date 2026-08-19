@@ -1,6 +1,6 @@
 # Quality Gates — group MaRs-777
 
-**Status: STAGE 2A ARCHITECTURE FREEZE — gate *definitions*.
+**Status: gate *definitions* frozen at Stage 2A; per-gate status reconciled at Stage 9A-1A.
 **NO GATE HAS PASSED. NO GATE IS CLAIMED.** Stage 2A defines the evidence each gate
 will require; none is evaluated here.
 
@@ -22,10 +22,41 @@ never because "the code was written".
 | Git hygiene | clean tree, empty index, HEAD = origin/main = ls-remote |
 | CI | green on **ubuntu-latest and windows-latest**. Ubuntu runs every test; the Windows gating suite excludes exactly one test, the documented native two-process exact-six stall (`CONCURRENCY_MODEL.md` §6), which runs in its own visible non-gating job |
 | Secret scan | 0 findings in tree and history |
-| File-size rule | every Python file ≤ 150 lines |
+| File-size rule | every Python file ≤ **150 code lines** — see *The file-size rule* below |
 | Dependency rules | import-graph DAG; no forbidden import; no cross-repo import |
 
-**Status: NOT EVALUATED (no implementation exists).**
+**Status (Stage 9A-1A): PASS on every row except the file-size rule.** `uv sync
+--frozen`, ruff, `ruff format --check`, `mypy --strict`, the full suite,
+coverage, `uv build`, Git hygiene, cross-OS CI, the secret scan and the
+dependency rules are all green on the exact HEAD commit. The file-size rule
+passes for `src/**` and **fails for `tests/**`.**
+
+### The file-size rule
+
+**Scope: every Python file in the repository, tests included.** The
+professional-software guideline states the limit for code files (§3.2) and
+restates it for test files explicitly (§6.1, test rule 6). This rule is
+therefore **not** narrowed to `src/**`.
+
+**Counting rule.** 150 **code** lines: blank lines and comment-only lines are
+excluded, as §3.2 requires. Physical line count is reported alongside it for
+transparency, and code is **split, never compressed** to fit — semicolon
+packing or removing docstrings to pass the count is a violation of the rule's
+purpose, not compliance with it.
+
+**Measured at Stage 9A-1A.**
+
+| Tree | Files | Over the limit |
+|---|---|---|
+| `src/**/*.py` | 236 | **0** |
+| `tests/**/*.py` | 387 | **13** |
+
+**Enforcement gap.** CI does **not** check this rule at all today — neither for
+`src/` nor for `tests/`. It is measured by hand at each audit. The guard to be
+added must (a) count code lines by the rule above, (b) inspect **both** trees,
+and (c) fail the build rather than warn. The thirteen test files are scheduled
+for splitting at Stage 9A-1B; the guard lands with them, because adding it first
+would simply break CI on a known, tracked debt.
 
 ## Gate 2 — PROTOCOL GATE
 
@@ -40,7 +71,13 @@ never because "the code was written".
 | Cross-OS | identical canonical bytes and digests on Linux and Windows |
 | Isolation | cross-process run with no shared state |
 
-**Status: NOT EVALUATED.**
+**Status: capabilities IMPLEMENTED AND COVERED; no Gate-2 evidence report has
+been written.** Step-0 keyed authentication, config negotiation and lock,
+the full Commit→Ack→Reveal→Audit cycle, cross-OS canonical bytes and
+cross-process isolation are all implemented and exercised by the suite, and a
+real two-process series has been played. What is missing is the **gate ritual
+itself** — a written evidence report walking these rows with exact commands and
+results. Until that exists this gate is reported as **PARTIAL**, not as passed.
 
 ## Gate 3 — MATCH GATE
 
@@ -57,7 +94,12 @@ never because "the code was written".
 | Opponent agreement | both teams' `result_sha256` equal, `mutual_agreement: true` |
 | Sanction check | no missing/contradictory report (else **0 to both**, C-09) |
 
-**Status: NOT EVALUATED.**
+**Status: PARTNER_DEPENDENT.** No counted series exists. Six sub-games have been
+played against an independent third-party implementation and six against a
+synthetic distinct-group opponent, but both were explicitly **non-counted**, and
+their evidence is written under names that cannot be mistaken for counted
+artifacts. This gate cannot be evaluated until another group's real agent plays
+us.
 
 ## Gate 4 — SUBMISSION GATE
 
@@ -74,7 +116,10 @@ never because "the code was written".
 | Moodle | per-member submission completed |
 | Secret check | nothing secret in any submitted artifact |
 
-**Status: NOT EVALUATED.**
+**Status: FINAL_SUBMISSION_PENDING.** Row-level current state is tracked in
+`docs/SUBMISSION_CHECKLIST.md`. Two rows are known to be unmet by construction
+today: Gmail delivery (no reporting code exists) and the exact competition tag
+(deliberately not created before the freeze).
 
 ## Gate discipline
 

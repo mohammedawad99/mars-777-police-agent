@@ -3,6 +3,17 @@
 This is an academic competition project. Contributions follow a strict,
 reviewable workflow.
 
+## How this project has actually been developed
+
+Recorded so that this file does not contradict the repository. All work so far
+has been done as **supervised stages committed directly to `main`**: each stage
+is specified in advance, reviewed against acceptance criteria, and committed
+once — with no force-push and no rewritten history. There have been no feature
+branches and no pull requests, because there has been one supervised author.
+
+The workflow below is what applies to **any additional contributor**, and it is
+the standard this project would follow with more than one author.
+
 ## Workflow
 
 1. Work from a **feature branch** (`feature/<req-id>-short-slug`).
@@ -15,9 +26,11 @@ reviewable workflow.
    - `uv run mypy --strict src`
    - `uv run pytest --cov --cov-report=term-missing --cov-fail-under=90`
    - `uv build`
-6. Never include **secrets** of any kind.
-7. Never claim completion without evidence (exact commands + results).
-8. Never access the **opposing agent's** private state, config, or strategy.
+6. Keep every Python file — **tests included** — within **150 code lines**
+   (blank and comment lines excluded). Split it; never compress it to fit.
+7. Never include **secrets** of any kind.
+8. Never claim completion without evidence (exact commands + results).
+9. Never access the **opposing agent's** private state, config, or strategy.
 
 ## Commit / PR expectations
 
