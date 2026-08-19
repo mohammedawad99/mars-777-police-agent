@@ -627,16 +627,53 @@ untouched, there is no fallback from a failed HMAC into friendly mode, and a
 friendly never reaches the counted runtime at all - the inbound KIT path
 branches on the run class, decided before boot.
 
+### Official counted artifacts vs development friendly evidence
+
+Two different things, in two different places, written by two different owners.
+
+The **official counted contract is unchanged**: 1 declaration + 6 configs + 6
+logs + 1 result = 14 files, and every writer still refuses what it always
+refused. A KIT friendly satisfies none of those preconditions, and the audit is
+worth stating precisely:
+
+| Artifact | Counted-only precondition | Can a friendly satisfy it? |
+|---|---|---|
+| `declaration_<id>.json` | an authenticated Step-0 peer, and a full peer subtree (hardware, `code_version`, `github_commit`, `mcp_endpoint`) | **No** — the pinned `identity` carries none of those |
+| `config_<id>_gNN.json` | `pregame.locked_evidence` — a **keyed** config-lock proof, cross-checked against `config_sha256` and the model digest | **No** — no keyed lock occurs |
+| `log_<id>_gNN.json` | the strict `OutboundEvidenceRuntime` + `AuditRuntime` (eight-member sealed records) | **No** — the KIT chain is `{payload, nonce, commit}` |
+| `result_<id>.json` | `exchange.is_agreed`, and the document hard-codes `"mutual_agreement": true` | **No** — the pinned four-tool wire has no result-agreement operation at all |
+
+So a friendly does not produce a fourteen-file set, and forcing one would have
+meant fabricating exactly the facts those files exist to record. **Truth outranks
+the file count.**
+
+What a friendly *does* produce is a **development evidence bundle**: one series
+document plus one document per sub-game, written under `friendly_*` names
+through a `DevelopmentEvidenceStore` that **cannot** emit a counted filename.
+Every document names itself `DEVELOPMENT_EVIDENCE`, and the series document
+states the two absences out loud rather than leaving them to be inferred:
+
+```
+"keyed_step0_authentication": "ABSENT"
+"mutual_result_agreement":    "ABSENT"
+"counted_eligible":           false
+```
+
+**No second result engine.** Scores come from `outcome_line` and totals from
+`cumulative_of` — the same authorities the counted path uses. A *group* total
+under alternation is a number no contract fixes, so none is published: each row
+records which side we played, and a reader derives whatever the pairing agrees.
+
+**Two role backends, one series.** Each backend writes its own role contribution
+(settled facts and immutable references only — never a board, a position, a
+barrier set or a nonce), and a collector merges them. Contributions that disagree
+on `game_id`, `game_uid`, group or opponent are refused: that would be two
+series, not one.
+
+The kit's own result artifact is **not** mutual approval and is never read as
+such. Its unilateral write is exactly what its own banner says it is.
+
 ### What is still missing
 
-**Our own official artifact set for a friendly.** The 14-file pipeline is gated
-on the counted protocol: `record_declaration` needs an authenticated Step-0
-peer, `lock_config` needs a verified strict config lock, `close_sub_game` needs
-the strict sealed evidence and audit runtimes, and `persist_result` needs a
-mutual result agreement. The pinned four-tool surface has **no result-agreement
-operation at all** - the kit writes its own result artifact unilaterally and says
-so. Producing our 14 files from a KIT friendly would mean either fabricating
-counted facts or building a second result engine, and neither is acceptable, so
-neither was done.
-
-Public ingress for a real opponent, and a counted-auth agreement, both remain.
+A counted-auth agreement with a real opponent, and the public ingress that
+fronts the group gateway for one. Neither is implemented here.

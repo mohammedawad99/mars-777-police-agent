@@ -7,14 +7,12 @@ the group gateway that routes each sub-game to the backend that owns it.
 
 **Driven by the routed greeting, not by a clock.** A backend waits until the
 gateway hands it a greeting for one of its own sub-games; only then does it send
-its own greeting, play, disclose, and report that it owes nothing more. The
-report is explicit because settlement cannot be inferred - a peer that is
-thinking looks exactly like a sub-game that has finished.
+its own greeting, play, disclose, and report that it owes nothing more -
+explicitly, because a peer that is thinking looks exactly like one that finished.
 
 **Fresh per sub-game, series-wide where the contract says so.** Board, scent,
 private truth and message history are rebuilt for every gNN; the identity, the
-opponent, the convention and the agreed terms are the series', and are held by
-the session context that outlives each sub-game.
+opponent, the convention and the agreed terms are the series'.
 """
 
 from collections.abc import Awaitable, Callable
@@ -22,6 +20,7 @@ from dataclasses import dataclass, field
 
 from .app.commitment_codecs import CommitmentCodec
 from .app.config_rules import hints_of, limits_of, rules_of
+from .app.friendly_backend_evidence import BackendWitness
 from .app.kit_friendly import KitFriendlySession
 from .app.kit_half_turn import KitHalfTurnMaker
 from .app.kit_messages import KitResultClaim, KitRole
@@ -45,12 +44,8 @@ from .transport.peer_transport import FastMcpPeerTransport
 
 Settled = Callable[[int], Awaitable[None]]
 """Report to the group gateway that this sub-game owes nothing more."""
-
-_CLAIM = {
-    Outcome.CAPTURE: KitResultClaim.CAPTURE,
-    Outcome.SURVIVAL: KitResultClaim.SURVIVAL,
-    Outcome.TECHNICAL_LOSS: KitResultClaim.TECHNICAL_LOSS,
-}
+_CLAIM = {one: KitResultClaim(one.value.lower()) for one in Outcome}
+"""Our end event in the kit's own spelling; the vocabularies coincide exactly."""
 
 
 @dataclass(slots=True)
@@ -73,6 +68,7 @@ class KitRoleBackend:
     outcomes: dict[int, Outcome] = field(default_factory=dict)
     chains: dict[int, KitRecordChain] = field(default_factory=dict)
     verified: dict[int, bool] = field(default_factory=dict)
+    witnessed: BackendWitness = field(default_factory=BackendWitness)
 
     def __post_init__(self) -> None:
         if self.friendly.classification.run_class is not RunClass.KIT_FRIENDLY_ONLY:
@@ -99,7 +95,7 @@ class KitRoleBackend:
         if sub_game not in self.ours:
             raise LocalDefectError(
                 f"sub-game {sub_game} is not this {self.kit_role.value} backend's;"
-                f" this repository plays {self.ours} and never the other side",
+                f" this repository plays {self.ours} and never the other",
             )
 
     async def run(self) -> dict[int, Outcome]:
@@ -117,7 +113,7 @@ class KitRoleBackend:
         await self.transport.send_kit(self.context.our_greeting(self.nonces.fresh().value, number))
         chain = KitRecordChain(self.codec, self.nonces)
         self.chains[number] = chain
-        outcome = await KitSubGame(
+        game = KitSubGame(
             maker=self._maker(number, chain),
             inbox=inbox,
             send=self.transport.send_kit,
@@ -125,10 +121,13 @@ class KitRoleBackend:
             limits=limits_of(self.config),
             deadline=self.deadline,
             state=KitPlayState.opening(self.config, self.role),
-        ).play()
+        )
+        outcome = await game.play()
+        self.witnessed.steps[number] = game.state.step
         await self.transport.send_kit(chain.reveal(self.kit_role, _CLAIM[outcome]))
         reveal = await self.friendly.await_audit(self.deadline)
         self.verified[number] = peer_chain_verified(reveal, number, self.codec)
+        self.witnessed.record(number, reveal)
         await self.settled(number)
         return outcome
 

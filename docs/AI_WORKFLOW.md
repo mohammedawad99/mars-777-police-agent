@@ -1090,3 +1090,18 @@
 - **Name the scope limit in the artifact, not just the report.** Every document this stage touched
   says what is transport-proven and what is not implemented, because a reader who finds only
   "public transport verified" will assume the rest.
+
+## Workflow exception — Stage 8A-2R group gateway (recorded, not repaired)
+
+`transport/kit_gateway.py` was **written before its routing tests**. Every other
+feature in that stage and this one was RED-first; this one was not.
+
+What actually happened, in order: the gateway module was implemented, then its
+routing tests (`tests/kit_series/test_kit_gateway.py`) were added as
+characterization tests, then coverage reached 100% and CI passed on the exact
+SHA. The tests are real and they do constrain the code — but they were written
+against an implementation that already existed, so they cannot be claimed as
+red-before-green evidence, and no later stage should claim it for them.
+
+The implementation is kept. Rewriting history to manufacture a RED phase would
+be a worse defect than the one it hid.
