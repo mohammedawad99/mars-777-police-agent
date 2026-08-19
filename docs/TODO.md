@@ -231,12 +231,20 @@ repository and green in CI on the exact commit.
       component applies it at call time**. Closure must cover provider calls
       only; peer gameplay calls must **not** be wrapped in generic retries or a
       queue.
-- [ ] **SDK façade** (guideline §4.1). Four external entrypoints reach the
-      application and domain layers directly. A thin façade over the existing
-      services, moving no business logic.
-- [ ] **Software version authority** (guideline §8.1, §14). `pyproject`
-      `version` and `__version__` are `0.0.0`; there is no `rate_limits.version`
-      and no boot-time compatibility validation of a *software* version.
+- [x] **SDK façade** (guideline §4.1) - **DELIVERED at Stage 9A-1B1.**
+      `<pkg>/sdk` exposes `AgentSdk` with five operations, each forwarding to
+      the composition module that owns the work. The three operator entrypoints
+      now import nothing but the standard library and `.sdk`; structural tests
+      hold both directions, and an out-of-process consumer test proves the
+      surface works from the installed distribution alone.
+- [x] **Software version authority** (guideline §8.1, §14) - **DELIVERED at
+      Stage 9A-1B1.** `<pkg>/shared/version.py` holds one value at the
+      guideline's initial version, rendered `1.00` for the guideline and `1.0`
+      for packaging; `pyproject`, `__version__` and the installed metadata are
+      held to it by test, and a mismatch refuses the process locally.
+- [ ] **`rate_limits.version`** (guideline §8.1, third row). Needs the local
+      versioned rate-limit configuration file, which belongs to the provider
+      gatekeeper slice.
 - [ ] **Test-file 150-code-line split** (guideline §3.2 with §6.1). 13 test
       files exceed the limit when counted the guideline's way; `src/` has zero
       violations. Also add the CI guard that measures **both** trees.

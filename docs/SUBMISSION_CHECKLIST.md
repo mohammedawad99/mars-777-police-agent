@@ -1,7 +1,7 @@
 # Submission checklist — group MaRs-777 (POLICE)
 
-**Status: CURRENT.** Last verified at Stage 9A-1A against commit
-`23a6db8` (police) and `7597c14` (thief), both green in CI on the exact SHA.
+**Status: CURRENT.** Last verified at Stage 9A-1B1, on commits green in CI on
+their exact SHAs in both repositories.
 
 Every row carries one status and its evidence. This is a working gate, not a
 ceremony: a row moves to `VERIFIED` only when the thing is in the repository and
@@ -56,9 +56,11 @@ green in CI on the exact commit.
 | Coverage above the gate | `VERIFIED` | measured **100%**; `fail_under = 90` |
 | `uv build` | `VERIFIED` | CI gate |
 | `uv.lock` committed; `uv sync --frozen` clean | `VERIFIED` | 79 packages checked |
-| `src/**` ≤ 150 code lines per file | `VERIFIED` | 0 violations across 236 files |
+| `src/**` ≤ 150 code lines per file | `VERIFIED` | 0 violations across 247 files |
 | `tests/**` ≤ 150 code lines per file | `PENDING` | **13** files exceed it; the guideline applies the rule to tests too |
 | CI enforces the line rule automatically | `PENDING` | measured by hand at each audit; no CI guard yet |
+| Public SDK façade (guideline §4.1) | `VERIFIED` | `sdk/AgentSdk` — five forwarding operations; operator entrypoints reach only the standard library and `.sdk`; structural and out-of-process consumer tests |
+| `__all__` and `__version__` in `__init__.py` (§14.2) | `VERIFIED` | both declared; `__version__` renders the authority |
 | CI green on `ubuntu-latest` **and** `windows-latest` | `VERIFIED` | both, every push |
 
 ## Documentation
@@ -91,8 +93,8 @@ green in CI on the exact commit.
 | Secrets from environment only, unprintable in logs | `VERIFIED` | `AuthSecret.__repr__` / `__str__` render `<withheld>` |
 | Tunnel credential never read by this project | `VERIFIED` | the ngrok agent uses the operator's own configuration |
 | `SECURITY.md` and a threat model | `VERIFIED` | `SECURITY.md`; `docs/architecture/SECURITY_ARCHITECTURE.md` (15 threats) |
-| Versioned configuration files | `PENDING` | the binding configuration is negotiated and locked, not shipped; a local versioned configuration surface does not exist yet |
-| Software version authority starting at `1.00` | `PENDING` | `version = "0.0.0"` in `pyproject.toml` and `__init__.py`; a configuration **schema** version exists and is covered by the mutual config-digest comparison, but there is no software-version authority and no boot-time version validation |
+| Versioned configuration files | `PENDING` | the binding configuration is negotiated and locked, not shipped; a local versioned configuration surface (and with it `rate_limits.version`) belongs to the provider gatekeeper slice |
+| Software version authority starting at `1.00` | `VERIFIED` | `shared/version.py` holds one value at the guideline's initial version, rendered `1.00` and `1.0` from a single source; `pyproject.toml`, `__version__` and the installed distribution metadata are held to it by test, and a mismatch refuses the process |
 
 ## Research and analysis
 

@@ -12,8 +12,8 @@
   **counted** match against another group's agent.
 
 This README is the user manual. Sections 1–3 say what the system is, 4–9 are the
-operator manual, 10–13 are the engineering surface, and 14–16 are the honest
-boundary of what is and is not done.
+operator manual, 10–14 are the engineering and programmatic surface, and 15–19
+are the honest boundary of what is and is not done.
 
 ---
 
@@ -335,7 +335,48 @@ required by the project book is not implemented. This section will carry
 screenshots of every screen and state once a GUI exists. Until then, the
 reproducible demonstration is §6 plus the artifacts a run writes.
 
-## 13. Documentation map
+## 13. Programmatic use — the SDK
+
+Everything this agent can do is reachable from one import path. The command
+lines shipped here use it, and so would a graphical interface, a replay viewer,
+or any third party who installed the distribution.
+
+```python
+import asyncio
+from pathlib import Path
+
+from mars777_police.sdk import AgentSdk, StrictSeriesRequest
+
+sdk = AgentSdk()  # verifies this installation is this source
+artifacts = asyncio.run(sdk.run_strict_series(StrictSeriesRequest(launch=Path("launch.json"))))
+```
+
+| Operation | What it does |
+|---|---|
+| `run_strict_series(request)` | plays one complete series and returns where the artifacts were written |
+| `compose_role_backend(request)` | assembles this role's friendly backend; nothing is served or dialled |
+| `write_contribution(backend, root)` | writes a finished backend's development evidence and says where |
+| `compose_public_gateway(request)` | assembles the group's public front door; no route is opened yet |
+| `verify_config_artifact(document)` | returns what a stored config artifact proves, or refuses it |
+
+The requests (`StrictSeriesRequest`, `RoleBackendRequest`, `PublicGatewayRequest`)
+and the failures a caller must tell apart (`SettingsError`, `LaunchInputError`,
+`TransportFailureError`, `PeerProtocolError`, `LocalDefectError`,
+`PublicIngressError`, `SoftwareVersionError`) are exported from the same place.
+The names in `mars777_police.sdk.__all__` are the promise; anything else in the
+package is an implementation detail.
+
+**What the SDK is not.** It holds no game rules, no cryptography, no strategy, no
+transport and no provider mechanics — it forwards to the layers that own them.
+There is deliberately **no replay or GUI operation**, because neither exists yet;
+a method whose implementation does not exist would be worse than an absent one.
+
+**Software version.** `mars777_police.sdk.SOFTWARE_VERSION` is the single
+authority. It renders two ways — `1.00`, the professional-software guideline's
+literal, and `1.0`, the packaging form declared in `pyproject.toml` — from one
+stored value, so the two cannot drift.
+
+## 14. Documentation map
 
 | Document | What it is for |
 |---|---|
@@ -351,7 +392,7 @@ reproducible demonstration is §6 plus the artifacts a run writes.
 | `docs/COSTS.md` | measured resource use |
 | `docs/SUBMISSION_CHECKLIST.md` | what still gates delivery |
 
-## 14. Contributing
+## 15. Contributing
 
 - **Workflow:** requirement → PRD → PLAN → TODO → implement → verify → review →
   commit → push. Nothing is implemented before an approved plan, and nothing is
@@ -367,7 +408,7 @@ reproducible demonstration is §6 plus the artifacts a run writes.
 
 Full contributor guidance: `CONTRIBUTING.md`.
 
-## 15. Security
+## 16. Security
 
 Never commit credentials, tokens, OAuth files, private keys or tunnel
 configuration. Secrets come from the environment only; the authentication secret
@@ -376,13 +417,13 @@ leak into a log line or a traceback. If a secret is ever exposed, revoke it
 immediately. Policy: `SECURITY.md`. Threat model:
 `docs/architecture/SECURITY_ARCHITECTURE.md`.
 
-## 16. Isolation statement
+## 17. Isolation statement
 
 This POLICE agent shares **no live state** with the opposing THIEF agent:
 separate repository, separate `.venv`, separate process, separate configuration,
 logs and runtime state. There is no shared package, database, cache or memory.
 
-## 17. License and credits
+## 18. License and credits
 
 **License: proprietary / unlicensed academic coursework.** This repository is
 submitted for assessment in the 2026 Distributed Police-Thief course. No licence
@@ -410,7 +451,7 @@ under human supervision; the method and its corrections are recorded in
 their authors and are **not** redistributed here; the book is read from a local,
 git-ignored path. See `docs/SOURCES.md`.
 
-## 18. Known limitations
+## 19. Known limitations
 
 1. No counted match against another group's agent has been played.
 2. No GUI, no user-facing Replay Viewer, no Gmail reporting.
@@ -419,5 +460,7 @@ git-ignored path. See `docs/SOURCES.md`.
 5. Thirteen tunnel tests require a real ngrok agent and are skipped by default.
 6. One documented Windows-native limitation is isolated in its own CI job so it
    stays visible rather than being hidden by a skip.
-7. The package version is `0.0.0`; a real version authority is a tracked gap
+7. The version authority covers this **software** only. There is no
+   `rate_limits.version` and no local versioned configuration file yet; the
+   binding game configuration is negotiated and locked with the peer instead
    (`docs/GUIDELINE_ALIGNMENT.md` §8.1).

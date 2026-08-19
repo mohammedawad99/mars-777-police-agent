@@ -16,39 +16,28 @@ never reached - not merely gated.
 The launch document is the same one the counted entrypoint reads: it already
 carries the negotiated config and, since Stage 8A-1T, the optional flat KIT
 terms an external pairing agreed.
+
+Like the counted entrypoint, this file parses, asks the facade, and classifies.
+The assembly it used to perform lives in `compose_backend`, one layer down.
 """
 
 import argparse
 import asyncio
-import os
 import sys
 from pathlib import Path
 
-from . import GROUP_CODE
-from .__main__ import ROLE
-from .app.commitment_codecs import CommitmentCodec
-from .app.competitive_strategy import CompetitiveStrategy
-from .app.friendly_backend_evidence import backend_rows
-from .app.friendly_evidence import DevelopmentEvidenceStore
-from .app.friendly_merge import contribution_document, friendly_contribution_name
-from .app.kit_friendly import KitFriendlySession
-from .app.kit_messages import KitRole
-from .app.kit_payload import PeerPayload
-from .app.kit_session import KitSessionContext
-from .app.protocol_errors import LocalDefectError
-from .app.run_class import RunClassification
-from .domain.scent_model_default import default_scent_model
-from .infra.artifacts import JsonArtifactStore
-from .infra.clock import SystemClock
-from .infra.settings import SettingsError, load_runtime_settings
-from .kit_backend import KitRoleBackend
-from .kit_backend_boot import KitBackendBoot, backend_client
-from .launch_input import LaunchInputError, read_launch_document
-from .protocol.secure_nonce import SecretsNonceSource
-from .transport.peer_transport import FastMcpPeerTransport
+from .sdk import (
+    AgentSdk,
+    KitBackendBoot,
+    KitRole,
+    KitRoleBackend,
+    LaunchInputError,
+    RoleBackendRequest,
+    SettingsError,
+    SoftwareVersionError,
+)
 
-BACKEND_DEADLINE = 1800.0
-"""How long this role waits to be handed a sub-game, bounded well above a turn."""
+__all__ = ["build", "main", "parse_args", "persist"]
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -64,64 +53,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def build(arguments: argparse.Namespace) -> KitBackendBoot:
-    """Assemble this role's backend. Nothing is served and nothing is dialled."""
-    load_runtime_settings(dict(os.environ), expected_role=ROLE)
-    document = read_launch_document(arguments.launch)
-    if document.kit_terms is None:
-        raise LaunchInputError("a KIT friendly needs the agreed flat terms in the launch document")
-    friendly = KitFriendlySession(RunClassification.friendly(kit_terms_agreement=True))
-    context = KitSessionContext(
-        GROUP_CODE,
-        KitRole(ROLE.value),
-        PeerPayload(document.kit_terms),
-        1,
-        friendly=friendly,
+    """Turn parsed text into one request and let the facade assemble it."""
+    return AgentSdk().compose_role_backend(
+        RoleBackendRequest(
+            launch=arguments.launch,
+            port=arguments.port,
+            opponent=arguments.opponent,
+            gateway_admin=arguments.gateway_admin,
+            first_role=KitRole(arguments.first_role),
+            evidence_root=arguments.evidence_root,
+        )
     )
-    client = backend_client(arguments.opponent, BACKEND_DEADLINE)
-    backend = KitRoleBackend(
-        context=context,
-        friendly=friendly,
-        transport=FastMcpPeerTransport(client),
-        settled=_unwired,
-        config=document.config,
-        role=ROLE,
-        strategy=CompetitiveStrategy(),
-        model=default_scent_model(),
-        nonces=SecretsNonceSource(),
-        clock=SystemClock(),
-        codec=CommitmentCodec.KIT_CORE_COMMITMENT_V1,
-        deadline=BACKEND_DEADLINE,
-        first_role=KitRole(arguments.first_role),
-    )
-    return KitBackendBoot(backend, context, client, arguments.gateway_admin, arguments.port)
-
-
-async def _unwired(sub_game: int) -> None:  # pragma: no cover - replaced before play
-    raise LocalDefectError("this backend was never given a gateway to report settlement to")
 
 
 def persist(backend: KitRoleBackend, root: Path) -> str:
     """Write this role's contribution to the development evidence root."""
-    pairing = backend.friendly.pairing
-    if pairing is None:
-        raise LocalDefectError("a contribution needs the pairing a greeting established")
-    document = contribution_document(
-        role=backend.kit_role,
-        game_id=pairing.game_id,
-        game_uid=pairing.game_uid,
-        our_group=pairing.our_group,
-        peer_group=pairing.peer_group,
-        rows=backend_rows(
-            role=backend.kit_role,
-            outcomes=backend.outcomes,
-            chains=backend.chains,
-            verified=backend.verified,
-            witnessed=backend.witnessed,
-        ),
-    )
-    store = DevelopmentEvidenceStore(JsonArtifactStore(root))
-    stored = store.store(friendly_contribution_name(pairing.game_id, backend.kit_role), document)
-    return stored.path
+    return AgentSdk().write_contribution(backend, root)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -129,7 +76,7 @@ def main(argv: list[str] | None = None) -> int:
     arguments = parse_args(argv)
     try:
         boot = build(arguments)
-    except (SettingsError, LaunchInputError) as failure:
+    except (SettingsError, LaunchInputError, SoftwareVersionError) as failure:
         print(f"cannot start: {failure}", file=sys.stderr)
         return 2
     try:

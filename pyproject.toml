@@ -1,7 +1,7 @@
 [project]
 name = "mars-777-police-agent"
-version = "0.0.0"
-description = "Police agent (group MaRs-777) for the 2026 Distributed Police-Thief P2P final project. Foundation only."
+version = "1.0"
+description = "Police agent (group MaRs-777) for the 2026 Distributed Police-Thief P2P final project."
 readme = "README.md"
 requires-python = "==3.12.*"
 license = { text = "UNLICENSED" }

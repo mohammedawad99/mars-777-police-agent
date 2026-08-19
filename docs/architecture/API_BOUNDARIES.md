@@ -752,3 +752,59 @@ A real partner. Nothing in the public path is waiting on us: what remains is an
 agreed keyed Step-0 proof and an agreed result-digest exchange, both of which
 need a partner to opt in, and both of which are specified in
 `docs/reference/KIT_PAIRING_HANDOFF.md`.
+
+## 9. The public SDK facade (Stage 9A-1B1)
+
+**Classification: PUBLIC OUTER FACADE / USER-PROGRAMMATIC API.** Not domain, not
+application business logic, not infrastructure. `mars777_police.sdk` is the one
+import path every consumer uses - the command lines shipped here, a future
+graphical interface, a future replay viewer, and any third party who installed
+the distribution. The excellence guideline §4.1 asks for exactly one such
+boundary; before this stage there were four entrypoints each reaching into
+`app`, `domain`, `protocol`, `transport` and `infra` directly.
+
+### What it contains
+
+```
+sdk/__init__.py     the export list - the promise
+sdk/agent_sdk.py    AgentSdk: five operations, each one forwarding call
+sdk/errors.py       the failure identities a caller must be able to tell apart
+```
+
+**`AgentSdk` decides nothing.** Every method forwards to the composition module
+that owns the work and returns what it answered:
+
+| Operation | Forwards to | Returns |
+|---|---|---|
+| `run_strict_series` | `compose_series.run_strict_series` | the artifact root |
+| `compose_role_backend` | `compose_backend.compose_role_backend` | `KitBackendBoot` |
+| `write_contribution` | `compose_backend.write_contribution` | the written path |
+| `compose_public_gateway` | `compose_gateway.compose_public_gateway` | `KitPublicLauncher` |
+| `verify_config_artifact` | `compose_verify.verify_stored_config` | what the bytes prove |
+
+The one thing the facade owns is the **local software integrity check**: building
+an `AgentSdk` verifies that the installed distribution is the version this source
+tree declares, so a stale wheel shadowing the tree is refused before any
+operation can run. It is local by construction and involves no peer.
+
+### What it must never contain
+
+Move legality, scoring, capture truth, commitment construction, scent physics,
+strategy, audit rules, FastMCP tool definitions, provider mechanics, or HTTP
+retry logic. Two structural tests enforce this - one that the facade names no
+business authority and no framework, one that the operator entrypoints reach
+nothing but the standard library and `.sdk`.
+
+### What moved, and what did not
+
+The assembly the three command lines used to perform moved down into
+`compose_series`, `compose_backend`, `compose_gateway` and `compose_verify`, and
+the role constant into `identity`. **No behaviour moved**: every flag, default,
+exit status, refusal message and banner line is what it was, and the same tests
+that pinned them still pin them.
+
+### Not yet part of the surface
+
+There is no replay or GUI operation, because there is no replay viewer or GUI to
+delegate to. A facade method whose implementation does not exist would be worse
+than an absent one. The stages that build them will extend this surface.

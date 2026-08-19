@@ -5,13 +5,15 @@ from ever being confused for one another. They contain no game logic.
 """
 
 import mars777_police as agent
+from mars777_police.shared.version import VERSION
 
 EXPECTED_ROLE = "POLICE"
 OPPOSING_ROLE = "THIEF"
 
 
 def test_package_imports() -> None:
-    assert agent.__version__ == "0.0.0"
+    """The package renders the authority; it does not hold a literal of its own."""
+    assert agent.__version__ == VERSION.pep440
 
 
 def test_group_code_is_exact() -> None:

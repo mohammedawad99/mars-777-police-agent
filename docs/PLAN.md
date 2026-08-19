@@ -114,6 +114,8 @@ one vocabulary:
 - **Stage 9A-0 - academic excellence gap audit.** Read-only. Produced the master gap matrix against the book, the professional-software guideline and the repository's own contracts, with **zero repository changes**.
 - **Stage 9A-1A - academic truth and guideline foundation closure.** Documentation and hygiene only, against the lecturer's actual guideline v3.00. Reconciled the front-door documents with the repository's real state, backfilled the prompt book, added `.env.example` and `docs/PRD.md`, and produced `docs/GUIDELINE_ALIGNMENT.md`, a complete version-authority audit, an SDK-equivalence audit, a Gatekeeper-equivalence audit and a correct code-line measurement. **CURRENT.**
 
+- **Stage 9A-1B1 - software version authority and public SDK facade.** Created the one software-version authority at the guideline's own location and initial value, held `pyproject.toml`, `__version__` and the installed distribution metadata to it by test, and made a mismatch refuse the process locally - never coupled to any peer's version. Added `sdk/`, classified as a **public outer facade**: five operations, each a forwarding call, with the three operator command lines migrated to reach nothing but the standard library and the facade. No behaviour changed - every flag, default, exit status and banner line is what it was. **IMPLEMENTED / VERIFIED.**
+
 ## 2. Where the project actually stands
 
 **IMPLEMENTED / VERIFIED.** Deterministic game mechanics; the protocol state
@@ -128,9 +130,9 @@ sub-games; and public-network play demonstrated end to end on one stable URL.
 **PLANNED — the largest open block is PRD-07.** A user-facing Replay Viewer, the
 live GUI, Gmail result reporting, and **enforcement** of the negotiated
 rate-limiter terms (which are today negotiated, validated and locked, but never
-applied at call time). Alongside them: an SDK façade and a software version
-authority, both required by the professional-software guideline and both audited
-at Stage 9A-1A.
+applied at call time). The SDK façade and the software version authority, both
+required by the professional-software guideline, landed at Stage 9A-1B1 and are
+no longer open.
 
 **PLANNED — research.** The systematic parameter study, the analysis notebook and
 the result charts. Deliberately not started, so that no learning curve is
@@ -147,10 +149,9 @@ and the collaborator grant.
 
 ## 3. Forward plan
 
-- **Stage 9A-1B - engineering closure.** Split the test files that exceed the
-  guideline's 150-code-line rule; add the SDK façade over the existing
-  application services without moving business logic; create the software
-  version authority and validate it at boot. `PLANNED`.
+- **Stage 9A-1B2 - test modularity.** Split the test files that exceed the
+  guideline's 150-code-line rule, then add the CI guard that measures both
+  trees. `PLANNED`.
 - **Stage 9A-1C - external-call control.** A gatekeeper for **provider** calls
   (tunnel API, and reporting when it exists): rate limits from versioned
   configuration, a bounded FIFO queue with backpressure, retries and call

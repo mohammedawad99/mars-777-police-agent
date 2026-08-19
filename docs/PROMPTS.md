@@ -1,6 +1,6 @@
 # Prompt Register - group MaRs-777
 
-> **Status: CURRENT.** Backfilled through Stage 9A-1A.
+> **Status: CURRENT.** Backfilled through Stage 9A-1B1.
 > **Purpose:** The prompt-engineering log. It records the supervising-reviewer
 > prompts that drove each stage — their goal, their binding constraints, what
 > the AI got wrong, what the human correction was, and what shipped.
@@ -158,7 +158,7 @@ contain no secrets.
 
 ---
 
-## 2. Prompt engineering log (Stages 5 — 9A-1A)
+## 2. Prompt engineering log (Stages 5 — 9A-1B1)
 
 Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text.
 
@@ -378,6 +378,40 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
   `docs/GUIDELINE_ALIGNMENT.md` written against the real guideline, and complete
   version-authority, SDK-equivalence and Gatekeeper-equivalence audits recorded.
 
+### Stage 9A-1B1 — software version authority and public SDK facade
+
+- **Goal.** Close the two guideline gaps the audit had mapped: one software
+  version authority, and one public entry point for every consumer.
+- **Constraints.** Resolve the guideline's version semantics from the PDF rather
+  than guessing. The facade holds **zero** business logic. No test split, no
+  gatekeeper, no Gmail, no replay, no GUI, no strategy change, no tag. Command
+  line behaviour - flags, defaults, exit codes, error semantics, banner - must
+  not change.
+- **Finding (version).** The guideline's `1.00` is not a PEP-440-stable string:
+  the packaging rules normalise it to `1.0`, so declaring `1.00` in
+  `pyproject.toml` would publish metadata that disagrees with the declaration.
+  Two truths, to satisfy formatting.
+- **Correction.** The value is stored once as `MAJOR.MINOR` and *rendered* twice
+  - `1.00` for the guideline, `1.0` for packaging. Nothing can drift, because
+  neither string is stored.
+- **Finding (boot validation).** §8.1's boot clause asks for **configuration**
+  version compatibility, not software version compatibility. Reading it as a
+  peer check would have coupled our package version to another group's
+  implementation.
+- **Correction.** The configuration half was mapped to the authority that
+  already exists and is already covered by the mutual config digest; the
+  software half became a **local** integrity check - installed distribution
+  metadata against the source authority - that no peer can cause or observe.
+- **Finding (facade).** Moving composition out of the command lines broke two
+  boot guards that asserted "only the entrypoint declares the role" and "only
+  the entrypoint reads the environment".
+- **Correction.** The guarded property - *exactly one* place - was still true;
+  the assertions were retargeted to follow it to `identity` and `compose_series`
+  rather than deleted or weakened.
+- **Result.** `shared/version.py`, `sdk/` with five forwarding operations, four
+  composition modules below it, three command lines reduced to parse-request-
+  classify, and structural tests holding both dependency directions.
+
 ## 3. Practices this project actually learned
 
 1. **Prove it as a process.** Every in-process proof in this project hid at
@@ -392,3 +426,8 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
    against a code-line rule produced a wrong answer by more than a factor of two.
 6. **Name what is absent.** `ABSENT`, `counted_eligible: false` and a rejected
    strategy candidate are all more useful than a tidy document.
+7. **Read the standard's own words before satisfying it.** `1.00` looked like a
+   literal to copy; it is a value to represent. Copying it would have created the
+   drift the clause exists to prevent.
+8. **When code moves, move the guard with it.** A structural test that fails
+   because its subject moved is a test to retarget, never one to delete.

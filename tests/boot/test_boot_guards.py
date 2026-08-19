@@ -7,7 +7,14 @@ import composed_builders as compose
 from r16_source import code_of, imports_of, tokens_of
 
 from mars777_police import __main__ as entry
-from mars777_police import agent_runtime, composition, composition_values, launch_input
+from mars777_police import (
+    agent_runtime,
+    compose_series,
+    composition,
+    composition_values,
+    identity,
+    launch_input,
+)
 from mars777_police.agent_runtime import AgentRuntime, RuntimeState
 
 OUTER = (agent_runtime, launch_input, entry)
@@ -51,12 +58,18 @@ def test_boot_uses_no_sleep_or_poll_as_readiness() -> None:
             assert forbidden not in tokens
 
 
-def test_only_the_entrypoint_reads_the_environment() -> None:
-    """Settings stay the configuration boundary."""
+def test_only_the_composition_boundary_reads_the_environment() -> None:
+    """Settings stay the configuration boundary.
+
+    Stage 9A-1B1 moved the read from the command line into the composition
+    module the facade delegates to; the property this guards - exactly one
+    place - is unchanged, so the assertion follows it rather than being dropped.
+    """
     for forbidden in ("environ", "getenv"):
         assert forbidden not in tokens_of(agent_runtime)
         assert forbidden not in tokens_of(launch_input)
-    assert "environ" in tokens_of(entry)
+        assert forbidden not in tokens_of(entry)
+    assert "environ" in tokens_of(compose_series)
 
 
 def test_the_launch_adapter_invents_no_schema() -> None:
@@ -91,13 +104,18 @@ def test_no_outer_module_carries_a_role_branch() -> None:
             assert branch not in body
 
 
-def test_the_entrypoint_declares_its_role_without_branching_on_it() -> None:
-    """This repository *is* one role; settings are checked against it, not asked."""
-    body = code_of(entry)
+def test_the_package_declares_its_role_without_branching_on_it() -> None:
+    """This repository *is* one role; settings are checked against it, not asked.
+
+    The declaration moved to `identity` at Stage 9A-1B1 so that the facade and
+    every composition module agree by construction rather than by importing the
+    command line. It is still exactly one constant, still with no branch.
+    """
+    body = code_of(identity)
     roles = [name for name in ("POLICE", "THIEF") if name in body]
     assert len(roles) == 1
-    assert f"ROLE = ActorRole . {roles[0]}" in body
-    assert "if" not in body.split("ROLE =")[1].split("def ")[0]
+    assert f"ROLE : Final [ ActorRole ] = ActorRole . {roles[0]}" in body
+    assert "if" not in body
     assert entry.ROLE.value in {"police", "thief"}
 
 

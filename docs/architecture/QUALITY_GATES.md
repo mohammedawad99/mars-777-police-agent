@@ -44,12 +44,12 @@ transparency, and code is **split, never compressed** to fit — semicolon
 packing or removing docstrings to pass the count is a violation of the rule's
 purpose, not compliance with it.
 
-**Measured at Stage 9A-1A.**
+**Measured at Stage 9A-1B1.**
 
 | Tree | Files | Over the limit |
 |---|---|---|
-| `src/**/*.py` | 236 | **0** |
-| `tests/**/*.py` | 387 | **13** |
+| `src/**/*.py` | 247 | **0** |
+| `tests/**/*.py` | 395 | **13** |
 
 **Enforcement gap.** CI does **not** check this rule at all today — neither for
 `src/` nor for `tests/`. It is measured by hand at each audit. The guard to be

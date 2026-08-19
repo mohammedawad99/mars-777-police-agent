@@ -1,14 +1,9 @@
 """`python -m mars777_police` - start this agent and play its series.
 
-The outermost file in the project. It reads the operator's settings and launch
-document, composes the agent, and hands the process to `AutonomousBoot`, which
-owns the lifecycle from there: serve, reach the opponent, exchange Step-0, run
-the one production `SeriesDriver`, stop. Nothing here plays anything.
-
-**It still does not dial by itself, and it still owns no game.** Joining the
-opponent is a bounded startup step inside the coordinator, because two teams
-start their agents independently and the first one up finds nothing to reach.
-No Step-0, no action and no config leaves this module.
+The outermost file in the project, and deliberately the thinnest. It reads the
+command line, turns it into one semantic request, hands that to the public
+facade, and translates whatever comes back into a process status. It composes
+nothing, plays nothing and owns no game.
 
 **One compatibility option, not eight.** `--external-mode` is the whole external
 selection: it resolves a frozen profile set, the tool surface this process
@@ -17,12 +12,13 @@ so nothing changes for a series that does not ask for the change, and it is
 never inferred from a message - a wire cannot be negotiated by the messages
 whose encoding it governs. No secret is passed on the command line.
 
-**Exit status is a classification, not a summary.** A local operator refusal
-(settings, launch document) is 2, an opponent that never became reachable is 4,
-and a peer that refused us for a protocol reason is 5 with its own frozen error
-id printed - the identity, never the payload. A genuine local defect is
-deliberately *not* translated: it keeps its traceback, because pretending a bug
-is an unreachable peer is how a defect survives to the next stage.
+**Exit status is a classification, not a summary.** A local refusal (settings,
+launch document, an installation that is not this software) is 2, an opponent
+that never became reachable is 4, and a peer that refused us for a protocol
+reason is 5 with its own frozen error id printed - the identity, never the
+payload. A genuine local defect is deliberately *not* translated: it keeps its
+traceback, because pretending a bug is an unreachable peer is how a defect
+survives to the next stage.
 
 Nothing printed here carries key material: the launch document holds no secret,
 settings render theirs as `<withheld>`, and the summary names only a directory
@@ -31,23 +27,23 @@ and a count.
 
 import argparse
 import asyncio
-import os
 import sys
 from pathlib import Path
 
-from . import GROUP_CODE
-from .agent_runtime import AgentRuntime
-from .app.kit_preset import ExternalMode
-from .app.protocol_errors import LocalDefectError, PeerProtocolError
-from .app.sealed_record_values import ActorRole
-from .autonomous_boot import AutonomousBoot
-from .composition import compose_agent
-from .infra.settings import SettingsError, load_runtime_settings
-from .launch_input import LaunchInputError, read_launch_document
-from .transport.wire_errors import TransportFailureError
+from .sdk import (
+    ROLE,
+    AgentSdk,
+    ExternalMode,
+    LaunchInputError,
+    LocalDefectError,
+    PeerProtocolError,
+    SettingsError,
+    SoftwareVersionError,
+    StrictSeriesRequest,
+    TransportFailureError,
+)
 
-ROLE = ActorRole.POLICE
-"""The role this repository is; settings are checked against it, never asked."""
+__all__ = ["ROLE", "SERIES_FILES", "main", "parse_args"]
 
 SERIES_FILES = 14
 """What one complete series leaves behind, reported rather than recounted."""
@@ -67,22 +63,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-async def play(launch: Path, mode: ExternalMode) -> Path:
-    """Compose the agent and let the boot coordinator run its whole life."""
-    settings = load_runtime_settings(os.environ, expected_role=ROLE)
-    document = read_launch_document(launch)
-    composition = compose_agent(settings, document.identity, GROUP_CODE, mode, document.kit_terms)
-    runtime = AgentRuntime(composition, settings.local.host, settings.local.port)
-    await AutonomousBoot(runtime, settings, document.config, ROLE).run()
-    return settings.artifact_root
-
-
 def main(argv: list[str] | None = None) -> int:
     """Run the agent; return the process status."""
     arguments = parse_args(argv)
+    request = StrictSeriesRequest(launch=arguments.launch, external_mode=arguments.external_mode)
     try:
-        root = asyncio.run(play(arguments.launch, arguments.external_mode))
-    except (SettingsError, LaunchInputError) as failure:
+        root = asyncio.run(AgentSdk().run_strict_series(request))
+    except (SettingsError, LaunchInputError, SoftwareVersionError) as failure:
         print(f"cannot start: {failure}", file=sys.stderr)
         return 2
     except TransportFailureError:

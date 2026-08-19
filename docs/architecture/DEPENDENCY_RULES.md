@@ -1,10 +1,16 @@
 # Dependency Rules — group MaRs-777
 
-**Status: STAGE 2A ARCHITECTURE FREEZE — design only.**
+**Status: frozen at Stage 2A; the facade and shared layers added at Stage 9A-1B1.**
 
 ## 1. Layers (dependencies point inward only)
 
 ```
+        sdk   (the public outer facade: one entry point for CLI / GUI / replay / third parties)
+              │  forwards to composition; holds no rule, no framework, no state
+              ▼
+        composition / entrypoints   (compose_*, composition, the operator command lines)
+              │  assembles concrete adapters and hands them to the layers below
+              ▼
         infrastructure   (FastMCP, files, clock, Gmail, GUI, LLM, metrics)
               │  implements ports, may import protocol + app.ports + domain
               ▼
@@ -16,7 +22,16 @@
               ▼
         domain   (board, rules, scoring, scent, barriers, truth, belief)
                  imports NOTHING from outer layers
+
+        shared   (version authority)
+                 imports NOTHING of ours at all, so every layer above may use it
 ```
+
+**Rule D0 — the facade decides nothing.** `sdk` is an outer boundary, not a
+layer with behaviour: every operation forwards to the composition module that
+already owns it. It may not contain game rules, cryptography, strategy, scent
+physics, audit rules, transport mechanics or provider mechanics, and it may not
+import a framework. A structural test enforces both directions.
 
 **Rule D1 — inward only.** An inner layer never imports an outer layer.
 **Rule D2 — no cycles.** The import graph is a DAG. Any cycle is an architecture defect.
@@ -38,6 +53,7 @@ adapters are injected at composition time (a single wiring module in `infra`).
 
 | Forbidden | Why |
 |---|---|
+| `sdk` → `domain`, a framework, or any business authority | The facade would become a second opinion about something already owned below |
 | `domain` → `infra` / `protocol` / `app` | Breaks purity, determinism, and unit-testability |
 | `app` → concrete adapter class | Breaks substitutability and offline testing |
 | strategy → `infra.mcp_client` / `infra.reporter` / `protocol.commitment` | Strategy could leak, cheat, or forge (STRATEGY_ARCHITECTURE §4) |

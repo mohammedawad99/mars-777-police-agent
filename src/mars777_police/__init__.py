@@ -1,14 +1,28 @@
 """Police agent package for the 2026 Distributed Police-Thief P2P project.
 
-Foundation only. Holds the identity constants used to prove role and group
-separation. No game, protocol, networking, cryptography, or strategy logic
-lives here yet.
+Holds the identity constants that prove role and group separation, and the
+software version authority's public rendering. The behaviour lives in the layers
+below - `domain`, `app`, `protocol`, `transport`, `infra` - and the one surface
+an external caller is meant to import is `mars777_police.sdk`.
+
+Nothing heavy is imported here on purpose: importing the package must not drag in
+a transport framework or a game engine.
 """
 
 from typing import Final
 
-__version__: Final[str] = "0.0.0"
-"""Foundation version. Bumped once real behavior is introduced."""
+from .shared.version import VERSION
+
+__all__ = [
+    "GROUP_CODE",
+    "ROLE",
+    "VALID_ROLES",
+    "__version__",
+    "is_role",
+]
+
+__version__: Final[str] = VERSION.pep440
+"""The software version, rendered for packaging. Authority: `shared.version`."""
 
 GROUP_CODE: Final[str] = "MaRs-777"
 """Exact, case-sensitive group code. Must never be altered."""
