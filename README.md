@@ -244,6 +244,18 @@ minimum quota, a **35**-move minimum ceiling, a `5×5` scent field, and exactly
 **Local operator settings.** Everything in §5 — where to listen, whom to dial,
 which key, where to write. These never cross the wire and are never hashed.
 
+**Local provider limits.** `config/rate_limits.json` is the versioned policy the
+API Gatekeeper enforces on calls to external **provider** services: requests per
+minute and per hour, concurrent calls, waiting-room depth, retry budget, backoff
+and which HTTP statuses may be repeated. Its `rate_limits.version` is validated
+at load, and an unsupported version refuses rather than falling back. It is
+**ours alone** — it is not negotiated, not hashed, and not the peer's
+`rate_limiter_gatekeeper` terms, which are an Appendix-F floor agreed with the
+opponent. It contains no secret. Peer gameplay calls are deliberately **not**
+governed by it: repeating a turn the opponent has already applied would be a
+protocol violation, so they keep their own delivery, ordering and timeout
+authorities.
+
 The launch document passed to `--launch` carries this side's *opening candidate*
 for the negotiated configuration. It is decoded by the same codec the wire uses,
 so there is no second configuration schema.
@@ -462,7 +474,8 @@ git-ignored path. See `docs/SOURCES.md`.
 
 1. No counted match against another group's agent has been played.
 2. No GUI, no user-facing Replay Viewer, no Gmail reporting.
-3. Negotiated rate limits are locked but not enforced at call time.
+3. The Gmail reporting rate-limiter the book requires (`REPORT-003`) has no
+   surface yet: the Gatekeeper exists and is proven, but there is no sender.
 4. No parameter study, notebook or charts yet (Stage 9B).
 5. Thirteen tunnel tests require a real ngrok agent and are skipped by default.
 6. One documented Windows-native limitation is isolated in its own CI job so it

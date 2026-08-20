@@ -92,6 +92,10 @@ codebase.
 
 ## 6. Network and third-party services
 
+Since Stage 9A-1C every call to an external provider passes through one
+Gatekeeper with a versioned local policy, so the rate at which this project can
+spend somebody else's quota is bounded in one place and recorded per call.
+
 | Service | Plan | Cost to this project |
 |---|---|---|
 | `ngrok` tunnel | the **operator's own** account | none incurred by this repository; one ephemeral HTTP tunnel per match is within the free tier |

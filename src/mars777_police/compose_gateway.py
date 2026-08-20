@@ -11,8 +11,10 @@ role decision, which belongs to the schedule.
 """
 
 import os
+from collections.abc import Callable
 
 from . import GROUP_CODE
+from .app.gatekeeper import Gatekeeper
 from .app.kit_handoff import SeriesHandoff
 from .app.kit_messages import KitRole
 from .app.public_endpoint_policy import SystemHostResolver
@@ -20,9 +22,10 @@ from .app.public_network_workflow import PublicNetworkService
 from .app.step0_runtime import Step0Runtime
 from .composition_inputs import keyed_authenticator
 from .identity import ROLE
-from .infra.ngrok_ingress import NgrokPublicIngress
+from .infra.ngrok_ingress import NgrokPublicIngress, fetch
 from .infra.ngrok_process import NgrokProcess
 from .infra.ngrok_settings import NgrokSettings
+from .infra.rate_limit_file import load_rate_limits
 from .infra.settings import load_runtime_settings
 from .kit_public_launcher import KitPublicLauncher
 from .operator_requests import PublicGatewayRequest
@@ -32,6 +35,24 @@ from .transport.kit_gateway import KitGroupGateway
 
 ROUTE_DEADLINE = 1800.0
 """How long one forwarded call may take, bounded well above a turn budget."""
+
+DISCOVER_TUNNELS = "ngrok.discover_tunnels"
+"""The one provider operation this repository makes today."""
+
+
+def gated_fetcher(gate: Gatekeeper) -> Callable[[str], bytes]:
+    """Read the provider's Agent API through the gate, and nowhere else.
+
+    The adapter keeps its own seam - it was always given its fetcher - so
+    centralising provider-call control changes no tunnel semantics: the same
+    request, the same timeout, the same `OSError` on a transport problem, now
+    counted and bounded in one place.
+    """
+
+    def read(url: str) -> bytes:
+        return gate.call(DISCOVER_TUNNELS, lambda: fetch(url))
+
+    return read
 
 
 def compose_public_gateway(request: PublicGatewayRequest) -> KitPublicLauncher:
@@ -48,8 +69,11 @@ def compose_public_gateway(request: PublicGatewayRequest) -> KitPublicLauncher:
         routes=routes.forwarders(),
         deadline=ROUTE_DEADLINE,
     )
+    gate = Gatekeeper(load_rate_limits())
     network = PublicNetworkService(
-        ingress=NgrokPublicIngress(NgrokProcess(NgrokSettings(executable=request.ngrok))),
+        ingress=NgrokPublicIngress(
+            NgrokProcess(NgrokSettings(executable=request.ngrok)), fetcher=gated_fetcher(gate)
+        ),
         resolver=SystemHostResolver(),
         step0=Step0Runtime(GROUP_CODE, Step0Authenticator(keyed)),
     )

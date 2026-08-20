@@ -1,6 +1,6 @@
 # Prompt Register - group MaRs-777
 
-> **Status: CURRENT.** Backfilled through Stage 9A-1B2.
+> **Status: CURRENT.** Backfilled through Stage 9A-1C.
 > **Purpose:** The prompt-engineering log. It records the supervising-reviewer
 > prompts that drove each stage — their goal, their binding constraints, what
 > the AI got wrong, what the human correction was, and what shipped.
@@ -158,7 +158,7 @@ contain no secrets.
 
 ---
 
-## 2. Prompt engineering log (Stages 5 — 9A-1B2)
+## 2. Prompt engineering log (Stages 5 — 9A-1C)
 
 Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text.
 
@@ -476,6 +476,38 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
   test function is present and mapped; production coverage totals are unchanged;
   the gate is now automatic on both operating systems.
 
+### Stage 9A-1C — provider gatekeeper and rate-limit authority
+
+- **Goal.** Close the guideline's generic external-call control and the last
+  §8.1 version row, without putting peer gameplay behind a generic queue.
+- **Constraints.** Establish REPORT-003's provenance **before** writing code. No
+  Gmail. No generic retry, queue or 429 loop on `receive_turn`, `submit_audit`
+  or `receive_control`. Local provider limits and peer-negotiated limits stay
+  separate authorities.
+- **Finding (provenance).** REPORT-003 is **reporting-specific**. Appendix E
+  rule 28 says "implement a token-bucket rate-limiter for **sending reports to
+  Gmail**"; NET-002 says the same; the book's page for REPORT-003 is the
+  reporting page, its sanction is "account suspension", and the chapter map puts
+  the Gatekeeper trio inside *9.3 Gmail automation*. So it could not be closed by
+  gating tunnel calls, and was not claimed to be.
+- **Finding (the provider surface is smaller than it looks).** The only outbound
+  provider call in production is a **loopback** read of the locally started ngrok
+  Agent API, polled because the API answers 200-with-empty while registering.
+  There is no metered cloud quota to protect today - which is exactly why the
+  429 machinery is proved against a fake provider rather than claimed against
+  this one.
+- **Finding (cleanup was already safe).** Teardown makes no provider HTTP call:
+  it stops a child process, cancels a task and closes a socket. So the smallest
+  safe design was **no** reserved lane - a rate limit cannot strand a tunnel it
+  never sees.
+- **Correction.** The discovery loop polls twice a second for its whole window,
+  so a 30-per-minute default would have broken it. The shipped policy for that
+  operation is a ceiling that catches a runaway loop and cannot interfere, with
+  retries set to zero because the loop above it already is the retry.
+- **Result.** `rate_limits.version` closed as text `"1.00"`, all three §8.1 rows
+  met, §5.1/§5.2/§5.3 met for every surface where generic control is safe, and a
+  structural test in both directions.
+
 ## 3. Practices this project actually learned
 
 1. **Prove it as a process.** Every in-process proof in this project hid at
@@ -501,3 +533,7 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
 10. **A rule nobody checks is a claim.** The 150-line rule was published,
     audited by hand three times, and still drifted. It stopped drifting the day
     a command returned a non-zero status.
+11. **Read what a requirement governs before satisfying it.** The book's
+    rate-limiter is about Gmail sends. Building one for tunnel calls is good
+    engineering and closes a different clause; calling it REPORT-003 would have
+    been a false claim with a real test behind it.

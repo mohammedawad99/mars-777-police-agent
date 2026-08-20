@@ -120,6 +120,8 @@ one vocabulary:
 
 - **Stage 9A-1B2 - test modularity and automatic size enforcement.** Split every test file that exceeded the guideline's 150-code-line rule - thirteen in the police repository, twelve in the thief - by **responsibility** rather than by line range, extracting shared doubles and builders into modules named for what they build. Then turned the rule from a documented claim into a gating CI check: `tools/check_python_loc.py` counts code lines exactly as the guideline defines them, inspects `src/` **and** `tests/`, and runs on Ubuntu and Windows. No production code changed - the coverage totals are byte-for-byte the entry ones - and no test was lost, weakened, skipped or merged away. **IMPLEMENTED / VERIFIED.**
 
+- **Stage 9A-1C - versioned provider gatekeeper and rate-limit authority.** Established the source provenance first: the book's Gatekeeper and its 429 rule live in the **Gmail reporting** section (Appendix E rule 28: *"implement a token-bucket rate-limiter for sending reports to Gmail"*), while the excellence guideline's §5.1 is the generic one. Built `config/rate_limits.json` - versioned, validated at load, refusing an unsupported version with no fallback - and one Gatekeeper owning rate windows, concurrency, a bounded FIFO with backpressure, bounded retries with 429/`Retry-After` handling capped by configuration, and per-call observation that records shape and never payload. The one provider surface that exists today, the tunnel Agent API read, is composed through it. **Peer gameplay is held outside by a structural test**, because a generic resend would re-send a turn the opponent already applied. Cleanup was audited and needs no lane at all: no teardown path makes a provider HTTP call. **IMPLEMENTED / VERIFIED.**
+
 ## 2. Where the project actually stands
 
 **IMPLEMENTED / VERIFIED.** Deterministic game mechanics; the protocol state
@@ -153,12 +155,6 @@ and the collaborator grant.
 
 ## 3. Forward plan
 
-- **Stage 9A-1C - external-call control.** A gatekeeper for **provider** calls
-  (tunnel API, and reporting when it exists): rate limits from versioned
-  configuration, a bounded FIFO queue with backpressure, retries and call
-  logging. Peer gameplay calls are explicitly **out of scope** — a generic retry
-  there re-sends a turn the peer already applied, and a queue would break
-  lockstep. `PLANNED`.
 - **Stage 9A-2 - PRD-07 delivery.** Replay Viewer, GUI, Gmail reporting.
   `PLANNED`.
 - **Stage 9B - competitive optimisation and research.** Parameter study,

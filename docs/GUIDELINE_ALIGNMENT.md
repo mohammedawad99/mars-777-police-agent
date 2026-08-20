@@ -47,25 +47,25 @@ Status vocabulary: **PASS** · **PARTIAL** · **GAP** · **JUSTIFIED_NA**.
 | 2.1 | `README.md` as a full user manual: install, usage, examples, configuration, contribution, license & credits | **PARTIAL** | `README.md` — all sections present; **screenshots absent** because there is no GUI to photograph | GUI slice, then Stage 9C |
 | 2.2 | `docs/` with `PRD.md`, `PLAN.md`, `TODO.md` | **PASS** | `docs/PRD.md` (index + goals), `docs/PLAN.md`, `docs/TODO.md` | — |
 | 2.3 | A dedicated PRD per algorithm / central mechanism | **PASS** | `docs/prd/PRD-01…07` — game logic, FastMCP, strategy, language & scent, public network, security & cryptography, reporting/GUI/replay | — |
-| 2.4 | Recommended tree (`src/`, `tests/`, `docs/`, `config/`, `data/`, `results/`, `assets/`, `notebooks/`, `.env.example`) | **PARTIAL** | `src/ tests/ docs/ config/ artifacts/ .env.example` present, and **`sdk/` and `shared/version.py` added at Stage 9A-1B1**; still no `shared/gatekeeper.py`, `data/`, `results/`, `assets/`, `notebooks/` | §5.1 row below; `notebooks/`+`results/` at Stage 9B |
+| 2.4 | Recommended tree (`src/`, `tests/`, `docs/`, `config/`, `data/`, `results/`, `assets/`, `notebooks/`, `.env.example`) | **PARTIAL** | `src/ tests/ docs/ config/ artifacts/ .env.example` present, plus `sdk/`, `shared/version.py`, `shared/rate_limits.py` and the gatekeeper modules; still no `data/`, `results/`, `assets/`, `notebooks/` | `notebooks/`+`results/` at Stage 9B |
 | 2.5 | Mandatory workflow PRD → PLAN → TODO → per-mechanism PRD → approval → implement | **PASS** | `docs/AI_WORKFLOW.md`; every stage in `docs/PLAN.md` names its approval | — |
 | 3.1 | Modular project structure, clear separation of concerns | **PASS** | hexagonal layout `domain/ app/ protocol/ transport/ infra/`, enforced by `docs/architecture/DEPENDENCY_RULES.md` and a framework-confinement test | — |
 | 3.2 | **≤ 150 code lines per file** (blank and comment lines excluded); split, never compress | **PASS** | **0 over the limit in `src/` and 0 in `tests/`**, and no longer audited by hand: `tools/check_python_loc.py` is the one authority, runs as a gating CI step on Ubuntu and Windows, and is the same command a contributor runs locally | — |
 | 3.3 | Docstrings on every module/class/function; comments explain *why* | **PASS** | every `src/**/*.py` module opens with a rationale docstring; ruff `D`-style discipline is visible throughout | — |
 | 4.1 | **SDK layer** — one public entry point for all consumers; no business logic in CLI/GUI/controllers | **PASS** | `mars777_police/sdk` — `AgentSdk` with five operations, each a forwarding call to the composition module that owns the work. Every operator entrypoint now reaches nothing but the standard library and `.sdk`, proven by a structural test; a second test proves the facade names no business authority and no framework; an out-of-process consumer test proves the surface is usable from the installed distribution alone | — (extended when GUI and replay exist) |
 | 4.2 | OOP, DRY, extract shared logic, mixin discipline | **PASS** | shared authorities are extracted, not copied (e.g. `app/kit_payload.py`, `transport/call_arguments.py`); no duplicated function body found across the package | — |
-| 5.1 | **Central API Gatekeeper** — every external call through it; rate limits, queue, retries, monitoring | **GAP** (with real partial control) | dedicated authorities exist per surface — `transport/session_deadline.py` (deadline), `startup_budget.py` (narrow retry), `app/network_failure_policy.py` (explicit no-retry rule), `app/kit_delivery.py` (idempotency) — but there is **no single component** enforcing limits and logging every outbound call | Stage 9A-1C; see §5 for what must **not** be wrapped |
-| 5.2 | Rate limits from configuration, never hardcoded | **PARTIAL** | `RateLimiterTerms` (requests/min, concurrency, backoff, max retries, queue depth) is **negotiated and cryptographically locked** at Step-0 and validated against Appendix F floors — so nothing is hardcoded — but there is **no local versioned `config/rate_limits.json`**, and the terms are **not enforced at call time** | Stage 9A-1C |
-| 5.3 | Overflow queued (FIFO, bounded, backpressure), never dropped | **GAP** | `queue_depth` is negotiated and validated; no queue implementation consumes it | Stage 9A-1C |
+| 5.1 | **Central API Gatekeeper** — every external call through it; rate limits, queue, retries, monitoring | **PASS for provider calls; peer gameplay deliberately excluded** | `app/gatekeeper.py` owns rate, concurrency, a bounded FIFO, bounded retries and per-call observation for provider operations, and the one provider surface that exists (`ngrok.discover_tunnels`) is composed through it. Peer gameplay keeps its stronger protocol-specific authorities — see §5 of this document and `API_BOUNDARIES.md` §10 | — |
+| 5.2 | Rate limits from configuration, never hardcoded | **PASS** | `config/rate_limits.json` — versioned, per-service, loaded by one typed loader that refuses a missing file, bad JSON, an unknown key, a missing key, a malformed value or an unsupported version. The peer-negotiated `RateLimiterTerms` remain a separate authority and are untouched | — |
+| 5.3 | Overflow queued (FIFO, bounded, backpressure), never dropped | **PASS** | `app/gatekeeper_queue.py` — a bounded FIFO whose depth comes from configuration, served strictly in arrival order, surviving cancellation without reordering, and raising backpressure only at the boundary. The gate drains it as the rolling windows reset | — |
 | 6.1 | TDD red-green-refactor; every module has a test file; **test files also obey the 150-line rule** | **PASS** | tests-first is the recorded method for every implementation stage (`docs/PLAN.md`, `docs/AI_WORKFLOW.md`); the test-file size rule is now met by every file and enforced automatically. The rule was **not** narrowed to `src/` | — |
 | 6.2 | Coverage ≥ 85%, suite fails below the threshold | **PASS** | measured **100%**; gate `fail_under = 90` in `pyproject.toml` and in CI — both above the 85% floor | — |
 | 6.3 | Edge cases identified, documented, defensive programming, graceful degradation | **PASS** | `docs/architecture/ERROR_MODEL.md`; frozen error identities; dedicated edge suites (`tests/kit_series/test_kit_edges.py`, `tests/boot/test_runtime_edges.py`) | — |
 | 6.4 | Expected test results documented; automated pass/fail reports; run logs kept | **PARTIAL** | CI runs the full suite on every push and its result is public per commit; no stored expected-result report artifact | Stage 9C |
 | 7.1 | Ruff — zero violations | **PASS** | `uv run ruff check .` and `uv run ruff format --check .` are CI gates | — |
 | 7.2 | No hardcoded configurable values | **PASS** | game parameters come from `NegotiatedConfig`; project constants live in dedicated modules; secrets come only from the environment (`infra/settings.py`) | — |
-| 7.3 | Versioned configuration files, `.env` git-ignored, `.env.example` committed | **PARTIAL** | `.env.example` added at this stage; `.gitignore` covers `.env`, `.env.*`, `token.json`, `client_secret*.json`; **`config/` holds no versioned JSON** because the binding configuration is negotiated with the peer, not shipped | Stage 9A-1C |
+| 7.3 | Versioned configuration files, `.env` git-ignored, `.env.example` committed | **PASS** | `config/rate_limits.json` is versioned and validated at load; `.env.example` is committed; `.gitignore` covers `.env`, `.env.*`, `token.json`, `client_secret*.json`. The binding **game** configuration remains negotiated with the peer rather than shipped, by design | — |
 | 7.4 | No secrets in the project; environment variables only; key rotation and least privilege | **PASS** | `AuthSecret` cannot be printed (`repr`/`str` → `<withheld>`); the tunnel credential is never read by this project at all; `SECURITY.md`; secret scan clean | — |
-| 8.1 | **Explicit version tracking** for code, configuration and rate limits, starting at `1.00`, validated at boot | **PARTIAL** | **Code version: PASS** · **Configuration version: PASS** · **Rate-limits version: PENDING.** See §4 below for what each of the three actually means here | Stage 9A-1C |
+| 8.1 | **Explicit version tracking** for code, configuration and rate limits, starting at `1.00`, validated at boot | **PASS** | all three rows met: software version, configuration schema version, and now `rate_limits.version`. See §4 below for what each one actually means | — |
 | 8.2 | Clear commit history, feature branches, PR review, tags for major versions | **PARTIAL** | 107 commits, one purpose each, no force-push, no rewritten history; work is supervised stage-by-stage on `main` rather than through PRs; **no tag yet** — the submission tag is deliberately deferred to Stage 9C | Stage 9C |
 | 8.3 | **Prompt book** — every significant prompt, its context and goal, outputs, iterations, lessons | **PASS** | `docs/PROMPTS.md` (stage register, backfilled through 9A-0) + `docs/AI_WORKFLOW.md` (method, corrections, lessons) | — |
 | 8.4 | **uv mandatory**; no `pip`, no bare `python -m` in code, scripts, CI or documentation | **PASS** | `pyproject.toml` + `uv.lock` committed; CI installs with `uv sync --frozen` and runs every tool through `uv run`; all documented commands are `uv run …` | — |
@@ -93,7 +93,8 @@ project made and then corrected, so the distinction is recorded here.
 |---|---|---|---|
 | **Software version consistency** | is this process running the code it thinks it is? | `shared/version.py` — one value, rendered `1.00` for the guideline and `1.0` for packaging; `pyproject.toml`, `__version__` and the installed distribution metadata are held to it by test | **PASS** — `verify_installation()` refuses a mismatch at facade construction |
 | **Configuration schema compatibility** | can this build represent and run this configuration revision? | `domain/config_schema.py` — `SUPPORTED_CONFIG_SCHEMA_VERSIONS` | **PASS** — an unsupported revision is not a constructible `NegotiatedConfig` |
-| **Peer configuration equality** | do both peers hold the same configuration bytes? | the mutual `config_sha256` comparison at the lock | **PASS** — unchanged, and never touched by this stage |
+| **Peer configuration equality** | do both peers hold the same configuration bytes? | the mutual `config_sha256` comparison at the lock | **PASS** — unchanged |
+| **Local rate-limit configuration version** | can this build run this local provider policy? | `config/rate_limits.json` `rate_limits.version`, against `SUPPORTED_RATE_LIMIT_VERSIONS` | **PASS** — an unsupported version refuses before any provider call is possible |
 
 **They are not substitutes for one another.**
 
@@ -114,9 +115,12 @@ negotiation, before convergence and before the lock. There is no fallback: an
 unsupported revision is never normalised, defaulted or downgraded, and never
 accepted because both peers happened to send it.
 
-**Still pending.** The third row, `rate_limits.version`, has no home until the
-local versioned rate-limit configuration file exists. §8.1 is therefore **not**
-claimed fully closed.
+**All three §8.1 rows are now met.** The rate-limit row was closed at Stage
+9A-1C by `config/rate_limits.json`, whose `version` is validated against the
+versions this build supports before any provider call can be made — refusal, no
+fallback, no silent migration. Its version is stored as **text** for the same
+reason the software version is: `1.00` written as a JSON number reads back as
+`1.0`.
 
 ## 5. §5.1 — what a Gatekeeper may and may not wrap
 
@@ -130,9 +134,11 @@ Recorded because a naïve reading of §5.1 would **break** this project.
 | Gmail / reporting | — | — | — | — | — | **YES**, when it exists — §5.1's motivating case (HTTP 429 back-off) |
 | LLM provider | n/a | n/a | n/a | n/a | n/a | **JUSTIFIED_NA** — the shipped hint policy is a deterministic template catalogue: no provider, no network, no tokens |
 
-The control goal of §5.1 is therefore **partly met by stronger, protocol-specific
-authorities** and **unmet for provider APIs**. The closure is a Gatekeeper that
-owns provider calls, not one that wraps gameplay.
+**Closed at Stage 9A-1C, exactly this way.** The Gatekeeper owns provider calls;
+peer gameplay keeps its stronger protocol-specific authorities and is held
+outside by a structural test. The control goal of §5.1 is met for every surface
+where generic control is semantically safe, and deliberately not applied where it
+would break the protocol.
 
 ## 6. ISO/IEC 25010 mapping (§13)
 
@@ -149,8 +155,6 @@ owns provider calls, not one that wraps gameplay.
 
 ## 7. Where this document must be updated
 
-- when a provider Gatekeeper lands (§5.1, §5.2, §5.3, §7.3);
-- when the rate-limit configuration file gives §8.1 its third version row (§4);
 - when Stage 9B produces the parameter study, notebook and charts (§9.1–§9.3);
 - when a GUI and its screenshots exist (§10, §2.1);
 - at the submission freeze (§8.2 tag, §17).

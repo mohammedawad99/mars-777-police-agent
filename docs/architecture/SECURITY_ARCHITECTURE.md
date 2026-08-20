@@ -89,3 +89,16 @@ message, a tool, a port or an error identity. The one asymmetry worth stating
 plainly: a false capture **declaration** is a legal move played badly and is
 scored (technical loss, 0/0), while a false **answer** is a forgery and is
 treated exactly as a failed digest is.
+
+## Provider-call observation (Stage 9A-1C)
+
+The API Gatekeeper records one observation per provider call: the operation
+name, whether it waited, whether it was throttled, how many attempts it took,
+how it ended, and how long it took. **It records no content.** No request body,
+no header, no URL, no provider payload and no credential enters a
+`GatekeeperCall`, so an observation is safe to print anywhere a log line is.
+
+`config/rate_limits.json` carries limits only. It holds no token, no key and no
+address, and a test asserts that the committed file contains none of those words.
+The tunnel credential remains the operator's own agent configuration, which this
+project never reads, and the peer key remains environment-only and unprintable.

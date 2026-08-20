@@ -225,31 +225,20 @@ repository and green in CI on the exact commit.
 - [ ] **Live GUI** (`GUI-001/002/003`, MUST). No graphical interface exists.
       Blocks the guideline's screenshot and UI-documentation requirements too.
 - [ ] **Gmail result reporting** (`REPORT-001`, MUST). No mailer exists.
-- [ ] **Rate-limit enforcement** (`REPORT-003`, MUST). `RateLimiterTerms` —
-      requests per minute, concurrency, backoff, max retries, queue depth — is
-      negotiated, floor-validated and cryptographically locked, but **no
-      component applies it at call time**. Closure must cover provider calls
-      only; peer gameplay calls must **not** be wrapped in generic retries or a
-      queue.
-- [x] **SDK façade** (guideline §4.1) - **DELIVERED at Stage 9A-1B1.**
-      `<pkg>/sdk` exposes `AgentSdk` with five operations, each forwarding to
-      the composition module that owns the work. The three operator entrypoints
-      now import nothing but the standard library and `.sdk`; structural tests
-      hold both directions, and an out-of-process consumer test proves the
-      surface works from the installed distribution alone.
-- [x] **Software version authority** (guideline §8.1, §14) - **DELIVERED at
-      Stage 9A-1B1.** `<pkg>/shared/version.py` holds one value at the
-      guideline's initial version, rendered `1.00` for the guideline and `1.0`
-      for packaging; `pyproject`, `__version__` and the installed metadata are
-      held to it by test, and a mismatch refuses the process locally.
-- [ ] **`rate_limits.version`** (guideline §8.1, third row). Needs the local
-      versioned rate-limit configuration file, which belongs to the provider
-      gatekeeper slice.
-- [x] **Test-file 150-code-line split** (guideline §3.2 with §6.1) -
-      **DONE at Stage 9A-1B2.** All 13 over-limit test files were split by
-      responsibility, not by line range; `src/` and `tests/` are both at zero.
-      `tools/check_python_loc.py` now enforces the rule as a gating CI step on
-      Ubuntu and Windows, and locally through the identical command.
+- [x] **Provider rate-limit enforcement** (guideline §5.1/§5.2/§5.3) -
+      **DONE at Stage 9A-1C.** `config/rate_limits.json` is versioned and
+      validated at load; `app/gatekeeper.py` enforces rate windows, concurrency,
+      a bounded FIFO with backpressure and bounded retries with 429/`Retry-After`
+      handling, and records every call without its content. The tunnel Agent API
+      read is composed through it; peer gameplay is held outside by test.
+- [ ] **Gmail rate-limit enforcement** (`REPORT-003` / `NET-002` / Appendix E-28,
+      MUST) - **still open, and it is the surface the book actually governs.**
+      The mechanism exists and is proven against a fake provider; what is missing
+      is the Gmail sender to register `reporting.send_report` against.
+- [x] **`rate_limits.version`** (guideline §8.1, third row) - **DONE at Stage
+      9A-1C.** Stored as the string `"1.00"`, validated against the versions this
+      build supports before any provider call is possible. All three §8.1 rows
+      are now met.
 - [ ] **Expected-result reporting** (guideline §6.4). Store the automated
       pass/fail report rather than relying on CI history alone.
 

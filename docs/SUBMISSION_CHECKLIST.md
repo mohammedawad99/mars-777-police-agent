@@ -1,6 +1,6 @@
 # Submission checklist — group MaRs-777 (POLICE)
 
-**Status: CURRENT.** Last verified at Stage 9A-1B2, on commits green in CI on
+**Status: CURRENT.** Last verified at Stage 9A-1C, on commits green in CI on
 their exact SHAs in both repositories.
 
 Every row carries one status and its evidence. This is a working gate, not a
@@ -42,7 +42,8 @@ green in CI on the exact commit.
 | **Replay Viewer** (`REPLAY-001`) | `PENDING` | an audit-time replay **engine** exists; a user-facing **viewer** does not |
 | **GUI** (`GUI-001/002/003`) | `PENDING` | not implemented |
 | **Gmail reporting** (`REPORT-001`) | `PENDING` | not implemented |
-| **Rate-limit enforcement** (`REPORT-003`) | `PENDING` | terms negotiated, floor-validated and locked; never applied at call time |
+| **Rate-limit enforcement for provider calls** | `VERIFIED` | `app/gatekeeper.py` + versioned `config/rate_limits.json`; the tunnel Agent API is composed through it |
+| **Rate-limit enforcement for Gmail** (`REPORT-003`) | `PENDING` | the mechanism exists and is proven against a fake provider; the Gmail sender it governs does not exist yet |
 | Counted match against another group | `PARTNER_DEPENDENT` | every run so far used a synthetic non-counted opponent or an explicitly friendly kit run |
 
 ## Engineering quality
@@ -93,7 +94,7 @@ green in CI on the exact commit.
 | Secrets from environment only, unprintable in logs | `VERIFIED` | `AuthSecret.__repr__` / `__str__` render `<withheld>` |
 | Tunnel credential never read by this project | `VERIFIED` | the ngrok agent uses the operator's own configuration |
 | `SECURITY.md` and a threat model | `VERIFIED` | `SECURITY.md`; `docs/architecture/SECURITY_ARCHITECTURE.md` (15 threats) |
-| Versioned configuration files | `PENDING` | the binding configuration is negotiated and locked, not shipped; a local versioned configuration surface (and with it `rate_limits.version`) belongs to the provider gatekeeper slice |
+| Versioned configuration files | `VERIFIED` | `config/rate_limits.json` carries `rate_limits.version` and is validated at load; the binding game configuration remains negotiated with the peer by design |
 | Software version authority starting at `1.00` | `VERIFIED` | `shared/version.py` holds one value at the guideline's initial version, rendered `1.00` and `1.0` from a single source; `pyproject.toml`, `__version__` and the installed distribution metadata are held to it by test, and a mismatch refuses the process |
 
 ## Research and analysis

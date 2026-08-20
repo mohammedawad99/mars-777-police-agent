@@ -808,3 +808,56 @@ that pinned them still pin them.
 There is no replay or GUI operation, because there is no replay viewer or GUI to
 delegate to. A facade method whose implementation does not exist would be worse
 than an absent one. The stages that build them will extend this surface.
+
+## 10. The API Gatekeeper (Stage 9A-1C)
+
+**Classification: application policy controlling infrastructure provider calls.**
+Not domain, not transport, not a provider adapter. `app/gatekeeper.py` is the one
+place an external **provider** call passes through, as the excellence guideline
+§5.1 asks.
+
+### What it controls, and what it deliberately does not
+
+| Surface | Classification | Why |
+|---|---|---|
+| `ngrok.discover_tunnels` — the local Agent API read | **GENERIC_GATEKEEPER** | a third-party service with its own failure modes; rate, concurrency and observation belong in one place |
+| a future `reporting.send_report` | **GENERIC_GATEKEEPER** | the surface Appendix E rule 28 and `REPORT-003` actually govern |
+| `receive_turn`, `submit_audit`, `receive_control` | **PROTOCOL_SPECIFIC_AUTHORITY** | a generic resend re-sends a turn the opponent already applied (App. E rule 35), and a queue would break lockstep |
+| `negotiate` / Step-0 | **PROTOCOL_SPECIFIC_AUTHORITY** | `startup_budget` already retries exactly one condition — "the peer is not listening yet" — and nothing else |
+| release and teardown | **NOT_APPLICABLE** | cleanup makes no provider HTTP call at all: it stops a child process, cancels a task and closes a socket |
+| LLM provider | **NOT_APPLICABLE** | the shipped hint path is a deterministic template catalogue |
+
+Two structural tests hold that boundary in both directions: no peer-transport or
+gameplay module may import the gate, and the provider adapter must be composed
+with a gated fetcher.
+
+### What it is made of
+
+```
+shared/rate_limits.py        the policy value objects and the supported versions
+infra/rate_limit_file.py     the one loader for config/rate_limits.json
+app/gatekeeper_windows.py    rolling per-minute and per-hour windows, monotonic
+app/gatekeeper_queue.py      the bounded FIFO a rate-limited caller waits in
+app/gatekeeper_retry.py      which failures may be repeated, and for how long
+app/gatekeeper_events.py     what is recorded about a call - shape, never payload
+app/gatekeeper.py            admission, execution, retry, observation
+```
+
+Time is injected (`monotonic`, `sleeper`), so every interval is deterministic in
+a test and no test sleeps for real.
+
+### What it must never contain
+
+Game state, board, strategy, scent, commitments, peer semantic state, a transport
+framework, or a caller-chosen retry count. Every operation resolves a **named
+policy** from the versioned configuration file; there is no "execute anything".
+
+### Cleanup safety
+
+Teardown was audited before anything was routed: `NgrokProcess.stop()` terminates
+a child process, `release()` cancels a task and closes a listener, and
+`close_session()` exits a peer session. **None of them is a provider HTTP call**,
+so no rate limit, queue or backpressure can stand between this agent and putting
+its tunnel away. That is the smallest safe design — the existing direct
+idempotent path — rather than a reserved-capacity lane that would have to be
+correct under cancellation.
