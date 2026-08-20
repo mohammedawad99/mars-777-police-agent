@@ -30,20 +30,20 @@ def test_a_clean_tree_reports_nothing(tmp_path: Path) -> None:
 def test_production_python_is_scanned(tmp_path: Path) -> None:
     tree(tmp_path, {"src/pkg/a.py": big(LIMIT + 1)})
 
-    assert [str(path) for path, _ in over_limit(tmp_path)] == ["src/pkg/a.py"]
+    assert [path for path, _ in over_limit(tmp_path)] == ["src/pkg/a.py"]
 
 
 def test_test_python_is_scanned_too(tmp_path: Path) -> None:
     """§6.1 rule 6: test files obey the same cap."""
     tree(tmp_path, {"tests/unit/test_a.py": big(LIMIT + 1)})
 
-    assert [str(path) for path, _ in over_limit(tmp_path)] == ["tests/unit/test_a.py"]
+    assert [path for path, _ in over_limit(tmp_path)] == ["tests/unit/test_a.py"]
 
 
 def test_the_reported_count_is_the_effective_one(tmp_path: Path) -> None:
     tree(tmp_path, {"src/a.py": "# note\n\n" + big(LIMIT + 3)})
 
-    assert over_limit(tmp_path) == [(Path("src/a.py"), LIMIT + 3)]
+    assert over_limit(tmp_path) == [("src/a.py", LIMIT + 3)]
 
 
 def test_files_outside_the_two_trees_are_ignored(tmp_path: Path) -> None:
@@ -68,7 +68,7 @@ def test_findings_are_sorted_so_the_output_is_deterministic(tmp_path: Path) -> N
         },
     )
 
-    assert [str(path) for path, _ in over_limit(tmp_path)] == [
+    assert [path for path, _ in over_limit(tmp_path)] == [
         "src/a.py",
         "src/m.py",
         "tests/z.py",

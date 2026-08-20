@@ -43,14 +43,19 @@ def effective_code_lines(source: str) -> int:
     return len(lines) - len(skip)
 
 
-def over_limit(root: Path) -> list[tuple[Path, int]]:
-    """Return every in-scope file above the limit, with its count, sorted."""
-    findings: list[tuple[Path, int]] = []
+def over_limit(root: Path) -> list[tuple[str, int]]:
+    """Return every in-scope file above the limit, with its count, sorted.
+
+    Paths are rendered POSIX-style whatever the platform, so the same tree
+    produces the same report - and the same sort order - on Linux and Windows.
+    A gate whose output depended on the operating system would not be one.
+    """
+    findings: list[tuple[str, int]] = []
     for tree in TREES:
         for path in sorted((root / tree).rglob("*.py")):
             counted = effective_code_lines(path.read_text(encoding="utf-8"))
             if counted > LIMIT:
-                findings.append((path.relative_to(root), counted))
+                findings.append((path.relative_to(root).as_posix(), counted))
     return sorted(findings)
 
 
