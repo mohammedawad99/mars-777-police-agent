@@ -85,15 +85,17 @@ Stated precisely, because "done" and "not done" are both misleading here.
 - **Third-party interoperability** — six live sub-games against the pinned
   interoperability kit, including the settlement divergence that exposed a real
   defect on our side (see `docs/DECISIONS.md`).
+- **Replay Viewer** — a command that replays a finished sub-game from the
+  artifacts alone and verifies every commitment (§6.4).
+- **Graphical interface** — a live window showing local truth and the belief
+  heatmap, and a replay window showing both agents and the verification result
+  (§6.5). Both are read-only and neither is on the decision path.
 
 ### Not implemented
 
 - a **counted match against another group's agent** — the runs above used either
   a synthetic distinct-group non-counted opponent or the interoperability kit in
   a friendly, explicitly non-counted mode;
-- a **user-facing Replay Viewer** (an audit-time replay *engine* exists;
-  a viewer does not);
-- the **live GUI**;
 - **Gmail result reporting**;
 - **enforcement** of the negotiated rate limits — the terms are negotiated,
   validated and locked, but no component applies them at call time;
@@ -219,7 +221,32 @@ Exit status `0` means every source-required commitment was present and matched,
 commitment whose nonce was never disclosed. Absence is never reported as
 tampering. Full guide: `docs/reference/REPLAY_VIEWER.md`.
 
-### 6.5 Command-line options
+### 6.5 Watching a match, and replaying one in a window
+
+The same evidence, drawn instead of printed:
+
+```bash
+# step through a finished sub-game (arrow keys, Home, End)
+uv run python -m mars777_police.gui_main replay \
+    --log <log artifact> --config <config artifact>
+
+# the same picture written to a file — needs no display at all
+uv run python -m mars777_police.gui_main replay \
+    --log <log> --config <config> --step 5 --png shot.png
+
+# watch this agent play a counted series
+uv run python -m mars777_police.gui_main live --launch <launch document>
+```
+
+The live window shows **local truth only** — own cell, declared barriers, the
+belief heatmap and its numbers, the received hint, and the turn-state banner. It
+never shows the opponent's position, because the value it draws is projected
+from the same `Observation` the strategy is restricted to and has no field one
+could arrive in. The replay window may show both agents, because the audit point
+has passed. Neither window has a control that reaches a decision. Full guide:
+`docs/reference/GUI.md`.
+
+### 6.6 Command-line options
 
 | Option | Where | Meaning |
 |---|---|---|
@@ -232,8 +259,9 @@ tampering. Full guide: `docs/reference/REPLAY_VIEWER.md`.
 | `--police-endpoint`, `--thief-endpoint` | `kit_gateway_main` | the two private backends the gateway routes between |
 | `--ngrok` | `kit_gateway_main` | path to the operator's ngrok executable |
 | `--evidence-root` | friendly runs | where development evidence is written |
+| `--png` | `gui_main replay` | write the picture to a file instead of opening a window |
 
-### 6.6 Exit status
+### 6.7 Exit status
 
 | Code | Meaning |
 |---|---|
@@ -365,10 +393,43 @@ fabricated result.
 
 ## 12. Screenshots and demonstrations
 
-**None yet, deliberately.** The system is a headless pair of processes; the GUI
-required by the project book is not implemented. This section will carry
-screenshots of every screen and state once a GUI exists. Until then, the
-reproducible demonstration is §6 plus the artifacts a run writes.
+Both pictures below were produced by the **real** renderer from **one**
+thirty-five-round sub-game two composed agents actually played in this
+repository. Neither is drawn, mocked, or a diagram of an application, and
+neither shows a secret, a token or a private path.
+
+### The live window — local truth and the belief heatmap
+
+![Live window showing this agent's own cell, a belief heatmap with per-cell
+values, the turn-state banner, and the statement that the opponent position is
+never shown](docs/evidence/gui/live_belief_map.png)
+
+`GUI-001` and `GUI-003`. Own cell (`ME`), the folded belief map with every
+heated cell carrying its own number, the barrier quota, the last action, the
+received hint, and the two statements that make the limit explicit —
+`belief (estimate) - not a sighting` and `opponent position: never shown`. There
+is no opponent cell on this screen because the value it is drawn from has no
+field one could arrive in (`GUI-002`).
+
+### The replay window — verification of the same sub-game
+
+![Replay window showing both agents' true cells, Verified OK for both sides with
+an OK glyph, a CONSISTENT semantic verdict, and audit complete
+yes](docs/evidence/gui/replay_verified.png)
+
+`REPLAY-001`, `REPLAY-002` and `PRD07-FR-023`. **After** the audit point, and
+only then, both agents' true cells may be shown. Every verification word carries
+a glyph as well as a colour, so `Verified OK`, `TAMPERED` and `NOT_CHECKABLE`
+stay distinguishable without colour.
+
+The identities in both pictures (`MaRs-777-vs-GROUP-XY`) are **development
+identities**. This was not a tournament match and is not presented as one.
+
+Regenerate both from a fresh run:
+
+```bash
+MARS777_WRITE_GUI_EVIDENCE=1 uv run pytest tests/gui/test_gui_evidence.py
+```
 
 ## 13. Programmatic use — the SDK
 
@@ -393,6 +454,8 @@ artifacts = asyncio.run(sdk.run_strict_series(StrictSeriesRequest(launch=Path("l
 | `write_contribution(backend, root)` | writes a finished backend's development evidence and says where |
 | `compose_public_gateway(request)` | assembles the group's public front door; no route is opened yet |
 | `verify_config_artifact(document)` | returns what a stored config artifact proves, or refuses it |
+| `open_replay(log, config, root)` | returns a navigable, already-verified replay of one finished sub-game |
+| `verify_replay(log, config, root)` | returns that replay's summary alone, for a caller that only wants the verdict |
 
 The requests (`StrictSeriesRequest`, `RoleBackendRequest`, `PublicGatewayRequest`)
 and the failures a caller must tell apart (`SettingsError`, `LaunchInputError`,
@@ -403,8 +466,14 @@ package is an implementation detail.
 
 **What the SDK is not.** It holds no game rules, no cryptography, no strategy, no
 transport and no provider mechanics — it forwards to the layers that own them.
-There is deliberately **no replay or GUI operation**, because neither exists yet;
-a method whose implementation does not exist would be worse than an absent one.
+
+**The live view is a seam, not a screen.** `LiveViewSink`, `LatestSnapshot` and
+`LiveViewSnapshot` are exported so a viewer can attach to a running series and
+name what it receives; pass one as `StrictSeriesRequest(..., viewer=...)` and
+every turn's lawful local view is published to it. The drawing itself lives in
+`mars777_police.gui`, which *consumes* this facade — a presentation package
+imported by the facade would point the dependency the wrong way, and would make
+every command line load an imaging library in order to parse an argument.
 
 **Software version.** `mars777_police.sdk.SOFTWARE_VERSION` is the single
 authority. It renders two ways — `1.00`, the professional-software guideline's
@@ -424,6 +493,7 @@ stored value, so the two cannot drift.
 | `docs/spec/` | the book extraction: requirement catalog, appendix crosswalks, numeric inventory, conflict register |
 | `docs/reference/MATCH_RUNBOOK.md` | the operator procedure for a real match |
 | `docs/reference/REPLAY_VIEWER.md` | how to replay and verify a finished game log |
+| `docs/reference/GUI.md` | the live and replay windows: what they may show, and why they cannot affect a match |
 | `docs/GUIDELINE_ALIGNMENT.md` | alignment with the professional-software excellence guideline |
 | `docs/COSTS.md` | measured resource use |
 | `docs/SUBMISSION_CHECKLIST.md` | what still gates delivery |
@@ -490,8 +560,9 @@ git-ignored path. See `docs/SOURCES.md`.
 ## 19. Known limitations
 
 1. No counted match against another group's agent has been played.
-2. No GUI and no Gmail reporting. The Replay Viewer exists as of Stage
-   9A-2A; the GUI screenshot `DOC-001` asks for is still pending.
+2. No Gmail reporting. The Replay Viewer exists as of Stage 9A-2A and the
+   graphical interface as of Stage 9A-2B, so the `DOC-001` screenshot component
+   is closed (§12); the reporting component is not.
 3. The Gmail reporting rate-limiter the book requires (`REPORT-003`) has no
    surface yet: the Gatekeeper exists and is proven, but there is no sender.
 4. No parameter study, notebook or charts yet (Stage 9B).

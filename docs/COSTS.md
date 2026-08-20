@@ -123,3 +123,10 @@ controls. It is therefore **not reported here rather than estimated**.
 - **Measure before optimising.** The gateway hop was measured, found to be four
   thousandths of a percent of the turn budget, and left alone.
 - **Small artifacts.** Canonical documents and digests, never recordings.
+- **The graphical interface costs the game nothing.** Publishing a turn to a
+  window is one assignment into a one-slot box; drawing happens on the
+  viewer's own timer, in the viewer's own thread, and a viewer that is slow
+  misses a frame rather than delaying a turn. The one dependency it added
+  (Pillow, pinned) is imported by a single module and is what lets the
+  graphical output be produced on CI without a display, so it replaces
+  manual screenshotting rather than adding a runtime cost to a match.

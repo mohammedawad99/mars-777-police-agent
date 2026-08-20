@@ -58,6 +58,8 @@ class ReplayTurn:
     cell: tuple[int, int]
     barriers: tuple[tuple[int, int], ...]
     action: str
+    label: str
+    """The same action in words. The wire text above stays exactly as logged."""
     hint: str | None
     intent: str | None
     capture_claim: str | None

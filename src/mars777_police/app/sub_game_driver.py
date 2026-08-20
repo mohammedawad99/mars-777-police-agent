@@ -39,6 +39,7 @@ from ..domain.terminal import Outcome, evaluate_terminal
 from ..domain.truth import LocalTruth
 from .active_runtime_context import ActiveRuntimeContext
 from .hint_policy import HintPort
+from .live_view_feed import LiveViewFeed
 from .peer_runner import PeerRunner
 from .protocol_errors import LocalDefectError
 from .protocol_values import Sha256Digest
@@ -66,6 +67,8 @@ class SubGameDriver:
     truth: LocalTruth
     deadline: float
     captured: bool = field(default=False)
+    feed: LiveViewFeed = field(default_factory=LiveViewFeed)
+    """Where the live window is told about this turn - nowhere, by default."""
 
     def open(self) -> TurnProtocolRuntime:
         """Bind the runtime for the round we are about to play, and return it.
@@ -110,8 +113,10 @@ class SubGameDriver:
         """One lockstep round: decide, seal, exchange, and adopt exactly once."""
         turn = self.context.current_turn()
         start, cursor = self.truth, turn.cursor
-        action = self.strategy.choose_action(observation_of(start, self.turns.quota, self.scent))
+        observed = observation_of(start, self.turns.quota, self.scent)
+        action = self.strategy.choose_action(observed)
         spoken = self.hints.choose(cursor, action)
+        self.feed.show(observed, cursor, action, spoken.text)
         prepared = await self.runner.open_turn(
             state=SealedState(
                 self.config_sha256,

@@ -20,7 +20,7 @@ COMPOSITION_ROOT = frozenset({"composition.py", "composition_values.py", "launch
 """The outer files allowed to name the framework: composition (5-R5) and the
 launch-input adapter (5-R6), which validates the already-frozen wire models."""
 
-DIRECT_DEPENDENCIES = ["fastmcp==3.4.6", "pydantic==2.13.4"]
+DIRECT_DEPENDENCIES = ["fastmcp==3.4.6", "pillow==11.3.0", "pydantic==2.13.4"]
 """The project's exact direct runtime dependencies.
 
 `pydantic` is **direct**, not merely inherited through FastMCP: R17 production
@@ -28,6 +28,13 @@ DTOs import `BaseModel`, `ConfigDict(extra="forbid")` and the string constraints
 themselves, and a package a project imports directly is a package the project
 owns. Relying on a transitive edge would let a FastMCP release quietly change an
 API this project calls.
+
+`pillow` is direct for the same reason and for one more: the graphical viewer
+rasterises its own frames offscreen so the GUI can be produced and asserted
+where there is no display at all - which is every CI runner this project uses,
+on Linux and on Windows. It is imported by exactly one module
+(`gui/image_renderer.py`), and it is pinned because a screenshot that renders
+differently on another machine is weaker evidence than one that does not.
 """
 
 
@@ -42,8 +49,15 @@ def test_nothing_else_was_promoted_to_direct_ownership() -> None:
     root = Path(__file__).resolve().parents[2]
     project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     names = {pin.split("==")[0] for pin in project["project"]["dependencies"]}
-    assert names == {"fastmcp", "pydantic"}
+    assert names == {"fastmcp", "pillow", "pydantic"}
     assert names.isdisjoint({"mcp", "pydantic-core", "pydantic-settings"})
+
+
+def test_every_direct_dependency_is_pinned_to_a_single_version() -> None:
+    """A range is not a pin: two peers must build the same bytes."""
+    for pin in DIRECT_DEPENDENCIES:
+        assert pin.count("==") == 1, pin
+        assert not any(mark in pin for mark in "><~,*"), pin
 
 
 def test_the_installed_version_is_the_pinned_one() -> None:

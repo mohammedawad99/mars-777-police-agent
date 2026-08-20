@@ -111,12 +111,12 @@ result_<game_id>.json (sealed) ──► ReportPort ──► e-mail with JSON a
 One-way. Cannot mutate game state. Both teams must send matching reports; missing from
 either side **or** contradictory ⇒ **0 to both** (C-09, INV-11).
 
-## Privacy assertions (to be enforced by tests)
+## Privacy assertions (enforced by tests)
 
 | Assertion | Enforcement |
 |---|---|
 | No opponent private truth reaches **strategy** | `Observation` has no such field; contract test |
-| …reaches **GUI** | GUI consumes projection events only; leak test asserts absent keys |
+| …reaches **GUI** | the live view is projected from `Observation` itself, so no field one could arrive in exists; `tests/gui/test_live_projection.py` asserts the field set, and `tests/gui/test_gui_privacy.py` asserts that no live module so much as names the objective board state. The replay view may show it, and only after the audit point (`PRD07-FR-023`) |
 | …reaches **logs** | Logger schema whitelist; negative test scans log for forbidden keys |
 | …reaches **reports** | Reporter reads sealed artifacts only; schema test |
 | Nonce not disclosed before audit | Timeline test asserts absence in all pre-audit outputs |

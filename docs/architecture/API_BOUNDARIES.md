@@ -781,6 +781,8 @@ that owns the work and returns what it answered:
 | `write_contribution` | `compose_backend.write_contribution` | the written path |
 | `compose_public_gateway` | `compose_gateway.compose_public_gateway` | `KitPublicLauncher` |
 | `verify_config_artifact` | `compose_verify.verify_stored_config` | what the bytes prove |
+| `open_replay` | `compose_replay.open_replay` | a navigable, already-verified `ReplaySession` |
+| `verify_replay` | `compose_replay.open_replay` | that session's `ReplaySummary` alone |
 
 The one thing the facade owns is the **local software integrity check**: building
 an `AgentSdk` verifies that the installed distribution is the version this source
@@ -803,11 +805,20 @@ the role constant into `identity`. **No behaviour moved**: every flag, default,
 exit status, refusal message and banner line is what it was, and the same tests
 that pinned them still pin them.
 
-### Not yet part of the surface
+### The live-view seam, and why the GUI is not behind the facade
 
-There is no replay or GUI operation, because there is no replay viewer or GUI to
-delegate to. A facade method whose implementation does not exist would be worse
-than an absent one. The stages that build them will extend this surface.
+`LiveViewSink`, `LatestSnapshot` and `LiveViewSnapshot` are exported (Stage
+9A-2B) because a viewer must be able to attach to a running series and name what
+it receives; `StrictSeriesRequest` carries an optional `viewer`, defaulting to a
+sink that discards.
+
+**The drawing itself is deliberately not a facade operation.** `mars777_police.gui`
+*consumes* this facade: a presentation package imported by the facade would point
+the dependency the wrong way, and would make every command line load an imaging
+library merely to parse an argument. `gui_main` is therefore held to its own
+rule - the facade, the identity it prints, the drawing package and the live sink,
+and nothing else - rather than to the counted entrypoints' "standard library and
+`.sdk`" rule, and `tests/gui/test_gui_entrypoint.py` states which.
 
 ## 10. The API Gatekeeper (Stage 9A-1C)
 
@@ -938,3 +949,49 @@ nonce is ever promoted to an accusation.
 `audit_complete(summary)` is the programmatic form of the same rule, exported
 from the SDK so a caller never parses human text. It is **derived**, not stored:
 `Verified OK` already means every applicable record was recomputed and matched.
+
+
+## 12. The graphical interface (Stage 9A-2B)
+
+**Classification: presentation only.** Not domain, not application policy, not
+transport. `mars777_police.gui` renders values other modules already decided, and
+`app/live_view_*` projects and publishes them. Nothing here decides a move, a
+barrier, a capture, a scent value, a commitment, a semantic verdict, a protocol
+transition, a score or a result agreement.
+
+### What it is made of
+
+```
+app/live_view_values.py  the lawful live projection, and what may be in it
+app/live_view_sink.py    the one-slot lossy drop box, and its failure guard
+app/live_view_feed.py    the single call the driver makes, once per round
+app/action_words.py      one short human word for an action, shared by all views
+gui/primitives.py        Rect, Text, Frame - what to draw, toolkit-free
+gui/geometry.py          where a board of any size goes, deterministically
+gui/palette.py           colour AND glyph AND word for every status
+gui/live_layout.py       the live picture: local truth only
+gui/replay_layout.py     the replay picture: both agents, after the audit point
+gui/image_renderer.py    the offscreen raster (Pillow), for CI and screenshots
+gui/window.py            the interactive window (tkinter) - the only toolkit user
+gui/live_app.py          a window that polls the box on a timer
+gui/replay_app.py        a window that navigates a finished ReplaySession
+gui_main.py              the operator command, `replay` and `live`
+```
+
+### The two directions that matter
+
+| Rule | How it is structural |
+|---|---|
+| the GUI cannot see more than the agent | the live snapshot is projected from `Observation`, whose four members have no field an opponent position could arrive in |
+| the GUI cannot affect the game | the driver's only call is `feed.show(...)`, which returns nothing, is guarded, and reaches a one-slot box |
+| the GUI cannot decide anything | `gui/` imports no strategy, turn service, protocol, transport or infrastructure module; no key is bound to anything but navigation |
+| the GUI cannot leave this machine | no module in `gui/` imports `socket`, `http`, `urllib`, `httpx`, `requests`, `ssl`, `subprocess` or `pickle` |
+| the toolkit cannot spread | `tkinter` appears in `gui/window.py` alone and Pillow in `gui/image_renderer.py` alone |
+
+### Why two renderers rather than one
+
+Layout produces a `Frame`; two adapters draw it. CI has no display, so the
+offscreen rasteriser is what lets the graphical output be asserted on Ubuntu and
+on Windows, and it is what produced the committed screenshots. The interactive
+window is proved against recording doubles everywhere and against the genuine
+toolkit wherever a display exists.

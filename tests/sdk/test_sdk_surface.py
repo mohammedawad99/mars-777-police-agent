@@ -39,6 +39,11 @@ EXPECTED = {
     "ReplayTurn",
     "audit_complete",
     "board_lines",
+    "LIVE",
+    "NO_VIEWER",
+    "LatestSnapshot",
+    "LiveViewSink",
+    "LiveViewSnapshot",
 }
 
 OPERATIONS = {

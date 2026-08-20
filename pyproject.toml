@@ -8,6 +8,7 @@ license = { text = "UNLICENSED" }
 authors = [{ name = "Mohamed Awad", email = "m7md.awad.1999@gmail.com" }]
 dependencies = [
     "fastmcp==3.4.6",
+    "pillow==11.3.0",
     "pydantic==2.13.4",
 ]
 

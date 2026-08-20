@@ -28,7 +28,7 @@ class ReplayLog:
     sub_game: int
     config_sha256: str
     entries: tuple[Mapping[str, object], ...]
-    nonces: dict[int, str]
+    nonces: dict[tuple[int, str], str]
     result: str
     tampered_step: int | None
     semantic: Mapping[str, object]
@@ -63,16 +63,25 @@ def _entries(raw: object) -> tuple[Mapping[str, object], ...]:
     return tuple(parsed)
 
 
-def _nonces(audit: Mapping[str, object]) -> dict[int, str]:
+def _nonces(audit: Mapping[str, object]) -> dict[tuple[int, str], str]:
+    """Every disclosed nonce, keyed by `(step, role)` as the log itself writes it.
+
+    **Keyed by both, because a lockstep step has two of them.** `final_reveal`
+    carries our own nonces and the peer's, each labelled with its role; a map
+    keyed by step alone would let the second entry overwrite the first, and every
+    commitment of the losing role would then be recomputed with somebody else's
+    nonce and reported as `TAMPERED`. A false accusation is the one outcome this
+    viewer must never produce.
+    """
     disclosed = audit.get("final_reveal", ())
     if not isinstance(disclosed, Sequence) or isinstance(disclosed, str | bytes):
         raise ReplayError("the audit block's 'final_reveal' must be a list")
-    found: dict[int, str] = {}
+    found: dict[tuple[int, str], str] = {}
     for entry in disclosed:
         if isinstance(entry, Mapping) and type(entry.get("step")) is int:
-            nonce = entry.get("nonce")
-            if type(nonce) is str:
-                found[entry["step"]] = nonce
+            nonce, role = entry.get("nonce"), entry.get("role")
+            if type(nonce) is str and type(role) is str:
+                found[(entry["step"], role)] = nonce
     return found
 
 

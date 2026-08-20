@@ -146,7 +146,7 @@ def test_a_commit_without_an_intent_is_refused() -> None:
     }
 
     with pytest.raises(ReplayError, match="could not be rebuilt"):
-        check_commit(entry, None, {1: "c" * 64}, None, 1)  # type: ignore[arg-type]
+        check_commit(entry, None, {(1, "police"): "c" * 64}, None, 1)  # type: ignore[arg-type]
 
 
 def test_an_audit_block_without_a_semantic_finding_is_refused() -> None:

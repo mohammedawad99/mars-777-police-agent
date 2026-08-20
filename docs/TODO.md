@@ -80,9 +80,10 @@ families, interoperability with the pinned third-party kit proven by six live
 sub-games, and public-network play demonstrated end to end.
 
 **What is not:** a counted match against another group's agent
-(`PARTNER_DEPENDENT`), the Replay Viewer, the GUI, Gmail reporting, enforcement
-of the negotiated rate-limiter terms, the SDK façade, the software version
-authority, the test-file split, and the Stage-9B research artifacts.
+(`PARTNER_DEPENDENT`), Gmail reporting, and the Stage-9B research artifacts. The
+Replay Viewer closed at Stage 9A-2A, the graphical interface at Stage 9A-2B, and
+provider rate-limit enforcement, the SDK façade, the software version authority
+and the test-file split at Stages 9A-1B1…9A-1C.
 
 ## Pending
 - [ ] Branch protection / rulesets - **blocked**: unavailable on the current GitHub
@@ -123,7 +124,7 @@ authority, the test-file split, and the Stage-9B research artifacts.
   the agent talk to a KIT peer.
 - [x] PRD-05 public network / tunnel / league - **LOCKED as requirements; IMPLEMENTED AND DEMONSTRATED.** The tunnel adapter, the group gateway and the ten-check readiness gate are wired behind one stable public route (Stage 4E-R18-R1 infrastructure, Stage 8B-P production wiring), with proven teardown and live role handoff. League participation against another group's agent remains `PARTNER_DEPENDENT`.
 - [x] PRD-06 security & cryptography (commit-reveal, Step-0) - **LOCKED as requirements; IMPLEMENTED.** Commit-reveal over SHA-256, the sealed record, CSPRNG nonces, keyed Step-0 and configuration authentication, the config lock, final nonce reveal, commitment recomputation, `TAMPERED` on mismatch and golden vectors are all in the repository and covered.
-- [x] PRD-07 reporting, GUI, replay (Gmail gatekeeper, Live GUI, Replay Viewer) - **STILL THE LARGEST OPEN BLOCK; see the remaining-work section at the end of this file.** LOCKED as requirements; NOT IMPLEMENTED.**
+- [x] PRD-07 reporting, GUI, replay (Gmail gatekeeper, Live GUI, Replay Viewer) - LOCKED as requirements. **Implemented since:** the Replay Viewer at 9A-2A/9A-2AF, the live and replay GUI at 9A-2B, and the provider rate-limit Gatekeeper at 9A-1C. **Gmail reporting remains open** - see the remaining-work section at the end of this file.
 - [x] **Phase 3 — Deterministic Core Implementation** — **STARTED** (Stage 3A closed; the phase itself is **not** complete).
 - [x] **Stage 3B — Deterministic Game Semantics** — **CLOSED** (barriers, capture, terminal/survival, scoring, bounded scent physics).
 - [x] **Stage 3C — Local Application / Turn Orchestration Foundation** — **CLOSED.**
@@ -227,8 +228,19 @@ repository and green in CI on the exact commit.
       completeness rule: a log whose required nonces are not all disclosed exits
       `4` rather than `0`, without being accused of tampering. Reachable through
       the SDK and as a command; documented in `docs/reference/REPLAY_VIEWER.md`.
-- [ ] **Live GUI** (`GUI-001/002/003`, MUST). No graphical interface exists.
-      Blocks the guideline's screenshot and UI-documentation requirements too.
+- [x] **Live and replay GUI** (`GUI-001/002/003`, MUST) - **DONE at Stage
+      9A-2B.** `gui_main replay` steps through a finished sub-game in a window
+      or writes the same picture to a file; `gui_main live` watches a counted
+      series this process is playing. The live view is projected from
+      `Observation` - the value the strategy itself is restricted to - so it
+      carries no field an opponent position could arrive in (`GUI-002`), and it
+      draws the belief heatmap with per-cell numbers and a turn-state banner
+      (`GUI-003`). The replay view shows both agents only because the audit
+      point has passed (`PRD07-FR-023`). Publication is a one-slot, lossy,
+      exception-swallowing sink, proved by two real agents playing a whole
+      sub-game with the viewer raising on every snapshot. Two real screenshots
+      are committed under `docs/evidence/gui/`, closing the `DOC-001` screenshot
+      component. Documented in `docs/reference/GUI.md`.
 - [ ] **Gmail result reporting** (`REPORT-001`, MUST). No mailer exists.
 - [x] **Provider rate-limit enforcement** (guideline §5.1/§5.2/§5.3) -
       **DONE at Stage 9A-1C.** `config/rate_limits.json` is versioned and
@@ -277,6 +289,7 @@ cryptography, the FastMCP peer transport, the runtime composition, the capture
 and semantic audit, the scent model/lock/Reveal-V2/audit/log chain, autonomous
 strategy, the production game owner, belief interpretation, the four artifact
 families and public-network play are all implemented, tested and demonstrated.
-**PRD-07 — the Replay Viewer, the GUI and Gmail reporting — remains
-unimplemented**, together with rate-limit enforcement. See the README's
-*Implementation status* section for the exact boundary._
+**Of PRD-07, the Replay Viewer (9A-2A), the graphical interface (9A-2B) and
+provider rate-limit enforcement (9A-1C) are implemented; Gmail reporting and its
+own rate-limited surface are not.** See the README's *Implementation status*
+section for the exact boundary._

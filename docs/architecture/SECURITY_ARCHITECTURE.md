@@ -121,3 +121,34 @@ its reader is a boundary rather than a convenience.
 - **No secret is shown.** The viewer projects disclosed evidence — cells,
   barriers, actions, hints, commitments and nonced verification results — and
   never key material, a private belief or an internal runtime object.
+
+
+## Graphical interface exposure (Stage 9A-2B)
+
+A window is a new way for information to leave a process, so it is treated as an
+exposure surface rather than as decoration.
+
+- **No new network surface.** The live view is an **in-process** sink, not a
+  socket: the runtime leaves a value in a one-slot box and a window in the same
+  process reads it. No port is opened, no address is bound, and no module in
+  `gui/` imports `socket`, `http`, `urllib`, `httpx`, `requests` or `ssl`.
+- **No remote asset.** No CDN, no remote script, no web font, no analytics, no
+  external image host. The only font is the bitmap face that ships with the
+  imaging library, so a screenshot renders identically on another machine and
+  nothing is fetched while drawing.
+- **Nothing is executed.** `gui/` contains no `eval`, no `exec`, no `pickle` and
+  no `subprocess`, and a structural test fails if one appears.
+- **The live view cannot leak an advantage.** Its whitelist is `Observation` —
+  the value the strategy itself is restricted to — so the window structurally
+  cannot show an opponent position, a peer nonce, a reveal or a final-audit
+  trajectory: there is no field one could arrive in. `GUI-002`'s sanction is
+  disqualification, so this is enforced by shape rather than by discipline.
+- **Belief is labelled, never disguised as a sighting.** Every heated cell
+  carries its own numeric value and the panel states
+  `belief (estimate) - not a sighting`.
+- **The replay view is the only one allowed more**, and only because
+  `PRD07-FR-023` grants it after the audit point. A structural test asserts that
+  no live module so much as names the objective board state.
+- **Committed screenshots carry no secret.** Both show development identities,
+  disclosed evidence and verification words only — no token, no key, no private
+  path and no live URL.

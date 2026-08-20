@@ -40,7 +40,7 @@ green in CI on the exact commit.
 | Exactly six sub-games per counted series | `VERIFIED` | structurally enforced; a seventh sub-game is not representable |
 | Public network / tunnel | `VERIFIED` | demonstrated end to end on one stable public route with proven teardown |
 | **Replay Viewer** (`REPLAY-001`, `REPLAY-002`) | `VERIFIED` | `uv run python -m mars777_police.replay_main --log … --config …`; per-step `Verified OK` / `TAMPERED`, textual board, and an audit-completeness rule so a partly-checkable log cannot report success (exit `4`). `docs/reference/REPLAY_VIEWER.md` |
-| **GUI** (`GUI-001/002/003`) | `PENDING` | not implemented |
+| **GUI** (`GUI-001/002/003`) | `VERIFIED` | `uv run python -m mars777_police.gui_main replay --log … --config …` and `… live --launch …`. Live view is local truth only, projected from `Observation`, with a labelled belief heatmap and a turn-state banner; the replay view shows both agents only after the audit point. `docs/reference/GUI.md` |
 | **Gmail reporting** (`REPORT-001`) | `PENDING` | not implemented |
 | **Rate-limit enforcement for provider calls** | `VERIFIED` | `app/gatekeeper.py` + versioned `config/rate_limits.json`; the tunnel Agent API is composed through it |
 | **Rate-limit enforcement for Gmail** (`REPORT-003`) | `PENDING` | the mechanism exists and is proven against a fake provider; the Gmail sender it governs does not exist yet |
@@ -74,7 +74,7 @@ green in CI on the exact commit.
 | Strategy description in the README | `VERIFIED` | README §11 |
 | Companion-repository link | `VERIFIED` | README header and §1.2 |
 | Learning curve | `PENDING` | nothing learns yet; will follow the Stage-9B experiments or not at all |
-| Screenshots | `PENDING` | blocked on the GUI; no screenshot is fabricated |
+| Screenshots | `VERIFIED` | `docs/evidence/gui/live_belief_map.png` and `docs/evidence/gui/replay_verified.png`, both rendered by the real GUI from one real thirty-five-round sub-game played in this repository; regenerate with `MARS777_WRITE_GUI_EVIDENCE=1 uv run pytest tests/gui/test_gui_evidence.py`. README §12 |
 | `docs/PRD.md`, `docs/PLAN.md`, `docs/TODO.md` | `VERIFIED` | all three current |
 | Per-mechanism PRDs | `VERIFIED` | `docs/prd/PRD-01…07` |
 | Architecture documentation | `VERIFIED` | 21 documents under `docs/architecture/` |

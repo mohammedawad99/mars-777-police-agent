@@ -15,6 +15,7 @@ from pathlib import Path
 
 from .app.kit_messages import KitRole
 from .app.kit_preset import ExternalMode
+from .app.live_view_sink import NO_VIEWER, LiveViewSink
 
 FRIENDLY_EVIDENCE_ROOT = Path("runtime/friendly")
 """Where a development run writes its evidence unless told otherwise."""
@@ -26,6 +27,8 @@ class StrictSeriesRequest:
 
     launch: Path
     external_mode: ExternalMode = ExternalMode.STRICT_INTERNAL
+    viewer: LiveViewSink = NO_VIEWER
+    """Somewhere to publish the live view. Optional, lossy, never consulted."""
 
 
 @dataclass(frozen=True, slots=True)

@@ -40,6 +40,7 @@ from dataclasses import dataclass
 
 from .app import artifact_store as artifacts
 from .app.audit_runtime import AuditRuntime
+from .app.live_view_sink import NO_VIEWER, LiveViewSink
 from .app.outbound_evidence_runtime import OutboundEvidenceRuntime
 from .app.round_opening import open_round_for
 from .app.sealed_record_values import ActorRole
@@ -65,6 +66,8 @@ class SeriesDriver:
     config: NegotiatedConfig
     runtimes: SubGameRuntimes
     deadline: float
+    viewer: LiveViewSink = NO_VIEWER
+    """A live window to publish to, or nobody. It is never read from."""
 
     def open(self) -> None:
         """Open the config round for the sub-game about to be played, and adopt it.
@@ -131,6 +134,7 @@ class SeriesDriver:
             evidence.context.config_sha256,
             sub_game,
             self.deadline,
+            self.viewer,
         )
         driver.open()
         settled = driver.settled()

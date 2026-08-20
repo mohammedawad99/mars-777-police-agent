@@ -18,12 +18,21 @@ anything.
 two `compose_*` operations return, and a typed caller has to be able to name
 them. They are project session objects, not framework types.
 
+**The live view is a seam, not a screen.** `LiveViewSink`, `LatestSnapshot` and
+`LiveViewSnapshot` are exported because a viewer has to be able to attach to a
+running series and name what it receives. The drawing itself lives in
+`mars777_police.gui`, which *consumes* this facade: a presentation package
+imported by the facade would point the dependency the wrong way, and would make
+every command line load an imaging library to parse an argument.
+
 **Stability.** The names in `__all__` are the promise; anything else in this
 package is an implementation detail and may move without notice.
 """
 
 from ..app.kit_messages import KitRole
 from ..app.kit_preset import ExternalMode
+from ..app.live_view_sink import NO_VIEWER, LatestSnapshot, LiveViewSink
+from ..app.live_view_values import LIVE, LiveViewSnapshot
 from ..app.replay_board import LEGEND, board_lines
 from ..app.replay_session import ReplaySession
 from ..app.replay_status import audit_complete
@@ -58,6 +67,8 @@ from .errors import (
 
 __all__ = [
     "LEGEND",
+    "LIVE",
+    "NO_VIEWER",
     "ROLE",
     "SOFTWARE_VERSION",
     "AgentSdk",
@@ -66,7 +77,10 @@ __all__ = [
     "KitPublicLauncher",
     "KitRole",
     "KitRoleBackend",
+    "LatestSnapshot",
     "LaunchInputError",
+    "LiveViewSink",
+    "LiveViewSnapshot",
     "LocalDefectError",
     "PeerProtocolError",
     "PublicGatewayRequest",

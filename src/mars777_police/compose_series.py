@@ -36,5 +36,5 @@ async def run_strict_series(request: StrictSeriesRequest) -> Path:
         document.kit_terms,
     )
     runtime = AgentRuntime(composition, settings.local.host, settings.local.port)
-    await AutonomousBoot(runtime, settings, document.config, ROLE).run()
+    await AutonomousBoot(runtime, settings, document.config, ROLE, request.viewer).run()
     return settings.artifact_root

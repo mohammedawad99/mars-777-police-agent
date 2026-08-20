@@ -9,6 +9,11 @@ here, and no second opinion about what a commitment is.
 
 **Missing evidence is not a verdict.** A commitment whose nonce this side never
 received is `NOT_CHECKABLE`, never `Verified OK` and never `TAMPERED`.
+
+**The nonce is looked up by `(step, role)`, never by step alone.** Both sides
+commit at every lockstep step, so a step has two nonces; recomputing one side's
+digest with the other side's nonce would fail and be reported as tampering that
+never happened.
 """
 
 from collections.abc import Mapping
@@ -59,7 +64,7 @@ def sealed_state(entry: Mapping[str, object], sub_game: int) -> SealedState:
 def check_commit(
     entry: Mapping[str, object],
     action: PhysicalAction,
-    nonces: Mapping[int, str],
+    nonces: Mapping[tuple[int, str], str],
     commitments: CommitmentPort,
     sub_game: int,
 ) -> ReplayCheck:
@@ -72,9 +77,11 @@ def check_commit(
     if type(stored) is not str:
         return ReplayCheck.NOT_APPLICABLE
     step = entry.get("step")
-    if type(step) is not int or step not in nonces:
+    if type(step) is not int:
         return ReplayCheck.NOT_CHECKABLE
     state = sealed_state(entry, sub_game)
+    if (step, state.role.value) not in nonces:
+        return ReplayCheck.NOT_CHECKABLE
     try:
         intent = Intent(str(entry["intent"]))
     except (KeyError, ValueError) as failure:
@@ -86,7 +93,7 @@ def check_commit(
         hint=str(entry.get("hint", "")),
         cursor=TurnCursor(sub_game, step),
         role=state.role,
-        nonce=NonceValue(nonces[step]),
+        nonce=NonceValue(nonces[(step, state.role.value)]),
     )
     matched = commitments.matches(Sha256Digest(stored), recomputed)
     return ReplayCheck.VERIFIED_OK if matched else ReplayCheck.TAMPERED

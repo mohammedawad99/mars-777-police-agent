@@ -27,6 +27,7 @@ from dataclasses import dataclass
 
 from .agent_runtime import AgentRuntime
 from .app.artifact_store import StoredArtifact
+from .app.live_view_sink import NO_VIEWER, LiveViewSink
 from .app.orchestrator import LocalOrchestrator
 from .app.pregame_session_runtime import PregameSessionRuntime
 from .app.protocol_errors import LocalDefectError
@@ -69,6 +70,8 @@ class AutonomousBoot:
     settings: RuntimeSettings
     config: NegotiatedConfig
     role: ActorRole
+    viewer: LiveViewSink = NO_VIEWER
+    """Handed straight to the series owner; this class never draws anything."""
 
     @property
     def deadline(self) -> float:
@@ -98,6 +101,7 @@ class AutonomousBoot:
             config=self.config,
             runtimes=sub_game_runtimes(composition, self.role, peer, self.config),
             deadline=self.deadline,
+            viewer=self.viewer,
         )
 
     async def await_peer_step0(self, pregame: PregameSessionRuntime) -> str:

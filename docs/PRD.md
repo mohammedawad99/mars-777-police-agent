@@ -47,7 +47,7 @@ must be able to verify afterwards that the match was played honestly.
 | `prd/PRD-04-language-and-scent.md` | deterministic hint channel, scent model, belief | implemented at the T0 (template, zero-token) scope |
 | `prd/PRD-05-public-network.md` | tunnel, public route, league participation | implemented and demonstrated end to end |
 | `prd/PRD-06-security-cryptography.md` | commit–reveal, Step-0 keyed authentication, config lock | implemented and covered |
-| `prd/PRD-07-reporting-gui-replay.md` | Gmail reporting, live GUI, Replay Viewer, rate-limit gatekeeper | **not implemented** — the largest open block |
+| `prd/PRD-07-reporting-gui-replay.md` | Gmail reporting, live GUI, Replay Viewer, rate-limit gatekeeper | Replay Viewer (9A-2A/2AF), live and replay GUI (9A-2B) and the provider rate-limit gatekeeper (9A-1C) implemented and covered; **Gmail reporting is not** |
 
 ## 4. Non-functional requirements
 

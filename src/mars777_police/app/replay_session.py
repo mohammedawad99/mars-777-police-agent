@@ -15,6 +15,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 
 from ..domain.actions import PhysicalAction
+from .action_words import action_label
 from .ports import CommitmentPort
 from .replay_crypto import barriers_of, check_commit, sealed_state
 from .replay_log import ReplayLog
@@ -71,6 +72,7 @@ class ReplaySession:
             cell=(state.self_pos.row, state.self_pos.col),
             barriers=tuple((one.row, one.col) for one in walls),
             action=str(entry["move"]),
+            label=action_label(action),
             hint=_text(revealed.get("hint")),
             intent=_text(entry.get("intent")),
             capture_claim=_text(revealed.get("capture_claim")),

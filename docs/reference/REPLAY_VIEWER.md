@@ -1,6 +1,7 @@
 # Replay Viewer — group MaRs-777
 
-**Status: CURRENT.** Added at Stage 9A-2A.
+**Status: CURRENT.** Added at Stage 9A-2A; completeness rules at 9A-2AF; a
+nonce-keying correction and a graphical front end at 9A-2B.
 
 `REPLAY-001` requires a viewer that replays a game log **and cryptographically
 verifies it**, and Appendix E rule 20 makes it a threshold for approving audits
@@ -143,3 +144,35 @@ The graphical interface `GUI-001/002/003` requires is a separate requirement and
 a later stage; it will consume this same replay projection rather than a second
 one, and **this terminal viewer is not counted as the GUI screenshot `DOC-001`
 still needs**.
+
+
+## Nonces are keyed by `(step, role)` (Stage 9A-2B)
+
+Every lockstep step carries **two** commitments — ours and the peer's — and the
+log's `final_reveal` block labels each released nonce with the role it belongs
+to. Until Stage 9A-2B the viewer keyed its nonce map by **step alone**, so the
+second entry overwrote the first and one whole side's commitments were
+recomputed with the other side's nonce and reported as `TAMPERED`.
+
+That is the worst failure this component can have: a **false accusation** of
+cheating, produced by the very tool a grader is told to run. It survived Stage
+9A-2A only because the fixture used there scripted one role per step, so no
+collision ever occurred.
+
+The map is now keyed by `(step, role)`; a commitment whose own role's nonce was
+never disclosed is `NOT_CHECKABLE`, never an accusation; an unlabelled nonce is
+ignored rather than applied to everyone. A whole thirty-five-round lockstep
+sub-game now replays as `Verified OK` end to end.
+`tests/replay/test_replay_lockstep_nonces.py` pins all four properties.
+
+## A window over the same session (Stage 9A-2B)
+
+Everything above is also available as a picture:
+
+```bash
+uv run python -m mars777_police.gui_main replay --log <log> --config <config>
+```
+
+The graphical viewer opens the **same** `ReplaySession` through the **same**
+facade, shows the same words with a glyph beside each, and returns the same exit
+status. It adds no verdict of its own. See `docs/reference/GUI.md`.

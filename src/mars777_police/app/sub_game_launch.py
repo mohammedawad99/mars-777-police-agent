@@ -23,6 +23,8 @@ first would decide on stale evidence.
 from ..domain.negotiated_config import NegotiatedConfig
 from .active_runtime_context import ActiveRuntimeContext
 from .config_rules import hints_of, limits_of, opening_truth, rules_of
+from .live_view_feed import LiveViewFeed
+from .live_view_sink import NO_VIEWER, LiveViewSink
 from .peer_runner import PeerRunner
 from .pregame_session_runtime import PregameSessionRuntime
 from .protocol_values import Sha256Digest
@@ -42,6 +44,7 @@ def launch_sub_game(
     config_sha256: Sha256Digest,
     sub_game: int,
     deadline: float,
+    viewer: LiveViewSink = NO_VIEWER,
 ) -> SubGameDriver:
     """The driver for *sub_game*, with every service this config implies."""
     return SubGameDriver(
@@ -58,4 +61,5 @@ def launch_sub_game(
         sub_game=sub_game,
         truth=opening_truth(config, role),
         deadline=deadline,
+        feed=LiveViewFeed(viewer, role.value, pregame.lock.game_id),
     )

@@ -126,6 +126,8 @@ one vocabulary:
 
 - **Stage 9A-2AF - replay audit completeness and exit semantics.** Answered one supervising question about the shipped viewer: can incomplete source-required evidence produce a successful verification because everything checkable passed? Measured first - it could not return `0`, but it reported a missing nonce with the **same** exit status as a real mismatch, and a record with no commitment to check downgraded the whole summary. Both corrected: incomplete audits now exit `4`, `NOT_APPLICABLE` outranks nothing, and a commit entry without the `Required` commitment is refused as corruption. Absence is still never promoted to tampering, and tampering is never softened into absence. **IMPLEMENTED / VERIFIED.**
 
+- **Stage 9A-2B - live and replay graphical interface.** Resolved the source first: `GUI-001` (Appendix E rule 8) requires the live interface to show **local truth only**, `GUI-002` (rule 9) forbids the full objective board state on pain of disqualification, `GUI-003` requires a belief heatmap and a turn-state banner, and `PRD07-FR-023` grants the replay - and only the replay, after the audit point - permission to show both agents' true paths. Then chose the toolkit by evidence rather than preference: `tkinter` ships with the interpreter CI installs, so the interactive window costs no dependency, and a pinned Pillow rasterises the identical frame **offscreen**, which is what makes the graphical output provable where no display exists. One toolkit-free layout model, two thin adapters. The live picture is projected from `Observation` - the value the strategy itself is restricted to - so the window structurally cannot show an advantage the agent does not already hold. Publication is a one-slot, lossy, exception-swallowing sink; two real agents play a whole sub-game with the viewer raising on every snapshot and reach the same terminal in the same number of rounds. **A real defect surfaced and was fixed:** the replay viewer keyed disclosed nonces by step alone, so in a lockstep log - where both sides commit at every step - one side's commitments were recomputed with the other side's nonce and reported as `TAMPERED`. Nonces are now keyed by `(step, role)`, and a whole thirty-five-round sub-game verifies end to end. Two real screenshots are committed. **IMPLEMENTED / VERIFIED.**
+
 ## 2. Where the project actually stands
 
 **IMPLEMENTED / VERIFIED.** Deterministic game mechanics; the protocol state
@@ -137,12 +139,14 @@ lock, live emission, audit and belief interpretation; the competitive barrier
 policy; interoperability with the pinned third-party kit proven by six live
 sub-games; and public-network play demonstrated end to end on one stable URL.
 
-**PLANNED — the largest open block is PRD-07.** A user-facing Replay Viewer, the
-live GUI, Gmail result reporting, and **enforcement** of the negotiated
-rate-limiter terms (which are today negotiated, validated and locked, but never
-applied at call time). The SDK façade and the software version authority, both
-required by the professional-software guideline, landed at Stage 9A-1B1 and are
-no longer open.
+**IMPLEMENTED / VERIFIED — most of PRD-07.** The user-facing Replay Viewer
+(9A-2A, completeness at 9A-2AF), the live and replay graphical interface with
+two real screenshots (9A-2B), and provider rate-limit enforcement through a
+versioned Gatekeeper (9A-1C). The SDK façade and the software version authority,
+both required by the professional-software guideline, landed at Stage 9A-1B1.
+
+**PLANNED — what is left of PRD-07.** Gmail result reporting, and the
+rate-limited Gmail sending surface the book actually governs (`REPORT-003`).
 
 **PLANNED — research.** The systematic parameter study, the analysis notebook and
 the result charts. Deliberately not started, so that no learning curve is
@@ -159,8 +163,6 @@ and the collaborator grant.
 
 ## 3. Forward plan
 
-- **Stage 9A-2B - the live GUI.** `GUI-001/002/003`, consuming the same replay
-  projection rather than a second one. `PLANNED`.
 - **Stage 9A-2C - Gmail reporting.** `REPORT-001/002/003`, registering one
   policy with the Gatekeeper that already exists. `PLANNED`.
 - **Stage 9B - competitive optimisation and research.** Parameter study,

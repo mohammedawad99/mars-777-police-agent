@@ -1,6 +1,6 @@
 # Prompt Register - group MaRs-777
 
-> **Status: CURRENT.** Backfilled through Stage 9A-2AF.
+> **Status: CURRENT.** Backfilled through Stage 9A-2B.
 > **Purpose:** The prompt-engineering log. It records the supervising-reviewer
 > prompts that drove each stage — their goal, their binding constraints, what
 > the AI got wrong, what the human correction was, and what shipped.
@@ -158,7 +158,7 @@ contain no secrets.
 
 ---
 
-## 2. Prompt engineering log (Stages 5 — 9A-2AF)
+## 2. Prompt engineering log (Stages 5 — 9A-2B)
 
 Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text.
 
@@ -561,6 +561,37 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
 - **Result.** Six measured cases, six distinct honest answers, and no accusation
   inflation in either direction.
 
+### Stage 9A-2B — the live and replay graphical interface
+
+- **Goal.** Close `GUI-001`, `GUI-002` and `GUI-003`; give the project a live
+  view and a replay view; produce the real screenshots `DOC-001` needs.
+- **Constraints.** Do not choose a toolkit before proving it works under the
+  project's Windows/Linux/CI constraints. The GUI must never decide a move, a
+  barrier, a capture, a scent, a commitment, a verdict, a transition, a score or
+  a result agreement. It must never block gameplay. No CDN, no remote script, no
+  web font, no analytics. The screenshot must be produced by the real
+  application - not drawn, not mocked, not a diagram - and must not present a
+  fixture as a tournament match.
+- **Finding (the whitelist already existed).** The safest set of facts a live
+  window may show is not one to design: it is `Observation`, the value the
+  strategy itself is restricted to. Projecting the window from it makes
+  `GUI-002` structural - there is no field an opponent cell could arrive in -
+  instead of a rule someone has to keep remembering.
+- **Finding (the toolkit question had two halves).** `tkinter` ships with the
+  interpreter CI installs, so the window costs no dependency; but `Tk()` needs a
+  display and no runner has one. Splitting layout from rendering answered both:
+  one toolkit-free `Frame`, an interactive adapter, and an offscreen rasteriser
+  that runs on every gating leg and produces the screenshots.
+- **Finding (the GUI found a defect in something else).** The first *lockstep*
+  log ever rendered showed our own turns as `TAMPERED`. The replay viewer keyed
+  disclosed nonces by step alone, and in lockstep both sides commit at every
+  step, so the peer's nonce overwrote ours and one whole side was recomputed
+  against the wrong secret. Stage 9A-2A had not seen it because its fixture
+  scripted one role per step. Keyed by `(step, role)`; a whole thirty-five-round
+  sub-game now verifies end to end.
+- **Result.** Two windows, one drawing model, 100% coverage of the graphical
+  package, and two screenshots taken from one real sub-game rather than staged.
+
 ## 3. Practices this project actually learned
 
 1. **Prove it as a process.** Every in-process proof in this project hid at
@@ -596,3 +627,10 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
 13. **A green result must say what it verified.** "Everything checkable passed"
     and "everything required was checked and passed" are different claims, and
     only the second deserves exit zero.
+14. **Build the view that the rules already permit.** The hardest part of the
+    GUI was deciding what it may show; the answer was a value that already
+    existed, and reusing it turned a prohibition into a shape.
+15. **A new consumer is a new test of an old component.** The replay viewer had
+    tests, a document and a green suite. Rendering one log it had never been
+    given - a lockstep one - exposed a false accusation of cheating in it.
+    A fixture that only ever exercises half a shape proves half a component.
