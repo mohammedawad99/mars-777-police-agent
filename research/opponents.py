@@ -67,6 +67,20 @@ def _scent(observation: Observation, move: Move) -> Decimal:
 PLACING_FAMILIES: tuple[str, ...] = ("pursuit", "barrier_aware", "adversarial_corner")
 """The police-side families willing to spend a placement when evidence backs it."""
 
+SEEDED_FAMILIES: tuple[str, ...] = ("random_legal",)
+"""The families whose **behaviour** depends on the seed, and only those.
+
+Every other family ranks moves by a deterministic key over the observation, so
+two seeds produce the same game from the same opening. That distinction is what
+`scenario.scenario_id` needs: a seed that changes nothing must not make two
+identical games look like two observations. `tests/research` proves the claim
+per family rather than trusting this list."""
+
+
+def seed_matters(family: str) -> bool:
+    """Whether *family*'s own behaviour actually varies with its seed."""
+    return family in SEEDED_FAMILIES
+
 
 @dataclass(frozen=True, slots=True)
 class Opponent:

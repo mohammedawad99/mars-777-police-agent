@@ -20,6 +20,9 @@ def record(**overrides: object) -> GameRecord:
         "opponent_family": "evasive",
         "seed_set": "development",
         "seed": 1,
+        "scenario_id": "a" * 64,
+        "police_start": "0,0",
+        "thief_start": "3,3",
         "config": "grid7",
         "grid": 7,
         "quota": 14,
@@ -106,7 +109,7 @@ def test_grouping_is_ordered_so_two_runs_agree() -> None:
 
 
 def test_a_table_reports_the_primary_metric_for_every_group() -> None:
-    rows = tuple(record(seed=one) for one in range(10))
+    rows = tuple(record(seed=one, scenario_id=f"s{one}") for one in range(10))
 
     cells = table(rows, "opponent_family")
 
@@ -115,8 +118,9 @@ def test_a_table_reports_the_primary_metric_for_every_group() -> None:
     assert cells[0].as_row()["n"] == 10
 
 
-def test_the_overall_row_covers_every_game() -> None:
-    rows = tuple(record(seed=one) for one in range(12))
+def test_the_overall_row_covers_every_unique_scenario() -> None:
+    """`overall` counts scenarios, not rows - the Stage-9B-0F unit."""
+    rows = tuple(record(seed=one, scenario_id=f"s{one}") for one in range(12))
 
     assert overall(rows).estimates[PRIMARY].n == 12
 
@@ -140,7 +144,12 @@ def test_the_manifest_identifies_every_input_by_hash() -> None:
     document = manifest().as_document()
 
     assert document["schema"] == SCHEMA_VERSION
-    assert set(document["seed_banks"]) == {"development", "holdout", "stress"}  # type: ignore[arg-type]
+    assert set(document["seed_banks"]) == {  # type: ignore[arg-type]
+        "development",
+        "holdout",
+        "stress",
+        "final_holdout",
+    }
     assert len(str(document["config_corpus_sha256"])) == 64
 
 

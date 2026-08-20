@@ -19,10 +19,15 @@ than averaged away.
 """
 
 import hashlib
+from typing import Final
 
 from mars777_police.domain.board import Position
 
 from .configs import BenchConfig
+from .opponents import seed_matters
+
+SCENARIO_VERSION: Final[str] = "scenario-1"
+"""Raised only when the identity's meaning changes, never for a new run."""
 
 
 def _index(seed: int, slot: int, size: int) -> int:
@@ -49,3 +54,69 @@ def start_cells(config: BenchConfig, seed: int) -> tuple[Position, Position]:
 
 def _cell(index: int, grid: int) -> Position:
     return Position(index // grid, index % grid)
+
+
+def space_size(config: BenchConfig) -> int:
+    """How many distinct opening pairs this configuration legally has.
+
+    One when the geometry is fixed; otherwise every ordered pair of distinct
+    cells, because the board starts empty so every cell is traversable.
+    """
+    if config.fixed_starts:
+        return 1
+    cells = config.grid * config.grid
+    return cells * (cells - 1)
+
+
+def openings(
+    config: BenchConfig, seeds: tuple[int, ...]
+) -> tuple[tuple[int, Position, Position], ...]:
+    """Distinct openings for *config*, drawn **without replacement**.
+
+    Sixty-four seeds that collide onto twenty openings are twenty observations,
+    not sixty-four, so a colliding seed is skipped rather than counted. When the
+    legal space is smaller than the request - the fixed reference geometry has
+    exactly one opening - the result is the whole space and the caller learns
+    the real `N` from its length rather than from what it asked for.
+    """
+    seen: set[tuple[Position, Position]] = set()
+    found: list[tuple[int, Position, Position]] = []
+    for seed in seeds:
+        if len(seen) >= space_size(config):
+            break
+        police, thief = start_cells(config, seed)
+        if (police, thief) in seen:
+            continue
+        seen.add((police, thief))
+        found.append((seed, police, thief))
+    return tuple(found)
+
+
+def scenario_id(
+    role: str, family: str, config: BenchConfig, seed: int, police: Position, thief: Position
+) -> str:
+    """The canonical identity of one deterministic experimental condition.
+
+    Everything that can make two games genuinely different is in it: the role
+    under evaluation, the opponent family, the board geometry and limits, both
+    opening cells, and the seed **only when that family's behaviour actually
+    depends on it**. Nothing that cannot change a game is in it - no path, no
+    timestamp, no row number - because those would make identical games look
+    like independent observations, which is exactly the error this identity
+    exists to prevent.
+    """
+    material = "|".join(
+        (
+            SCENARIO_VERSION,
+            role,
+            family,
+            config.name,
+            str(config.grid),
+            str(config.quota),
+            str(config.horizon),
+            f"{police.row},{police.col}",
+            f"{thief.row},{thief.col}",
+            str(seed) if seed_matters(family) else "-",
+        )
+    )
+    return hashlib.sha256(material.encode()).hexdigest()

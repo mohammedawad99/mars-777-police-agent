@@ -1,6 +1,6 @@
 # Prompt Register - group MaRs-777
 
-> **Status: CURRENT.** Backfilled through Stage 9B-0.
+> **Status: CURRENT.** Backfilled through Stage 9B-0F.
 > **Purpose:** The prompt-engineering log. It records the supervising-reviewer
 > prompts that drove each stage — their goal, their binding constraints, what
 > the AI got wrong, what the human correction was, and what shipped.
@@ -158,7 +158,7 @@ contain no secrets.
 
 ---
 
-## 2. Prompt engineering log (Stages 5 — 9B-0)
+## 2. Prompt engineering log (Stages 5 — 9B-0F)
 
 Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text.
 
@@ -680,6 +680,27 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
   dependencies, and a police baseline win rate of 5.3% that is now a measurement
   instead of an impression.
 
+### Stage 9B-0F — statistical independence and a sealed holdout
+
+- **Goal.** Close two methodology defects before a candidate could inherit them:
+  a holdout whose results had been read, and rows counted as observations.
+- **Constraints.** Zero pushes while investigating. Do not implement a
+  candidate. Do not inspect the new holdout's outcomes. Do not rewrite history.
+- **Finding (the holdout was never blind).** Stage 9B-0 executed it and read its
+  baseline while ranking hypotheses. It is now called validation - what it is -
+  and a sealed replacement was enumerated, hashed and committed unplayed.
+- **Finding (the seed matters only where it is read).** Only `random_legal`
+  consumes its seed; every one of the 7 duplicate-outcome disagreements in the
+  old rows was that family. So `scenario_id` includes the seed conditionally,
+  which is the honest identity rather than the convenient one.
+- **Finding (the correction moved the published number).** Police went from
+  0.0526 to 0.0638 because 1,008 reference rows - 9 scenarios replayed - had
+  been folded in as independent losses. Both figures are published with the
+  reason; replacing one silently would be the same error relocated.
+- **Result.** Scenario-level statistics, openings without replacement, a
+  reference cell reporting N=9, frozen weighting and pairing, four findings
+  CONFIRMED, one WEAKENED, one INSUFFICIENT_N, and a holdout nobody has opened.
+
 ## 3. Practices this project actually learned
 
 1. **Prove it as a process.** Every in-process proof in this project hid at
@@ -746,3 +767,8 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
 21. **Freeze the gates while you still do not know the answer.** Promotion
     thresholds written after seeing a candidate's numbers are not thresholds,
     they are a description of that candidate.
+22. **A holdout you have looked at is a validation set.** The only honest fixes
+    are to rename it and seal a new one. Both are cheap; pretending is not.
+23. **Ask which inputs the code actually reads before treating them as
+    conditions.** Six of seven opponent families ignored their seed entirely, so
+    six sevenths of the "variation" was relabelling one game.

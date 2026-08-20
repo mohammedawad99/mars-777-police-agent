@@ -23,17 +23,18 @@ def test_an_empty_bank_is_refused() -> None:
         seeds.bank("development", 0)
 
 
-def test_the_three_banks_are_pairwise_disjoint() -> None:
-    development, holdout, stress = seeds.banks()
+def test_every_bank_is_pairwise_disjoint_from_every_other() -> None:
+    """Four banks now, including the sealed one, and no seed may appear twice."""
+    all_banks = seeds.banks()
 
-    assert seeds.disjoint(development, holdout)
-    assert seeds.disjoint(development, stress)
-    assert seeds.disjoint(holdout, stress)
+    for index, first in enumerate(all_banks):
+        for second in all_banks[index + 1 :]:
+            assert seeds.disjoint(first, second), f"{first.name} shares a seed with {second.name}"
 
 
 def test_a_bank_digest_changes_only_when_its_seeds_do() -> None:
     assert seeds.development_bank().digest == seeds.development_bank().digest
-    assert seeds.development_bank().digest != seeds.holdout_bank().digest
+    assert seeds.development_bank().digest != seeds.validation_bank().digest
 
 
 def test_no_configuration_is_below_the_appendix_f_grid_minimum() -> None:

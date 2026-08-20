@@ -8,7 +8,7 @@ grader can open, JSON a script can read, and PNGs a report can show.
 import csv
 from pathlib import Path
 
-from .analysis import PRIMARY, Cell, overall, table
+from .analysis import PRIMARY, Cell, headline, overall, reference, reference_cell, table
 from .charts import Bar, bar_chart, save
 from .identity import baseline_identity
 from .records import GameRecord, write_json
@@ -44,7 +44,10 @@ def _bars(cells: tuple[Cell, ...], metric: str) -> tuple[Bar, ...]:
 def write_all(records: tuple[GameRecord, ...], root: Path) -> None:
     """Regenerate every table, summary and figure this stage commits."""
     identity = baseline_identity()
-    caption = f"{identity.role} baseline {identity.strategy} @ {identity.commit[:12]}"
+    caption = (
+        f"{identity.role} baseline {identity.strategy} @ {identity.commit[:12]}"
+        f" - unit: unique scenario; n shown per bar"
+    )
     figures = root / "figures"
     for key in GROUPS:
         cells = table(records, key)
@@ -55,11 +58,16 @@ def write_all(records: tuple[GameRecord, ...], root: Path) -> None:
             )
             save(frame, figures / f"{metric}_by_{key}.png")
     summary = overall(records)
+    small = reference_cell(records)
     write_json(
         {
-            "games": len(records),
+            "raw_rows": len(records),
+            "headline_scenarios": len(headline(records)),
+            "reference_scenarios": len(reference(records)),
+            "statistical_unit": "unique scenario_id",
             "baseline": identity.as_record(),
             "overall": {name: found.as_record() for name, found in summary.estimates.items()},
+            "reference_only": {name: found.as_record() for name, found in small.estimates.items()},
         },
         root / "tables" / "overall.json",
     )

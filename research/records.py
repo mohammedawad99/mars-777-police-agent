@@ -16,8 +16,12 @@ import json
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
-SCHEMA_VERSION = "research-1"
-"""Raised only when a column changes meaning or disappears, never for a new run."""
+SCHEMA_VERSION = "research-2"
+"""Raised only when a column changes meaning or disappears, never for a new run.
+
+`research-2` added `scenario_id` and both opening cells: Stage 9B-0F made the
+scenario the statistical unit, and a unit that has to be re-derived from a
+generator is a unit an auditor cannot check."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +36,9 @@ class GameRecord:
     opponent_family: str
     seed_set: str
     seed: int
+    scenario_id: str
+    police_start: str
+    thief_start: str
     config: str
     grid: int
     quota: int

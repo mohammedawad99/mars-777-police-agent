@@ -8,17 +8,55 @@ module exists: a statistic nobody can run twice is not evidence.
 opponent_score` under Appendix F Table 17, and the capture/survival rates below
 are counts of the outcomes the domain reported - not a research score invented
 to make a candidate look better than the league would.
+
+**The statistical unit is the scenario, not the row** (Stage 9B-0F). Policies
+here are deterministic, so replaying a scenario produces the identical game;
+counting it twice would inflate `N` without adding one bit of evidence. Every
+aggregate therefore collapses rows by `scenario_id` first, and the bootstrap
+resamples those unique scenarios.
+
+**The fixed reference geometry is reported apart from the headline.** Its legal
+opening space is exactly one, so it contributes seven scenarios in total - one
+per opponent family - and folding seven observations in beside two thousand
+would let a tiny cell borrow their confidence.
 """
 
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from .configs import corpus
 from .records import GameRecord
 from .stats import Estimate, estimate
 
 Selector = Callable[[GameRecord], float]
 
 PRIMARY = "win_rate"
+
+REFERENCE_CONFIGS: tuple[str, ...] = tuple(one.name for one in corpus() if one.fixed_starts)
+"""Configurations whose opening geometry is fixed, so their scenario space is one."""
+
+
+def unique_scenarios(records: tuple[GameRecord, ...]) -> tuple[GameRecord, ...]:
+    """One row per `scenario_id`, keeping the first in a deterministic order.
+
+    Defensive rather than decorative: the sweep already emits one row per
+    scenario, and this guarantees the property for any file that is loaded,
+    merged or replayed later.
+    """
+    seen: dict[str, GameRecord] = {}
+    for record in sorted(records, key=lambda one: (one.scenario_id, one.seed_set, one.seed)):
+        seen.setdefault(record.scenario_id, record)
+    return tuple(seen.values())
+
+
+def headline(records: tuple[GameRecord, ...]) -> tuple[GameRecord, ...]:
+    """The scenarios the primary aggregate is computed over: reference excluded."""
+    return tuple(one for one in unique_scenarios(records) if one.config not in REFERENCE_CONFIGS)
+
+
+def reference(records: tuple[GameRecord, ...]) -> tuple[GameRecord, ...]:
+    """The fixed-geometry scenarios, reported on their own with their real `N`."""
+    return tuple(one for one in unique_scenarios(records) if one.config in REFERENCE_CONFIGS)
 
 
 def win(record: GameRecord) -> float:
@@ -90,12 +128,13 @@ def group_by(records: tuple[GameRecord, ...], key: str) -> dict[str, tuple[GameR
 
 
 def summarise(records: tuple[GameRecord, ...], key: str, group: str) -> Cell:
-    """Every metric over one group of games, with intervals where supported."""
+    """Every metric over one group, over **unique scenarios**, with honest intervals."""
+    rows = unique_scenarios(records)
     return Cell(
         key=key,
         group=group,
         estimates={
-            name: estimate(tuple(select(one) for one in records), seed=len(records))
+            name: estimate(tuple(select(one) for one in rows), seed=len(rows))
             for name, select in METRICS.items()
         },
     )
@@ -103,9 +142,15 @@ def summarise(records: tuple[GameRecord, ...], key: str, group: str) -> Cell:
 
 def table(records: tuple[GameRecord, ...], key: str) -> tuple[Cell, ...]:
     """One row per distinct value of *key*, ordered so two runs agree."""
-    return tuple(summarise(group, key, name) for name, group in group_by(records, key).items())
+    grouped = group_by(unique_scenarios(records), key)
+    return tuple(summarise(group, key, name) for name, group in grouped.items())
 
 
 def overall(records: tuple[GameRecord, ...]) -> Cell:
-    """The whole benchmark as one row, for the headline numbers."""
-    return summarise(records, "all", "all")
+    """The headline: unique scenarios, fixed reference geometry excluded."""
+    return summarise(headline(records), "all", "all")
+
+
+def reference_cell(records: tuple[GameRecord, ...]) -> Cell:
+    """The reference geometry on its own, so its small `N` stays visible."""
+    return summarise(reference(records), "reference", "appendixF-example")

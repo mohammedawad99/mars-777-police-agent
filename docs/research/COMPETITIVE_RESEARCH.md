@@ -116,20 +116,56 @@ changes the outcome in **26 of 42** cells, and the intervals mean something.
 `tests/research/test_research_units.py` pins the property so it cannot silently
 return.
 
-**One row's interval must not be read as its `n` suggests.** The
-`appendixF-example` configuration fixes both opening cells on purpose, so every
-seed replays the same game: it contributes **7 distinct scenarios** (one per
-opponent family), not 1008. Its `n` is honest about how many games were played
-and dishonest about how much independent information they carry, so its interval
-is reported but must not be compared with the other rows'. Measured, not
-assumed: 1 of its 7 family cells varies with the seed, against 7 of 7 for every
-other configuration. Reweighting or dropping the replication is a corpus
-improvement for Stage 9B-1.
+**The experimental unit is the scenario, fixed at Stage 9B-0F.** Stage 9B-0
+counted rows: 6,048 of them, over 4,991 distinct conditions, with 7 conditions
+replayed 144 times each. Policies here are deterministic, so a replayed scenario
+produces the identical game and adds no information — counting it again inflates
+`N` and narrows an interval that should not narrow.
 
-**Holdout policy.** The holdout bank exists to confirm a promotion, never to tune
-a candidate. This is a *process* commitment, and the honest limitation is that
-nothing mechanically prevents a person from looking; what the code guarantees is
-deterministic separation and a separately reported number.
+`scenario_id` is now the canonical identity (`scenario-1`), a SHA-256 over: role
+under evaluation, opponent family, configuration name, grid, quota, horizon,
+both opening cells, **and the opponent seed only where that family's behaviour
+actually depends on it**. Measured, not assumed: only `random_legal` reads its
+seed, and the 7 outcome disagreements in the Stage-9B-0 rows were all that
+family. Nothing that cannot change a game — path, timestamp, row number — is in
+the identity.
+
+Three consequences, all enforced in code and pinned by tests:
+
+* **Openings are drawn without replacement.** Sixty-four seeds that collide onto
+  twenty openings are twenty observations; a colliding seed is now skipped, and
+  `size_of` reports what a sweep will actually play rather than
+  `families × configs × seeds`.
+* **A finite space yields its real size.** `appendixF-example` has exactly **one**
+  legal opening, so it contributes **7 scenarios** in total — one per family —
+  and is reported as `N = 7`, never as `N = 1008`.
+* **The reference geometry is excluded from the headline** and reported on its
+  own, so seven observations cannot borrow the confidence of two thousand.
+
+**Holdout policy, corrected at Stage 9B-0F.** Stage 9B-0 ran a bank called
+`holdout` and then read its baseline results while ranking candidate hypotheses.
+A set whose outcomes have been seen is not blind, whatever it is called, so it
+was **reclassified as `validation`** — what it actually is. Its results are kept,
+not deleted, and this paragraph is the record rather than a rewrite.
+
+A genuinely sealed **`final_holdout`** was created afterwards, under its own
+namespace `mars777-research/final-holdout-v1/`, disjoint from every working
+bank, and **no game has been played on it**. Its scenario list is enumerated,
+hashed and committed in `results/final_holdout.json` so that "fixed before the
+candidate existed" is checkable rather than asserted. `bench_main` iterates
+`working_banks()`, which does not contain it, and asking for it by name is
+refused; there is deliberately no `--final-holdout` flag yet, because a flag
+that existed today is a flag somebody could pass today.
+
+| Bank | Purpose | May be inspected |
+|---|---|---|
+| `development` | candidate design and tuning | freely |
+| `validation` (was `holdout`) | comparison once a coherent revision exists | occasionally |
+| `stress` | rare and adversarial cases | freely |
+| **`final_holdout`** | **exactly one** promotion evaluation, after the candidate is frozen | **not until then** |
+
+If a final-holdout evaluation fails, the candidate is rejected. A new cycle needs
+a **new sealed version** — a failed holdout does not become blind again.
 
 ## 7. Metrics, frozen before any candidate exists
 
@@ -148,9 +184,25 @@ Proportions and means are reported with `n`, median, and a **deterministic
 percentile bootstrap** 95% interval (1000 resamples drawn from a SHA-256
 counter, never a random module), so a published figure is reproducible and an
 argument about it is checkable. Fewer than 8 observations report **no** interval
-rather than a meaningless one. Baseline-versus-candidate comparisons must be
-**paired** — same seeds, same configurations, same opponents — and reported as
-the per-game difference.
+rather than a meaningless one.
+
+**The resampling unit is one unique scenario.** Every aggregate collapses rows by
+`scenario_id` before it measures anything, and a test asserts that duplicating a
+series does not narrow its interval — which is exactly the error the Stage-9B-0
+numbers contained.
+
+**Weighting, frozen now.** The headline is **scenario-weighted over the varied
+configurations**, which carry equal target `N` by construction (64 openings
+each), so scenario weighting and equal-cell weighting coincide there and no
+config can dominate by having a larger legal opening space. The fixed reference
+geometry is excluded from that headline and reported separately with its own
+`N`. This is the tournament-relevant reading: a real match is played on one
+agreed configuration, and no configuration is more likely than another.
+
+**Paired comparison, frozen now.** A baseline-versus-candidate comparison is
+keyed by `scenario_id`, not by position: `paired_by_scenario` refuses unless
+both sides played exactly the same scenario set, so a baseline measured on one
+bank and a candidate on another can never be presented as pairs.
 
 ## 9. Promotion gates — frozen now, before any candidate exists
 
@@ -206,98 +258,98 @@ That runs every seed bank against the whole corpus, writes the result rows,
 regenerates every table and figure, measures decision latency and rewrites the
 manifest. No network, no credential, no live game, no editing between stages.
 
-## 13. Baseline results (Stage 9B-0, frozen)
+## 13. Baseline results — corrected at Stage 9B-0F
 
-6,048 games per role: 7 opponent families × 6 configuration families × (64 + 64
-+ 16) seeds. Runtime ≈ 12 minutes per role on one developer core.
+The Stage-9B-0 numbers counted rows; these count **unique scenarios** and
+exclude the fixed reference geometry from the headline. Both are shown, because
+the correction changed the headline and hiding that would be the same error in a
+different place.
 
-### Police — `CompetitiveStrategy`
-
-**Overall win rate 5.26% [4.66%, 5.82%]**, mean score 5.79 of a possible 20,
-mean 3.40 barriers spent of a 14 quota.
-
-| Opponent family | win rate | 95% CI |
+| Role | Stage 9B-0 (rows) | **Corrected (scenarios)** |
 |---|---|---|
-| `adversarial_corner` | 0.111 | [0.091, 0.133] |
-| `center_mobility` | 0.076 | [0.059, 0.095] |
-| `random_legal` | 0.060 | [0.045, 0.076] |
-| `pursuit` | 0.044 | [0.031, 0.057] |
-| `barrier_aware` | 0.032 | [0.021, 0.045] |
-| `scent_aware` | 0.029 | [0.017, 0.041] |
-| `evasive` | **0.015** | [0.007, 0.023] |
+| Police | 0.0526 [0.0466, 0.0582], "n = 6048" | **0.0638 [0.0567, 0.0706], n = 4988** |
+| Thief | 0.9906 [0.9879, 0.9927], "n = 6048" | **0.9886 [0.9856, 0.9914], n = 4988** |
 
-| Configuration | win rate | 95% CI |
-|---|---|---|
-| `grid7` / `grid7-quota22` | 0.073 | [0.058, 0.090] |
-| `grid9` / `grid9-horizon45` | 0.063 | [0.048, 0.079] |
-| `grid11` | 0.042 | [0.030, 0.055] |
-| `appendixF-example` | **0.000** | [0.000, 0.000] — 7 distinct scenarios, see §6 |
+**Why the police number rose.** The old figure folded in 1,008 rows of the fixed
+reference geometry — 9 distinct scenarios replayed — every one of them a loss,
+each weighted as an independent observation. Removing that inflation raises the
+headline by about 1.1 points. The old interval was also too narrow, because
+1,057 duplicate rows were resampled as if they were independent.
 
-Development 0.047, holdout 0.060, stress 0.048 — the three banks agree.
+**Reference geometry, reported separately.** Police 0.000 and thief 1.000, at
+**N = 9** — six non-seeded families contribute one scenario each, and
+`random_legal` contributes three because its behaviour genuinely varies with its
+seed. Nine, not seven, and not 1,008.
 
-### Thief — `BaselineStrategy`
+**Run shape after the correction.** 5,033 raw rows per role, 4,997 unique
+scenarios, multiplicity `{1: 4967, 2: 24, 3: 6}` — the remaining duplicates are
+cross-bank collisions on the same opening, correctly collapsed. Runtime ≈ 10
+minutes per role.
 
-**Overall win rate 99.06% [98.79%, 99.27%]**, mean score 9.95 of a possible 10.
-Only two families ever beat it, and only with barriers: `adversarial_corner`
-0.958 and `barrier_aware` 0.976. Every other family: 1.000.
+### Police — `CompetitiveStrategy`, corrected
+
+| Opponent family | win rate | 95% CI | N |
+|---|---|---|---|
+| `adversarial_corner` | 0.135 | [0.109, 0.160] | 713 |
+| `center_mobility` | 0.093 | [0.072, 0.115] | 713 |
+| `random_legal` | 0.072 | [0.056, 0.092] | 719 |
+| `pursuit` | 0.053 | [0.038, 0.070] | 713 |
+| `barrier_aware` | 0.039 | [0.025, 0.055] | 713 |
+| `scent_aware` | 0.035 | [0.022, 0.049] | 713 |
+| `evasive` | **0.018** | [0.010, 0.028] | 713 |
+
+| Configuration | win rate | 95% CI | N |
+|---|---|---|---|
+| `grid7` / `grid7-quota22` | 0.075 | [0.059, 0.091] | 988 |
+| `grid9` / `grid9-horizon45` | 0.064 | [0.050, 0.081] | 1002 |
+| `grid11` | 0.042 | [0.030, 0.055] | 1008 |
+| `appendixF-example` | 0.000 | [0.000, 0.000] | **9 — reference only** |
+
+### Thief — `BaselineStrategy`, corrected
+
+**0.9886 [0.9856, 0.9914]**, N = 4988. Beaten only by `adversarial_corner`
+(0.950, N=713) and `barrier_aware` (0.971, N=713); every other family 1.000.
 
 ### Decision latency
 
-| Role | median | p95 | max | samples |
-|---|---|---|---|---|
-| Police | 0.03 ms | 2.09 ms | 3.06 ms | 210 |
-| Thief | 1.20 ms | 1.31 ms | 2.55 ms | 210 |
+Unchanged by the correction — it measures `choose_action`, not aggregation.
+Police p95 ≈ 2.1 ms, thief p95 ≈ 1.3 ms, both far inside the 25 ms ceiling.
 
-Both are two orders of magnitude inside the 25 ms candidate ceiling.
+## 14. Police weakness findings, reclassified against the corrected numbers
 
-## 14. What the baseline evidence supports — police
+| Stage-9B-0 finding | Status | Corrected evidence |
+|---|---|---|
+| Weakest against region-maximising evaders | **CONFIRMED** | `evasive` 0.018 [0.010, 0.028], N=713 — still the worst family by a clear margin |
+| Strongest against an opponent entering tight regions | **CONFIRMED** | `adversarial_corner` 0.135 [0.109, 0.160], N=713 |
+| Raising the barrier quota changes nothing | **CONFIRMED** | `grid7` and `grid7-quota22` remain identical; the quota is not the binding constraint |
+| A longer horizon changes nothing | **CONFIRMED** | `grid9` and `grid9-horizon45` remain identical in win rate |
+| Win rate falls as the board grows | **WEAKENED** | 0.075 → 0.064 → 0.042; the 7 and 9 intervals overlap, so only the 11 drop is clearly separated |
+| Zero captures on the Appendix F example geometry | **INSUFFICIENT_N** | still 0.000, but **N = 9**, not 1008 — this is a reference observation, not a statistical finding |
+| Overall win rate near the floor | **CONFIRMED, revised upward** | 0.064 rather than 0.053; still weak, and still the side worth improving |
 
-**Observed (measurement).**
+**Thief `NO_CHANGE` reassessment.** The corrected figure is 0.9886 over 4,988
+independent scenarios, with the two barrier-using families at 0.950 and 0.971 on
+N=713 each. The coverage is ample and the conclusion is unchanged:
+**`NO_CHANGE` stands.**
 
-1. The police wins **5.3%** of games. The tournament pays 20 for a capture and 5
-   for a survival, so this is close to the floor.
-2. It is weakest against **region-maximising evaders** (`evasive`, 1.5%) and
-   strongest against an opponent that walks into tight regions (11.1%).
-3. **Raising the barrier quota changes nothing**: `grid7` and `grid7-quota22`
-   are identical in win rate and in barriers spent (4.06). The quota is not the
-   binding constraint — the policy spends ~3.4 of 14.
-4. **A longer horizon changes nothing**: `grid9` and `grid9-horizon45` have the
-   same win rate; only the step count differs.
-5. Win rate **falls as the board grows**: 0.073 → 0.063 → 0.042 for 7, 9, 11.
-6. On Appendix F's own example geometry it captured **0 times** — with the
-   caveat in §6 that this row is 7 scenarios replicated, not 1008.
-
-**Hypotheses (not facts).** These follow from reading the policy beside the
-numbers, and none is established by this stage:
-
-* `BaselineStrategy` maximises **its own** reachability, which is a target-free
-  objective — there is no term that closes distance on believed evidence, which
-  would explain both the flat performance and the failure against evaders.
-* `CompetitiveStrategy` admits a placement only when its support strictly
-  exceeds the evidence at the cell the baseline would move to, which is a rare
-  condition — consistent with spending 3.4 of 14 barriers.
-* Larger boards dilute a fixed-radius scent field, so the evidence that funds a
-  placement is weaker where there is more room to search.
-
-## 15. What the baseline evidence supports — thief
-
-The thief wins 99.1% of games and loses only to barrier pressure. There is **no
-statistically supported weakness** to fix, and the historical record already
-contains one rejected thief candidate. **Recommendation: `NO_CHANGE`.** Changing
-it for symmetry with the police would risk a 99% baseline for no measured reason.
-
-## 16. Candidate hypotheses for Stage 9B-1 — police only
+## 15. Candidate hypotheses for Stage 9B-1 — police only
 
 Ranked by expected benefit against evidence support, implementation risk,
 latency risk and overfitting risk. **None is implemented, and none may be until
 this stage has supervisory PASS.**
+
+**Evidence policy (Stage 9B-0F).** Every hypothesis below rests only on
+`development`, `validation` and source/domain reasoning. **None uses
+`final_holdout`, because no final-holdout outcome exists** — the sealed set has
+been enumerated and committed but never played. All five survive the corrected
+numbers; only their supporting rows changed.
 
 | # | Hypothesis | Evidence | Benefit | Risk |
 |---|---|---|---|---|
 | 1 | **Belief-directed pursuit**: add a term that reduces distance to the strongest lawful evidence, instead of only maximising own reachability | findings 1, 2, 5 — the policy has no target term at all | high | low latency (BFS already computed); moderate design risk |
 | 2 | **Mobility denial**: prefer placements that cut the evader's reachable region rather than only those the evidence directly supports | findings 2, 3 — the quota is unspent and evaders thrive on region | high | must not weaken the existing strict admission gate |
 | 3 | **Spend the quota**: relax the placement admission when a large quota remains late in the horizon | finding 3 — 3.4 of 14 spent | medium | irreversible placements; needs a regression guard |
-| 4 | **Board-size-aware weighting**: scale the evidence threshold with board area | finding 5 | medium | overfitting risk: only three grid sizes measured |
+| 4 | **Board-size-aware weighting**: scale the evidence threshold with board area | finding 5, now **WEAKENED** — the 7 and 9 intervals overlap | low-medium | highest overfitting risk: three grid sizes, one clear separation |
 | 5 | **End-game trap completion**: prefer placements that complete a `GAME-005` enclosure | capture is only ever `BAR-003` or `GAME-005` | medium | narrow applicability |
 
 Candidate 4 carries the highest overfitting risk and should be attempted last,

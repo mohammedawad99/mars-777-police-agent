@@ -10,6 +10,12 @@ nothing.
 SHA-256 counter rather than a random module, so the same data always yields the
 same interval on any machine - which is what makes a published figure
 reproducible and an argument about it checkable.
+
+**The resampling unit is one independent observation, and `analysis` is what
+guarantees that.** These functions resample whatever list they are handed, so
+handing them duplicate rows would inflate confidence rather than measure it;
+every caller collapses rows by `scenario_id` first, and a test asserts that
+duplicating a series does not narrow its interval.
 """
 
 import hashlib
@@ -91,3 +97,25 @@ def paired_difference(
     if len(before) != len(after):
         raise SmallSampleError("a paired comparison needs the same games on both sides")
     return estimate(tuple(right - left for left, right in zip(before, after, strict=True)), seed)
+
+
+def paired_by_scenario(
+    before: dict[str, float], after: dict[str, float], seed: int = 0
+) -> Estimate:
+    """The paired difference over the scenarios both sides actually played.
+
+    Keyed by `scenario_id` rather than by position, because a baseline measured
+    on one seed set and a candidate on another are not pairs however neatly
+    their lists line up. A scenario only one side played is refused rather than
+    dropped silently: a comparison over a subset nobody chose is not the
+    comparison that was asked for.
+    """
+    if set(before) != set(after):
+        raise SmallSampleError(
+            "a paired comparison needs the same scenario set on both sides;"
+            f" {len(set(before) ^ set(after))} scenario(s) appear on only one"
+        )
+    keys = sorted(before)
+    return paired_difference(
+        tuple(before[one] for one in keys), tuple(after[one] for one in keys), seed
+    )

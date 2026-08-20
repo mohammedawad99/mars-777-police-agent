@@ -7,6 +7,12 @@ One documented path from a frozen strategy to committed evidence:
 There is no network here, no credential, no provider and no live game. Results
 are written under the chosen root and never into the official artifact
 namespace.
+
+**The sealed final holdout is not reachable from any command here.** `working_banks`
+is the only source of banks this module iterates, and the sealed bank is not in
+it; there is deliberately no `--final-holdout` flag yet. Exactly one promotion
+evaluation may run on it, in a later stage, after a candidate has been frozen -
+and a flag that existed today would be a flag somebody could pass today.
 """
 
 import argparse
@@ -21,7 +27,8 @@ from .latency import measure
 from .manifest import manifest
 from .records import GameRecord, read_csv, write_csv, write_json
 from .runner import Sweep, size_of
-from .seeds import banks
+from .sealed import sealed_set
+from .seeds import FINAL_HOLDOUT, working_banks
 
 BASELINE = "baseline"
 
@@ -43,8 +50,13 @@ def strategy() -> CompetitiveStrategy:
 def bench(root: Path, chosen: list[str] | None) -> tuple[GameRecord, ...]:
     """Play every selected seed bank against the whole corpus and record it."""
     identity = baseline_identity()
+    if chosen and FINAL_HOLDOUT in chosen:
+        raise SystemExit(
+            f"{FINAL_HOLDOUT} is sealed: it is evaluated exactly once, after a candidate"
+            " is frozen, in a later stage"
+        )
     played: list[GameRecord] = []
-    for bank in banks():
+    for bank in working_banks():
         if chosen and bank.name not in chosen:
             continue
         print(f"running {bank.name}: {size_of(bank)} games", flush=True)
@@ -71,6 +83,7 @@ def analyse(root: Path) -> None:
     timing = measure(strategy(), corpus()[1], seed=1)
     write_json(timing.as_record(), root / BASELINE / "latency.json")
     write_json(manifest().as_document(), root / "manifest.json")
+    write_json(sealed_set(baseline_identity().role).as_document(), root / "final_holdout.json")
     print(f"analysed {len(records)} games into {root}", flush=True)
 
 

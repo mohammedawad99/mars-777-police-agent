@@ -285,6 +285,14 @@ repository and green in CI on the exact commit.
       from committed rows by one command. **No production strategy changed.**
       `docs/research/COMPETITIVE_RESEARCH.md`.
 
+- [x] **Research methodology closure** (Stage 9B-0F). The old holdout was
+      reclassified as validation because its outcomes had been read; a sealed
+      `final_holdout` was fixed, committed and left unplayed; `scenario_id`
+      became the statistical unit so duplicate deterministic scenarios stop
+      inflating `N`; openings are drawn without replacement; the reference
+      geometry reports `N = 9`; weighting and paired-comparison policy are
+      frozen. Corrected baselines published beside the originals.
+
 ### Research (Stage 9B)
 
 - [ ] Systematic parameter study and sensitivity analysis.

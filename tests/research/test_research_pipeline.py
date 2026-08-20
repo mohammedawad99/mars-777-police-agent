@@ -23,7 +23,7 @@ from research import bench_main, seeds, tables
 def tiny(monkeypatch: pytest.MonkeyPatch) -> None:
     """Shrink every bank to two seeds so the pipeline runs inside a test."""
     monkeypatch.setattr(seeds, "DEVELOPMENT_SIZE", 2)
-    monkeypatch.setattr(seeds, "HOLDOUT_SIZE", 2)
+    monkeypatch.setattr(seeds, "VALIDATION_SIZE", 2)
     monkeypatch.setattr(seeds, "STRESS_SIZE", 1)
 
 
@@ -66,7 +66,10 @@ def test_analysis_alone_regenerates_from_committed_rows(tiny: None, tmp_path: Pa
     (tmp_path / "tables").mkdir(exist_ok=True)
 
     assert bench_main.main(["analyse", "--out", str(tmp_path)]) == 0
-    assert json.loads((tmp_path / "tables" / "overall.json").read_text())["games"] > 0
+    summary = json.loads((tmp_path / "tables" / "overall.json").read_text())
+    assert summary["raw_rows"] > 0
+    assert summary["headline_scenarios"] > 0
+    assert summary["statistical_unit"] == "unique scenario_id"
 
 
 def test_a_named_seed_set_can_be_run_alone(tiny: None, tmp_path: Path) -> None:
