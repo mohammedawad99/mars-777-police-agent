@@ -77,20 +77,42 @@ after the agreement. **The reporting layer attaches those exact bytes** and
 recomputes nothing — not the winner, not the scores, not the outcome, not the
 digest.
 
-The covering body carries identifiers only, in a fixed order, with no greeting,
-no commentary, no signature and no Markdown:
+**There is no body part at all** — ruling at Stage 9A-2CF. `PRD07-FR-143`
+forbids *"free-text/plaintext-only reports, prose reformatting, or an arbitrary
+**email-body representation**"*, and `PRD07-AC-032` requires a prose-bodied
+report to be refused before sending, which a reporter that writes one itself
+cannot satisfy. An earlier covering body restated identifiers the attachment
+already carried: it added nothing a grader could want, and it put non-JSON text
+in the message in exactly the place Ch 9 assigns a zero-grade sanction to.
+
+Appendix A's `MIMEText(body)` does not require one either. The book's front
+matter makes examples illustrative unless explicitly marked binding, and that
+snippet is introduced as an illustration of the flow — so it is
+`ILLUSTRATIVE_REFERENCE`, never promoted to a body requirement.
+
+The serialised message is therefore exactly:
 
 ```
-game_id: <id>
-group_id: <id>
-role: <police|thief>
-result_sha256: <hex>
-attachment: result_<game_id>.json
+To: rmisegal+uoh26finalgame@gmail.com
+Subject: MaRs-777 <role> result <game_id>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_MaRs-777-report"
+
+------=_MaRs-777-report
+Content-Type: application/json
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="result_<game_id>.json"
+
+<base64 of the result document, byte-for-byte>
+------=_MaRs-777-report--
 ```
 
-The message is a `multipart/mixed` with a **fixed** boundary and explicit
-`\r\n` line endings, so one report always serialises to the same bytes on Ubuntu
-and on Windows. `tests/reporting/test_report_contract.py` is the golden vector.
+One leaf part, `application/json`, no `text/plain`, no `text/html`. The boundary
+is **fixed** and the line endings are explicitly `\r\n`, so one report always
+serialises to the same bytes on Ubuntu and on Windows.
+`tests/reporting/test_report_attachment_only.py` parses those bytes and fails on
+any added part, any prose, or any identifier restated outside the attachment;
+`tests/reporting/test_report_contract.py` is the golden vector.
 
 ## 6. Token bucket — the algorithm is source-binding
 

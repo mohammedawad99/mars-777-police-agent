@@ -53,14 +53,17 @@ def test_the_attached_bytes_are_the_result_document_unchanged() -> None:
     assert json.loads(carried)["mutual_agreement"] is True
 
 
-def test_the_covering_body_carries_identifiers_and_no_prose() -> None:
-    body = next(one for one in parsed().walk() if one.get_content_type() == "text/plain")
-    text = body.get_payload(decode=True).decode()
+def test_there_is_no_covering_body_at_all() -> None:
+    """`PRD07-FR-143` forbids an email-body representation; the ruling is at 9A-2CF.
 
-    assert text.splitlines()[0] == f"game_id: {fix.GAME_ID}"
-    assert all(":" in line for line in text.splitlines() if line)
-    for prose in ("Hello", "Dear", "Regards", "```", "please", "Thanks"):
-        assert prose not in text
+    The attachment is the report, so a body could only restate it or decorate
+    it - and non-JSON text in the message is the exact shape Ch 9 assigns a
+    zero-grade sanction to. `test_report_attachment_only.py` holds the whole
+    structure; this keeps the golden-vector file honest about it.
+    """
+    kinds = [one.get_content_type() for one in parsed().walk() if not one.is_multipart()]
+
+    assert kinds == ["application/json"]
 
 
 def test_one_report_always_serialises_to_exactly_the_same_bytes() -> None:

@@ -2,8 +2,18 @@
 
 Appendix E rule 34 forbids sending the completion report as free text and
 permits it **only as an attached JSON file**, so the structure is fixed: a
-multipart message whose one attachment is the result document byte-for-byte,
-beside a body that carries no report content and no prose.
+multipart message whose **single** part is the result document byte-for-byte.
+
+**There is no body part at all** (ruling at Stage 9A-2CF). `PRD07-FR-143`
+forbids *"free-text/plaintext-only reports, prose reformatting, or an arbitrary
+**email-body representation**"*, and `PRD07-AC-032` requires a prose-bodied
+report to be refused before sending - which a reporter that writes one itself
+cannot satisfy. The earlier covering body restated identifiers the attachment
+already carried, so it added nothing a grader could want and offered a parser
+non-JSON text to trip over, in exactly the place Ch 9 assigns a zero-grade
+sanction. Appendix A's `MIMEText(body)` does not require one either: the book's
+front matter makes examples illustrative unless marked binding, and that snippet
+is introduced as an illustration of the flow.
 
 **No subject is specified anywhere in the source.** Chapter 9, Appendix E and
 Appendix F are silent, and Appendix A shows `subject` only as a parameter of an
@@ -55,28 +65,17 @@ def subject_for(report: GameReport) -> str:
     return f"{GROUP_CODE_PREFIX} {role} result {game}"
 
 
-def body_for(report: GameReport) -> str:
-    """The covering text: identifiers only, never the report and never prose.
-
-    Rule 34 makes the attachment the report, so this body must not look like
-    one. It repeats only identifiers that are already inside the attachment, in
-    a fixed order, with no greeting, no commentary and no signature.
-    """
-    return (
-        f"game_id: {report.game_id}\n"
-        f"group_id: {report.group_id}\n"
-        f"role: {report.role}\n"
-        f"result_sha256: {report.result_sha256}\n"
-        f"attachment: {report.attachment_name}\n"
-    )
-
-
 def message_for(report: GameReport) -> EmailMessage:
-    """The complete message: fixed recipient, fixed subject, one JSON attachment."""
+    """The complete message: fixed recipient, fixed subject, one JSON attachment.
+
+    No content is set on the message itself, so the only part that exists is the
+    attachment - proved by `tests/reporting/test_report_attachment_only.py`,
+    which parses the serialised bytes rather than trusting this sentence.
+    """
     message = EmailMessage()
     message["To"] = safe_header(REPORTS_ADDRESS, "To")
     message["Subject"] = subject_for(report)
-    message.set_content(body_for(report), subtype="plain", charset="utf-8")
+    message["MIME-Version"] = "1.0"
     subtype = MEDIA_TYPE.split("/", 1)[1]
     message.add_attachment(
         report.attachment,

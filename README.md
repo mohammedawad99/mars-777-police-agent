@@ -265,8 +265,11 @@ uv run python -m mars777_police.report_main \
 ```
 
 **What is reported** is the agreed result artifact itself, byte-for-byte — the
-same `result_<game_id>.json` the series wrote after both sides agreed. Nothing
-about the game is recomputed to build the email.
+same `result_<game_id>.json` the series wrote after both sides agreed, carried as
+the message's **only** part. There is no covering text: Appendix E rule 34 makes
+the attachment the report, and a body could only restate it or give an automated
+grader non-JSON text to trip over. Nothing about the game is recomputed to build
+the email.
 
 **When** is after the mutual audit and the result agreement, never before: a
 result that does not record `mutual_agreement` is refused, so a friendly or KIT

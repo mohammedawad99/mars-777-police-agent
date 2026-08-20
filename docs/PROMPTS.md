@@ -1,6 +1,6 @@
 # Prompt Register - group MaRs-777
 
-> **Status: CURRENT.** Backfilled through Stage 9A-2C.
+> **Status: CURRENT.** Backfilled through Stage 9A-2CF.
 > **Purpose:** The prompt-engineering log. It records the supervising-reviewer
 > prompts that drove each stage — their goal, their binding constraints, what
 > the AI got wrong, what the human correction was, and what shipped.
@@ -158,7 +158,7 @@ contain no secrets.
 
 ---
 
-## 2. Prompt engineering log (Stages 5 — 9A-2C)
+## 2. Prompt engineering log (Stages 5 — 9A-2CF)
 
 Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text.
 
@@ -631,6 +631,29 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
 - **Result.** Reporting implemented end to end, 100% coverage, zero new
   dependencies, and `LIVE_GMAIL_SEND: NOT_PERFORMED` stated rather than blurred.
 
+### Stage 9A-2CF — the exact Gmail attachment-only contract
+
+- **Goal.** Resolve one contradiction before `REPORT-001` could be final: the
+  9A-2C report said *"covering body is identifiers only"*, while the locked
+  `PRD07-FR-143` forbids *"an arbitrary email-body representation"*.
+- **Constraints.** Do not redesign reporting. Determine first whether the
+  committed code was already correct - `PASS_NO_CHANGE` with no push was the
+  preferred outcome. Inspect bytes, not prose.
+- **Finding.** The message really did carry a `text/plain` part: parsed, not
+  assumed - `multipart/mixed`, two leaf parts, 215 bytes of identifier text. The
+  PRD was right and the implementation was wrong, so the correction went to the
+  code and the locked contract was left alone.
+- **Finding.** Appendix A's `MIMEText(body)` is an illustration, and the front
+  matter says examples are non-binding unless marked. Promoting it to a body
+  requirement would have inverted the source hierarchy to match the code.
+- **Finding.** Removing the body exposed a fixture that had been passing for the
+  wrong reason: two reports differing only by digest used to differ *via the
+  body*, which is untrue of production where the digest is a field of the
+  attached document.
+- **Result.** One leaf part, `application/json`, attachment SHA-256 unchanged,
+  and a regression test that fails on any future banner, greeting or duplicated
+  JSON.
+
 ## 3. Practices this project actually learned
 
 1. **Prove it as a process.** Every in-process proof in this project hid at
@@ -686,3 +709,7 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
     out to be a file the system already wrote, so "never recompute the result"
     stopped being a rule to follow and became a shape: a layer that attaches
     bytes it cannot produce.
+19. **A convenience that duplicates evidence is a liability.** The covering body
+    restated only what the attachment already carried, so it could add nothing
+    and could still be the non-JSON text a grader trips over. When a part earns
+    nothing, its remaining risk is its whole value.

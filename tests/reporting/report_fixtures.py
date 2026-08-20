@@ -40,14 +40,21 @@ def written_result(root: Path, **overrides: object) -> Path:
 
 
 def report(**overrides: object) -> GameReport:
-    """One eligible report, built without touching a disk or a provider."""
+    """One eligible report, built without touching a disk or a provider.
+
+    The attachment is derived from the digest unless a test names its own, the
+    way production derives both from one document: two reports that differ only
+    by `result_sha256` must differ in their attached bytes too, because in a
+    real run that digest **is** a field of the document being attached.
+    """
+    digest = overrides.get("result_sha256", DIGEST)
     fields: dict[str, object] = {
         "game_id": GAME_ID,
         "group_id": "mars777",
         "role": "police",
-        "result_sha256": DIGEST,
+        "result_sha256": digest,
         "attachment_name": f"result_{GAME_ID}.json",
-        "attachment": json.dumps(result_document()).encode(),
+        "attachment": json.dumps(result_document(result_sha256=digest)).encode(),
     }
     fields.update(overrides)
     return GameReport(**fields)  # type: ignore[arg-type]
