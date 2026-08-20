@@ -1,0 +1,637 @@
+{
+  "C1": {
+    "candidate": "C1-pursuit",
+    "candidate_sha256": "11035d91cb4f1b44266d1f5455e750bbdb5e855cec56c7ccec1f9a61edc2783d",
+    "config": {
+      "appendixF-example": {
+        "baseline_barriers": 0.0,
+        "baseline_wins": 0,
+        "candidate_barriers": 0.0,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 0,
+        "n": 1,
+        "win_delta": 0.0
+      },
+      "grid11": {
+        "baseline_barriers": 2.8889,
+        "baseline_wins": 2,
+        "candidate_barriers": 0.5111,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 2,
+        "n": 90,
+        "win_delta": -0.022222
+      },
+      "grid7": {
+        "baseline_barriers": 3.8519,
+        "baseline_wins": 3,
+        "candidate_barriers": 0.2346,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 3,
+        "n": 81,
+        "win_delta": -0.037037
+      },
+      "grid7-quota22": {
+        "baseline_barriers": 4.1835,
+        "baseline_wins": 9,
+        "candidate_barriers": 0.2477,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 9,
+        "n": 109,
+        "win_delta": -0.082569
+      },
+      "grid9": {
+        "baseline_barriers": 2.9223,
+        "baseline_wins": 5,
+        "candidate_barriers": 0.466,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 5,
+        "n": 103,
+        "win_delta": -0.048544
+      },
+      "grid9-horizon45": {
+        "baseline_barriers": 3.1494,
+        "baseline_wins": 4,
+        "candidate_barriers": 0.5402,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 4,
+        "n": 87,
+        "win_delta": -0.045977
+      }
+    },
+    "family": {
+      "adversarial_corner": {
+        "baseline_barriers": 1.6176,
+        "baseline_wins": 6,
+        "candidate_barriers": 0.0,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 6,
+        "n": 68,
+        "win_delta": -0.088235
+      },
+      "barrier_aware": {
+        "baseline_barriers": 4.3188,
+        "baseline_wins": 5,
+        "candidate_barriers": 0.0435,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 5,
+        "n": 69,
+        "win_delta": -0.072464
+      },
+      "center_mobility": {
+        "baseline_barriers": 4.7922,
+        "baseline_wins": 4,
+        "candidate_barriers": 0.6104,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 4,
+        "n": 77,
+        "win_delta": -0.051948
+      },
+      "evasive": {
+        "baseline_barriers": 2.7857,
+        "baseline_wins": 0,
+        "candidate_barriers": 0.3143,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 0,
+        "n": 70,
+        "win_delta": 0.0
+      },
+      "pursuit": {
+        "baseline_barriers": 3.5614,
+        "baseline_wins": 1,
+        "candidate_barriers": 0.2281,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 1,
+        "n": 57,
+        "win_delta": -0.017544
+      },
+      "random_legal": {
+        "baseline_barriers": 2.9394,
+        "baseline_wins": 7,
+        "candidate_barriers": 0.0152,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 7,
+        "n": 66,
+        "win_delta": -0.106061
+      },
+      "scent_aware": {
+        "baseline_barriers": 3.6562,
+        "baseline_wins": 0,
+        "candidate_barriers": 1.5781,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 0,
+        "n": 64,
+        "win_delta": 0.0
+      }
+    },
+    "overall": {
+      "baseline_barriers": 3.4034,
+      "baseline_wins": 23,
+      "candidate_barriers": 0.397,
+      "candidate_wins": 0,
+      "gains": 0,
+      "losses": 23,
+      "n": 471,
+      "win_delta": -0.048832
+    },
+    "paired_ci": {
+      "ci_high": -0.031847,
+      "ci_low": -0.067941,
+      "mean": -0.048832,
+      "median": 0.0,
+      "n": 471
+    },
+    "revision": "r1",
+    "summary": "belief-directed mover"
+  },
+  "C2": {
+    "candidate": "C2-denial",
+    "candidate_sha256": "1cc0a20d40680874a337dd3f7f2e552924763e42f291066990cb0dc8385c2884",
+    "config": {
+      "appendixF-example": {
+        "baseline_barriers": 0.0,
+        "baseline_wins": 0,
+        "candidate_barriers": 2.0,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 0,
+        "n": 1,
+        "win_delta": 0.0
+      },
+      "grid11": {
+        "baseline_barriers": 2.8889,
+        "baseline_wins": 2,
+        "candidate_barriers": 3.4778,
+        "candidate_wins": 4,
+        "gains": 2,
+        "losses": 0,
+        "n": 90,
+        "win_delta": 0.022222
+      },
+      "grid7": {
+        "baseline_barriers": 3.8519,
+        "baseline_wins": 3,
+        "candidate_barriers": 3.1111,
+        "candidate_wins": 10,
+        "gains": 8,
+        "losses": 1,
+        "n": 81,
+        "win_delta": 0.08642
+      },
+      "grid7-quota22": {
+        "baseline_barriers": 4.1835,
+        "baseline_wins": 9,
+        "candidate_barriers": 3.1927,
+        "candidate_wins": 15,
+        "gains": 11,
+        "losses": 5,
+        "n": 109,
+        "win_delta": 0.055046
+      },
+      "grid9": {
+        "baseline_barriers": 2.9223,
+        "baseline_wins": 5,
+        "candidate_barriers": 3.0777,
+        "candidate_wins": 10,
+        "gains": 6,
+        "losses": 1,
+        "n": 103,
+        "win_delta": 0.048544
+      },
+      "grid9-horizon45": {
+        "baseline_barriers": 3.1494,
+        "baseline_wins": 4,
+        "candidate_barriers": 3.3448,
+        "candidate_wins": 8,
+        "gains": 6,
+        "losses": 2,
+        "n": 87,
+        "win_delta": 0.045977
+      }
+    },
+    "family": {
+      "adversarial_corner": {
+        "baseline_barriers": 1.6176,
+        "baseline_wins": 6,
+        "candidate_barriers": 3.4412,
+        "candidate_wins": 11,
+        "gains": 7,
+        "losses": 2,
+        "n": 68,
+        "win_delta": 0.073529
+      },
+      "barrier_aware": {
+        "baseline_barriers": 4.3188,
+        "baseline_wins": 5,
+        "candidate_barriers": 2.8986,
+        "candidate_wins": 8,
+        "gains": 5,
+        "losses": 2,
+        "n": 69,
+        "win_delta": 0.043478
+      },
+      "center_mobility": {
+        "baseline_barriers": 4.7922,
+        "baseline_wins": 4,
+        "candidate_barriers": 3.4545,
+        "candidate_wins": 10,
+        "gains": 6,
+        "losses": 0,
+        "n": 77,
+        "win_delta": 0.077922
+      },
+      "evasive": {
+        "baseline_barriers": 2.7857,
+        "baseline_wins": 0,
+        "candidate_barriers": 2.5286,
+        "candidate_wins": 5,
+        "gains": 5,
+        "losses": 0,
+        "n": 70,
+        "win_delta": 0.071429
+      },
+      "pursuit": {
+        "baseline_barriers": 3.5614,
+        "baseline_wins": 1,
+        "candidate_barriers": 3.4912,
+        "candidate_wins": 6,
+        "gains": 5,
+        "losses": 0,
+        "n": 57,
+        "win_delta": 0.087719
+      },
+      "random_legal": {
+        "baseline_barriers": 2.9394,
+        "baseline_wins": 7,
+        "candidate_barriers": 3.1364,
+        "candidate_wins": 4,
+        "gains": 2,
+        "losses": 5,
+        "n": 66,
+        "win_delta": -0.045455
+      },
+      "scent_aware": {
+        "baseline_barriers": 3.6562,
+        "baseline_wins": 0,
+        "candidate_barriers": 3.75,
+        "candidate_wins": 3,
+        "gains": 3,
+        "losses": 0,
+        "n": 64,
+        "win_delta": 0.046875
+      }
+    },
+    "overall": {
+      "baseline_barriers": 3.4034,
+      "baseline_wins": 23,
+      "candidate_barriers": 3.2335,
+      "candidate_wins": 47,
+      "gains": 33,
+      "losses": 9,
+      "n": 471,
+      "win_delta": 0.050955
+    },
+    "paired_ci": {
+      "ci_high": 0.078556,
+      "ci_low": 0.023355,
+      "mean": 0.050955,
+      "median": 0.0,
+      "n": 471
+    },
+    "revision": "r1",
+    "summary": "pursuit mover + belief-valued barriers (0.9)"
+  },
+  "C3": {
+    "candidate": "C3-pressure",
+    "candidate_sha256": "1cc0a20d40680874a337dd3f7f2e552924763e42f291066990cb0dc8385c2884",
+    "config": {
+      "appendixF-example": {
+        "baseline_barriers": 0.0,
+        "baseline_wins": 0,
+        "candidate_barriers": 4.0,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 0,
+        "n": 1,
+        "win_delta": 0.0
+      },
+      "grid11": {
+        "baseline_barriers": 2.8889,
+        "baseline_wins": 2,
+        "candidate_barriers": 3.4,
+        "candidate_wins": 4,
+        "gains": 2,
+        "losses": 0,
+        "n": 90,
+        "win_delta": 0.022222
+      },
+      "grid7": {
+        "baseline_barriers": 3.8519,
+        "baseline_wins": 3,
+        "candidate_barriers": 3.1481,
+        "candidate_wins": 7,
+        "gains": 6,
+        "losses": 2,
+        "n": 81,
+        "win_delta": 0.049383
+      },
+      "grid7-quota22": {
+        "baseline_barriers": 4.1835,
+        "baseline_wins": 9,
+        "candidate_barriers": 3.3211,
+        "candidate_wins": 11,
+        "gains": 9,
+        "losses": 7,
+        "n": 109,
+        "win_delta": 0.018349
+      },
+      "grid9": {
+        "baseline_barriers": 2.9223,
+        "baseline_wins": 5,
+        "candidate_barriers": 2.9806,
+        "candidate_wins": 7,
+        "gains": 5,
+        "losses": 3,
+        "n": 103,
+        "win_delta": 0.019417
+      },
+      "grid9-horizon45": {
+        "baseline_barriers": 3.1494,
+        "baseline_wins": 4,
+        "candidate_barriers": 3.1609,
+        "candidate_wins": 5,
+        "gains": 5,
+        "losses": 4,
+        "n": 87,
+        "win_delta": 0.011494
+      }
+    },
+    "family": {
+      "adversarial_corner": {
+        "baseline_barriers": 1.6176,
+        "baseline_wins": 6,
+        "candidate_barriers": 3.6324,
+        "candidate_wins": 9,
+        "gains": 6,
+        "losses": 3,
+        "n": 68,
+        "win_delta": 0.044118
+      },
+      "barrier_aware": {
+        "baseline_barriers": 4.3188,
+        "baseline_wins": 5,
+        "candidate_barriers": 3.0,
+        "candidate_wins": 6,
+        "gains": 5,
+        "losses": 4,
+        "n": 69,
+        "win_delta": 0.014493
+      },
+      "center_mobility": {
+        "baseline_barriers": 4.7922,
+        "baseline_wins": 4,
+        "candidate_barriers": 3.1299,
+        "candidate_wins": 6,
+        "gains": 3,
+        "losses": 1,
+        "n": 77,
+        "win_delta": 0.025974
+      },
+      "evasive": {
+        "baseline_barriers": 2.7857,
+        "baseline_wins": 0,
+        "candidate_barriers": 2.6857,
+        "candidate_wins": 4,
+        "gains": 4,
+        "losses": 0,
+        "n": 70,
+        "win_delta": 0.057143
+      },
+      "pursuit": {
+        "baseline_barriers": 3.5614,
+        "baseline_wins": 1,
+        "candidate_barriers": 3.3333,
+        "candidate_wins": 4,
+        "gains": 4,
+        "losses": 1,
+        "n": 57,
+        "win_delta": 0.052632
+      },
+      "random_legal": {
+        "baseline_barriers": 2.9394,
+        "baseline_wins": 7,
+        "candidate_barriers": 3.2727,
+        "candidate_wins": 2,
+        "gains": 2,
+        "losses": 7,
+        "n": 66,
+        "win_delta": -0.075758
+      },
+      "scent_aware": {
+        "baseline_barriers": 3.6562,
+        "baseline_wins": 0,
+        "candidate_barriers": 3.4375,
+        "candidate_wins": 3,
+        "gains": 3,
+        "losses": 0,
+        "n": 64,
+        "win_delta": 0.046875
+      }
+    },
+    "overall": {
+      "baseline_barriers": 3.4034,
+      "baseline_wins": 23,
+      "candidate_barriers": 3.2038,
+      "candidate_wins": 34,
+      "gains": 27,
+      "losses": 16,
+      "n": 471,
+      "win_delta": 0.023355
+    },
+    "paired_ci": {
+      "ci_high": 0.050955,
+      "ci_low": -0.002123,
+      "mean": 0.023355,
+      "median": 0.0,
+      "n": 471
+    },
+    "revision": "r1",
+    "summary": "pursuit mover + belief-valued barriers (0.3)"
+  },
+  "C4": {
+    "candidate": "C4-ablation",
+    "candidate_sha256": "1cc0a20d40680874a337dd3f7f2e552924763e42f291066990cb0dc8385c2884",
+    "config": {
+      "appendixF-example": {
+        "baseline_barriers": 0.0,
+        "baseline_wins": 0,
+        "candidate_barriers": 5.0,
+        "candidate_wins": 0,
+        "gains": 0,
+        "losses": 0,
+        "n": 1,
+        "win_delta": 0.0
+      },
+      "grid11": {
+        "baseline_barriers": 2.8889,
+        "baseline_wins": 2,
+        "candidate_barriers": 2.4667,
+        "candidate_wins": 9,
+        "gains": 7,
+        "losses": 0,
+        "n": 90,
+        "win_delta": 0.077778
+      },
+      "grid7": {
+        "baseline_barriers": 3.8519,
+        "baseline_wins": 3,
+        "candidate_barriers": 3.6049,
+        "candidate_wins": 9,
+        "gains": 7,
+        "losses": 1,
+        "n": 81,
+        "win_delta": 0.074074
+      },
+      "grid7-quota22": {
+        "baseline_barriers": 4.1835,
+        "baseline_wins": 9,
+        "candidate_barriers": 3.4679,
+        "candidate_wins": 16,
+        "gains": 11,
+        "losses": 4,
+        "n": 109,
+        "win_delta": 0.06422
+      },
+      "grid9": {
+        "baseline_barriers": 2.9223,
+        "baseline_wins": 5,
+        "candidate_barriers": 3.1553,
+        "candidate_wins": 13,
+        "gains": 9,
+        "losses": 1,
+        "n": 103,
+        "win_delta": 0.07767
+      },
+      "grid9-horizon45": {
+        "baseline_barriers": 3.1494,
+        "baseline_wins": 4,
+        "candidate_barriers": 3.1264,
+        "candidate_wins": 10,
+        "gains": 8,
+        "losses": 2,
+        "n": 87,
+        "win_delta": 0.068966
+      }
+    },
+    "family": {
+      "adversarial_corner": {
+        "baseline_barriers": 1.6176,
+        "baseline_wins": 6,
+        "candidate_barriers": 4.0588,
+        "candidate_wins": 24,
+        "gains": 18,
+        "losses": 0,
+        "n": 68,
+        "win_delta": 0.264706
+      },
+      "barrier_aware": {
+        "baseline_barriers": 4.3188,
+        "baseline_wins": 5,
+        "candidate_barriers": 2.7101,
+        "candidate_wins": 9,
+        "gains": 6,
+        "losses": 2,
+        "n": 69,
+        "win_delta": 0.057971
+      },
+      "center_mobility": {
+        "baseline_barriers": 4.7922,
+        "baseline_wins": 4,
+        "candidate_barriers": 3.7792,
+        "candidate_wins": 7,
+        "gains": 4,
+        "losses": 1,
+        "n": 77,
+        "win_delta": 0.038961
+      },
+      "evasive": {
+        "baseline_barriers": 2.7857,
+        "baseline_wins": 0,
+        "candidate_barriers": 1.4429,
+        "candidate_wins": 5,
+        "gains": 5,
+        "losses": 0,
+        "n": 70,
+        "win_delta": 0.071429
+      },
+      "pursuit": {
+        "baseline_barriers": 3.5614,
+        "baseline_wins": 1,
+        "candidate_barriers": 2.807,
+        "candidate_wins": 5,
+        "gains": 4,
+        "losses": 0,
+        "n": 57,
+        "win_delta": 0.070175
+      },
+      "random_legal": {
+        "baseline_barriers": 2.9394,
+        "baseline_wins": 7,
+        "candidate_barriers": 4.5455,
+        "candidate_wins": 4,
+        "gains": 2,
+        "losses": 5,
+        "n": 66,
+        "win_delta": -0.045455
+      },
+      "scent_aware": {
+        "baseline_barriers": 3.6562,
+        "baseline_wins": 0,
+        "candidate_barriers": 2.7969,
+        "candidate_wins": 3,
+        "gains": 3,
+        "losses": 0,
+        "n": 64,
+        "win_delta": 0.046875
+      }
+    },
+    "overall": {
+      "baseline_barriers": 3.4034,
+      "baseline_wins": 23,
+      "candidate_barriers": 3.172,
+      "candidate_wins": 57,
+      "gains": 42,
+      "losses": 8,
+      "n": 471,
+      "win_delta": 0.072187
+    },
+    "paired_ci": {
+      "ci_high": 0.101911,
+      "ci_low": 0.044586,
+      "mean": 0.072187,
+      "median": 0.0,
+      "n": 471
+    },
+    "revision": "r1",
+    "summary": "shipped mover + belief-valued barriers (0.9): which half carries C2?"
+  },
+  "label": "DEVELOPMENT RESEARCH - not final holdout, not a production promotion",
+  "screening": {
+    "digest": "6a22fc7d17d0355a836cbb9d034a2b9ea8f05fcdfbc3e5c25c4ba8a5218d9f46",
+    "n": 471,
+    "share_per_mille": 220,
+    "version": "screen-v1"
+  }
+}

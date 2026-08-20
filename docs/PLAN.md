@@ -179,9 +179,14 @@ and the collaborator grant.
 
 ## 3. Forward plan
 
-- **Stage 9B - competitive optimisation and research.** Parameter study,
-  sensitivity analysis, notebook, charts, and strategy tuning measured against a
-  benchmark. `PLANNED`.
+- **Stage 9B - competitive optimisation and research.** `IN PROGRESS`. The
+  research laboratory, the frozen baseline and the sealed final holdout closed
+  at 9B-0/9B-0F. **9B-1A explored four police candidates on development
+  scenarios only**: two were rejected on their own evidence, one advanced (C4,
+  +0.0601 paired over N=2,247), and **nothing was promoted** - production still
+  composes the entry strategy. Remaining: candidate evaluation on validation
+  (9B-1B), the parameter study and sensitivity analysis, the results notebook,
+  and any promotion decision.
 - **Stage 9C - submission freeze.** Final checklist verification, the exact
   competition commit and its tag. `FINAL_SUBMISSION_PENDING`.
 - **Real-partner friendly, then counted play.** `PARTNER_DEPENDENT`.

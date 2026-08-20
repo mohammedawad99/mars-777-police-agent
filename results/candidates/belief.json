@@ -1,0 +1,76 @@
+{
+  "config": "grid9",
+  "families": [
+    {
+      "belief_steps": 343,
+      "blocked_share": 0.0816,
+      "blocked_steps": 28,
+      "family": "random_legal",
+      "lawful_targets": 1525,
+      "mean_landing_scent": 0.0975,
+      "mean_mass": 15.7665,
+      "steps": 355
+    },
+    {
+      "belief_steps": 345,
+      "blocked_share": 0.0783,
+      "blocked_steps": 27,
+      "family": "center_mobility",
+      "lawful_targets": 1203,
+      "mean_landing_scent": 0.2056,
+      "mean_mass": 18.3329,
+      "steps": 357
+    },
+    {
+      "belief_steps": 408,
+      "blocked_share": 0.0539,
+      "blocked_steps": 22,
+      "family": "evasive",
+      "lawful_targets": 1604,
+      "mean_landing_scent": 0.0738,
+      "mean_mass": 9.5683,
+      "steps": 420
+    },
+    {
+      "belief_steps": 408,
+      "blocked_share": 0.0588,
+      "blocked_steps": 24,
+      "family": "pursuit",
+      "lawful_targets": 1604,
+      "mean_landing_scent": 0.0771,
+      "mean_mass": 9.5856,
+      "steps": 420
+    },
+    {
+      "belief_steps": 375,
+      "blocked_share": 0.0,
+      "blocked_steps": 0,
+      "family": "barrier_aware",
+      "lawful_targets": 1499,
+      "mean_landing_scent": 0.0113,
+      "mean_mass": 14.6332,
+      "steps": 387
+    },
+    {
+      "belief_steps": 377,
+      "blocked_share": 0.0106,
+      "blocked_steps": 4,
+      "family": "scent_aware",
+      "lawful_targets": 1442,
+      "mean_landing_scent": 0.0723,
+      "mean_mass": 12.9207,
+      "steps": 389
+    },
+    {
+      "belief_steps": 375,
+      "blocked_share": 0.8907,
+      "blocked_steps": 334,
+      "family": "adversarial_corner",
+      "lawful_targets": 1805,
+      "mean_landing_scent": 0.8218,
+      "mean_mass": 20.4889,
+      "steps": 387
+    }
+  ],
+  "label": "DEVELOPMENT RESEARCH - not final holdout, not a production promotion"
+}

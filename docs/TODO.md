@@ -80,12 +80,20 @@ families, interoperability with the pinned third-party kit proven by six live
 sub-games, and public-network play demonstrated end to end.
 
 **What is not:** a counted match against another group's agent
-(`PARTNER_DEPENDENT`), Gmail reporting, and the Stage-9B research artifacts. The
+(`PARTNER_DEPENDENT`), a live authorised Gmail send, and the remaining Stage-9B
+research stages. Gmail reporting itself closed at 9A-2C/9A-2CF; the research
+laboratory and baseline closed at 9B-0/9B-0F and police candidate exploration at
+9B-1A. The
 Replay Viewer closed at Stage 9A-2A, the graphical interface at Stage 9A-2B, and
 provider rate-limit enforcement, the SDK façade, the software version authority
 and the test-file split at Stages 9A-1B1…9A-1C.
 
 ## Pending
+- [ ] **Stage 9B-1B — candidate evaluation on VALIDATION.** C4 left 9B-1A on
+      development evidence only. Gates C, D, E and I in
+      `docs/research/COMPETITIVE_RESEARCH.md` §9 are unevaluated, and the one
+      family regression (`random_legal`, −0.0156, not material) must be
+      re-checked there specifically.
 - [ ] Branch protection / rulesets - **blocked**: unavailable on the current GitHub
       plan for private repos (Stage 0D). Needs Pro upgrade, org, or public-at-submission.
 - [x] Full 160-page source extraction - done (Stage 1A: `docs/spec/`).
@@ -292,6 +300,25 @@ repository and green in CI on the exact commit.
       inflating `N`; openings are drawn without replacement; the reference
       geometry reports `N = 9`; weighting and paired-comparison policy are
       frozen. Corrected baselines published beside the originals.
+- [x] **Police candidate exploration, DEVELOPMENT only** (Stage 9B-1A). The
+      belief state was instrumented **before** any candidate was written, and
+      the measurement partly refuted the assumption behind hypothesis 3: the
+      shipped barrier gate is blocked in **89.1%** of belief-carrying steps
+      against `adversarial_corner` (mean landing evidence 0.822) and in **≤8.2%**
+      against every other family — the police is standing next to a well-located
+      evader and is forbidden from spending a barrier because it just walked
+      onto the hottest cell. Four candidates were run over a **pre-frozen**
+      screening subset (`screen-v1`, N=471): **C1 rejected** (−0.0488, all 23
+      baseline wins lost — hypothesis 1 refuted in isolation), **C3 rejected**
+      (+0.0234, interval includes zero — "spend more quota" refuted; both C2 and
+      C3 place *fewer* barriers than the baseline), **C2 not advanced**
+      (+0.0510), **C4 advanced** (+0.0722). C4 is the ablation that reversed the
+      ranking: the barrier rule carries the gain and the new mover **costs**
+      about 2 points. On the full development set (**N=2,247**) C4 measures
+      **+0.0601, 95% CI [+0.0467, +0.0748]**, 126 → 261 wins, p95 latency
+      2.32 ms (`grid9`) / 3.40 ms (`grid11`) against the 25 ms ceiling. One
+      non-material family regression (`random_legal`, −0.0156). **No promotion,
+      no validation run, no stress run, final holdout untouched.**
 
 ### Research (Stage 9B)
 
@@ -299,7 +326,11 @@ repository and green in CI on the exact commit.
 - [ ] Results-analysis notebook.
 - [ ] Result charts, and the learning curve **if and only if** something is
       actually learned. Nothing here may be produced before the experiments are.
-- [ ] Competitive strategy tuning, measured against a benchmark.
+      *(9B-0 produced the baseline charts and 9B-1A the candidate charts; the
+      progression figure is labelled as exploration order, not training —
+      nothing is learned, so no learning curve is claimed.)*
+- [ ] Competitive strategy tuning, measured against a benchmark. *(9B-1A
+      explored; nothing is tuned into production.)*
 
 ### Partner-dependent
 
@@ -323,7 +354,9 @@ cryptography, the FastMCP peer transport, the runtime composition, the capture
 and semantic audit, the scent model/lock/Reveal-V2/audit/log chain, autonomous
 strategy, the production game owner, belief interpretation, the four artifact
 families and public-network play are all implemented, tested and demonstrated.
-**Of PRD-07, the Replay Viewer (9A-2A), the graphical interface (9A-2B) and
-provider rate-limit enforcement (9A-1C) are implemented; Gmail reporting and its
-own rate-limited surface are not.** See the README's *Implementation status*
-section for the exact boundary._
+**PRD-07 is implemented**: the Replay Viewer (9A-2A/9A-2AF), the graphical
+interface (9A-2B), provider rate-limit enforcement (9A-1C) and Gmail result
+reporting with its own rate-limited surface (9A-2C, exact attachment-only MIME
+contract closed at 9A-2CF). What remains of that block is a **live authorised
+send**, which is an operator action rather than an implementation gap. See the
+README's *Implementation status* section for the exact boundary._

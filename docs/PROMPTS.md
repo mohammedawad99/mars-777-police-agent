@@ -772,3 +772,24 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
 23. **Ask which inputs the code actually reads before treating them as
     conditions.** Six of seven opponent families ignored their seed entirely, so
     six sevenths of the "variation" was relabelling one game.
+24. **Measure the mechanism before writing the candidate.** Instrumenting the
+    belief gate took one module and refuted half the hypothesis list before any
+    strategy code existed; the same conclusion reached by benchmarking variants
+    would have cost four candidate runs and still not said *why*.
+25. **Run the ablation even when the combined result already looks good.** C2
+    improved, and stopping there would have shipped the wrong explanation: the
+    ablation showed the mover change was *costing* two points and only the
+    barrier rule worked. A result you cannot attribute is a result you cannot
+    defend.
+26. **A failed candidate is evidence, so keep it in the figure.** Two of four
+    candidates lost, and the progression chart plots them. A chart of survivors
+    only would have drawn a rising line out of a search that went down twice.
+27. **Freeze the sample before you draw from it.** Screening membership is a
+    function of the scenario id, so the subset cannot be nudged by an outcome —
+    and the smaller subset is what makes rejecting a candidate cheap.
+28. **Expect the selection set to flatter the winner.** C4 measured +0.0722 on
+    the subset that chose it and +0.0601 on the full set. Report the second.
+29. **A signed difference needs a real zero on the axis.** The first draft of the
+    candidate figure shifted every delta by one to fit a zero-based bar chart,
+    which drew a −4.9-point collapse and a +7.2-point gain as near-identical
+    bars. The chart was wrong, not the data.

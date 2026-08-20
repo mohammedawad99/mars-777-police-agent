@@ -1,0 +1,5 @@
+candidate,revision,summary,n,baseline_wins,candidate_wins,gains,losses,delta,ci_low,ci_high,verdict
+C1,r1,belief-directed mover,471,23,0,0,23,-0.048832,-0.067941,-0.031847,rejected
+C2,r1,pursuit mover + belief-valued barriers (0.9),471,23,47,33,9,0.050955,0.023355,0.078556,rejected
+C3,r1,pursuit mover + belief-valued barriers (0.3),471,23,34,27,16,0.023355,-0.002123,0.050955,rejected
+C4,r1,shipped mover + belief-valued barriers (0.9): which half carries C2?,471,23,57,42,8,0.072187,0.044586,0.101911,advanced

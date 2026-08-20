@@ -354,3 +354,183 @@ numbers; only their supporting rows changed.
 
 Candidate 4 carries the highest overfitting risk and should be attempted last,
 if at all. Candidates 1 and 2 are the ones the evidence actually points at.
+
+## 16. Stage 9B-1A — police candidate exploration on DEVELOPMENT only
+
+**Scope, stated before the numbers.** Everything in this section is measured on
+`development` scenarios. No candidate has been run on `validation`, none on
+`stress`, and the sealed `final_holdout` has not been opened, parsed or played.
+No candidate has been promoted: `composition.py` still builds
+`CompetitiveStrategy(baseline=BaselineStrategy())`, unchanged from the entry
+commit. Promotion gates C and E in §9 are therefore **not satisfied and not
+claimed** — they require the promotion and holdout sets, which belong to a later
+stage.
+
+### 16.1 The mechanism first, not a parameter search
+
+The §15 hypotheses name *what* to try; they do not say *why* the shipped policy
+underperforms. So the belief state was instrumented before any candidate was
+written (`research/diagnostics.py`, committed output
+`results/candidates/belief.json`).
+
+The shipped barrier gate admits a placement only when its support **strictly
+exceeds** the evidence at the cell the mover was already stepping onto. Measured
+over `grid9`, twelve games per family:
+
+| family | belief steps | gate blocked | blocked share | mean landing evidence |
+|---|---|---|---|---|
+| `adversarial_corner` | 375 | 334 | **0.891** | **0.822** |
+| `center_mobility` | 345 | 27 | 0.078 | 0.206 |
+| `random_legal` | 343 | 28 | 0.082 | 0.098 |
+| `pursuit` | 408 | 24 | 0.059 | 0.077 |
+| `evasive` | 408 | 22 | 0.054 | 0.074 |
+| `scent_aware` | 377 | 4 | 0.011 | 0.072 |
+| `barrier_aware` | 375 | 0 | 0.000 | 0.011 |
+
+This **partly refuted the assumption behind hypothesis 3**. The quota is not
+unspent because the policy is timid in general; against six of seven families the
+gate almost never blocks. It is blocked almost always in exactly the one family
+where the police is *already next to a well-located evader* — because the same
+policy has just walked onto the hottest cell, and the gate then compares the
+candidate placement against that cell. A hot landing square is **evidence to
+act**, not a reason to abstain. That is a defect in the comparison, not in the
+threshold, and it is what the candidates were built to test.
+
+### 16.2 Candidates — all four, including the two that lost
+
+Each is one conceptual change, frozen with its revision and the SHA-256 of its
+source before it was run (`research/candidates/registry.py`).
+
+| # | name | change | why it was askable |
+|---|---|---|---|
+| C1 | `C1-pursuit` | belief-directed mover, shipped barrier gate | hypothesis 1, alone |
+| C2 | `C2-denial` | C1's mover **+** belief-valued barrier rule at 0.9 | hypotheses 1+2 together |
+| C3 | `C3-pressure` | same rule at 0.3 | tests whether more aggression helps |
+| C4 | `C4-ablation` | **shipped** mover + the same rule at 0.9 | C1–C3 cannot say which half of C2 works |
+
+**Three numeric variants at most, and only two were used**: 0.9 and 0.3. Both are
+anchored to the Appendix F Table 16 FIXED source strength (0.9) rather than
+fished for, and both were frozen before any candidate was run. No threshold was
+adjusted after seeing a result, and no per-grid weighting was implemented —
+hypothesis 4 remains untried, deliberately, as the highest overfitting risk.
+
+### 16.3 Screening — membership frozen before any candidate ran
+
+`screen-v1`, 220/1000 of scenario ids by digest, giving **N = 471** unique
+scenarios (21.0% of development), digest `6a22fc7d…`, all 7 families and all 6
+configurations present. Membership is a function of the scenario id alone, so no
+outcome can influence it. Baseline wins on that subset: 23.
+
+| # | delta | 95% paired CI | wins | gains / losses | barriers | verdict |
+|---|---|---|---|---|---|---|
+| C1 | **−0.0488** | [−0.0679, −0.0318] | 23 → 0 | 0 / 23 | 3.40 → 0.40 | **rejected — collapse** |
+| C2 | +0.0510 | [+0.0234, +0.0786] | 23 → 47 | 33 / 9 | 3.40 → 3.23 | not advanced |
+| C3 | +0.0234 | [−0.0021, +0.0510] | 23 → 34 | 27 / 16 | 3.40 → 3.20 | **rejected — interval includes zero** |
+| C4 | **+0.0722** | [+0.0446, +0.1019] | 23 → 57 | 42 / 8 | 3.40 → 3.17 | **advanced** |
+
+**What the negative results actually establish**, and why they are kept:
+
+* **C1 refutes hypothesis 1 as an isolated change.** A belief-directed mover
+  *alone* does not merely fail to help, it destroys the policy: every one of the
+  23 baseline wins is lost. Chasing the evidence walks the police onto the hot
+  cell, which — via the gate measured in §16.1 — suppresses the barrier placements
+  the wins were actually made of. Barrier use falls 3.40 → 0.40.
+* **C3 refutes "spend more of the quota" (hypothesis 3).** Lowering the floor to
+  0.3 is *worse* than 0.9, and its interval includes zero. Both C2 and C3 place
+  **fewer** barriers than the baseline, not more. The gain does not come from
+  spending more quota; it comes from spending it on better-valued targets.
+* **C4 reverses the ranking C2 suggested.** Running the same barrier rule behind
+  the **shipped** mover beats running it behind the new one. So the mover change
+  is not merely unnecessary, it costs about 2 percentage points. Without this
+  ablation the stage would have advanced C2 and attributed the gain to the wrong
+  half of the change.
+
+### 16.4 Full development set — the advancing candidate only
+
+C4 over the whole development set, paired on identical `scenario_id`s,
+**N = 2,247** unique scenarios:
+
+| metric | baseline | C4 |
+|---|---|---|
+| wins | 126 | **261** |
+| mean barriers placed | 3.28 | 2.99 |
+| paired delta | — | **+0.0601, 95% CI [+0.0467, +0.0748]** |
+| gains / losses | — | 187 / 52 |
+
+**The full-set estimate is lower than the screening estimate** (+0.0601 against
++0.0722), which is the expected direction: the subset that selected the candidate
+flatters it. The full-set number is the one that carries forward.
+
+| family | delta | | configuration | delta |
+|---|---|---|---|---|
+| `adversarial_corner` | **+0.1776** | | `grid7` | +0.0759 |
+| `barrier_aware` | +0.0623 | | `grid7-quota22` | +0.0759 |
+| `pursuit` | +0.0623 | | `grid11` | +0.0647 |
+| `center_mobility` | +0.0561 | | `grid9` | +0.0402 |
+| `evasive` | +0.0498 | | `grid9-horizon45` | +0.0402 |
+| `scent_aware` | +0.0280 | | `appendixF-example` | +0.2857 (N=7) |
+| `random_legal` | **−0.0156** | | | |
+
+The largest family gain is exactly where §16.1 predicted it: `adversarial_corner`,
+the family the gate was blocking 89% of the time.
+
+**One family regresses.** `random_legal` falls 1.6 percentage points. Against the
+§9 material-regression definition — more than **5** points *and* an interval
+excluding zero — this is **not a material regression**. It is reported rather
+than dropped, and it is the specific thing the validation stage must re-check,
+because a regression against a random opponent is the signature of a policy that
+has learned the shape of the *modelled* opponents.
+
+### 16.5 Latency
+
+Measured at `choose_action` on `grid9` (the board the committed baseline number
+was measured on) and on `grid11` (the largest legal board, the worst case).
+Committed output: `results/candidates/latency.json`. Wall-clock timings move a
+few percent between runs; the ceiling is an order of magnitude away, so the
+conclusion does not depend on which run is quoted.
+
+| candidate | grid9 p95 | grid11 p95 | ceiling |
+|---|---|---|---|
+| baseline (9B-0) | 3.61 ms | — | 25 ms |
+| C1 | 2.32 ms | 3.38 ms | 25 ms |
+| C2 | 2.18 ms | 3.36 ms | 25 ms |
+| C3 | 2.25 ms | 3.32 ms | 25 ms |
+| **C4** | **2.32 ms** | **3.40 ms** | 25 ms |
+
+Every candidate, including the rejected ones, is inside the ceiling; gate F in
+§9 is satisfied for C4 on development evidence.
+
+### 16.6 What leaves this stage
+
+**One candidate: C4.** It dominates C2 on delta, on interval, on gains-to-losses
+and on implementation surface — it needs no change to the mover at all. C2 is not
+kept as a hedge, because C2 and C4 share the barrier rule and are therefore
+highly correlated: they would fail together.
+
+**C4 is not promoted.** It is a development-only research result. Gates C, D
+(re-check on the promotion set), E and I are unevaluated by construction.
+
+### 16.6a One correction made before publishing
+
+`compare.replay` stamped each replayed row with the **baseline's** strategy name
+and hash, so every candidate CSV filed its own games under `CompetitiveStrategy`.
+The identity is now a required argument rather than an inherited field, and all
+candidate result files were regenerated. The correction is labelling only: every
+delta, interval, win count and barrier mean above is identical before and after.
+
+### 16.7 Reproduction
+
+```bash
+uv run python -m research.candidate_main screen   --out results
+uv run python -m research.candidate_main full     --candidate C4 --out results
+uv run python -m research.candidate_main latency  --out results
+uv run python -m research.candidate_main belief   --out results
+uv run python -m research.candidate_main figures  --out results
+```
+
+Figures: `results/figures/candidates/candidate_delta.png` and
+`exploration_progression.png`, both labelled **DEVELOPMENT RESEARCH / NOT FINAL
+HOLDOUT / NOT PRODUCTION PROMOTION**. The progression figure plots one point per
+candidate in the order tried, with the rejected points kept and marked. It is
+**not a learning curve**: nothing is trained, the x axis is exploration order,
+and the y axis is a paired win-rate difference against a frozen baseline.

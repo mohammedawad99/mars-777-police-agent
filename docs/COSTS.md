@@ -161,3 +161,16 @@ and cost a whole gating run.
   (Pillow, pinned) is imported by a single module and is what lets the
   graphical output be produced on CI without a display, so it replaces
   manual screenshotting rather than adding a runtime cost to a match.
+
+- **Candidate exploration cost, and what bought the result.** Stage 9B-1A ran
+  every candidate by **replaying committed development scenarios locally** -
+  4 candidates x 471 screening scenarios, then 2,247 for the one that advanced,
+  plus latency and belief instrumentation. Zero GitHub Actions minutes, zero
+  network calls, zero LLM tokens: nothing in the research path calls a model,
+  and no benchmark runs on CI. The screening subset exists precisely to keep the
+  cost of *rejecting* a candidate small - three of four candidates were decided
+  on 21% of the corpus, and only the survivor paid for the full set.
+- **The candidate figures added no dependency.** They reuse the headless
+  rasteriser the GUI stage already ships, so the research charts cost the same
+  as the baseline charts: nothing to install, and identical bytes on Ubuntu and
+  Windows.

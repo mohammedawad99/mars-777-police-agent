@@ -1,0 +1,64 @@
+{
+  "ceiling_ms": 25.0,
+  "grid11": {
+    "C1": {
+      "max_ms": 5.7222,
+      "median_ms": 3.228,
+      "p95_ms": 3.3848,
+      "samples": 210,
+      "within_ceiling": true
+    },
+    "C2": {
+      "max_ms": 3.4941,
+      "median_ms": 1.9652,
+      "p95_ms": 3.3552,
+      "samples": 210,
+      "within_ceiling": true
+    },
+    "C3": {
+      "max_ms": 3.4382,
+      "median_ms": 1.9688,
+      "p95_ms": 3.3229,
+      "samples": 210,
+      "within_ceiling": true
+    },
+    "C4": {
+      "max_ms": 4.5053,
+      "median_ms": 3.2788,
+      "p95_ms": 3.3995,
+      "samples": 210,
+      "within_ceiling": true
+    }
+  },
+  "grid9": {
+    "C1": {
+      "max_ms": 3.1534,
+      "median_ms": 2.2096,
+      "p95_ms": 2.3239,
+      "samples": 210,
+      "within_ceiling": true
+    },
+    "C2": {
+      "max_ms": 2.3461,
+      "median_ms": 1.3017,
+      "p95_ms": 2.1781,
+      "samples": 213,
+      "within_ceiling": true
+    },
+    "C3": {
+      "max_ms": 2.3391,
+      "median_ms": 1.3277,
+      "p95_ms": 2.2472,
+      "samples": 213,
+      "within_ceiling": true
+    },
+    "C4": {
+      "max_ms": 3.64,
+      "median_ms": 2.1902,
+      "p95_ms": 2.3151,
+      "samples": 213,
+      "within_ceiling": true
+    }
+  },
+  "label": "DEVELOPMENT RESEARCH - not final holdout, not a production promotion"
+}
