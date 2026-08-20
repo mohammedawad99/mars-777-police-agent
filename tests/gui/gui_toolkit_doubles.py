@@ -1,13 +1,14 @@
 """A toolkit that records instead of drawing, so the window is testable anywhere.
 
-CI has no display, and a window is exactly the part of a graphical program that
-usually goes untested for that reason. These doubles stand in for `tkinter.Tk`
-and `tkinter.Canvas` so every line of the window adapter runs on Linux, on
-Windows and in a headless container - and so a test can read back what was
-drawn instead of photographing a screen.
+CI has no display - and, on Debian-family Linux, often no `tkinter` at all.
+A window is exactly the part of a graphical program that usually goes untested
+for those reasons. These doubles stand in for the whole toolkit, so every line
+of the window adapter runs on Linux, on Windows and in a headless container, and
+so a test can read back what was drawn instead of photographing a screen.
 """
 
 from collections.abc import Callable
+from types import SimpleNamespace
 from typing import Any
 
 
@@ -96,7 +97,12 @@ class FakeRoot:
 
 
 def install(monkeypatch: Any) -> list[FakeRoot]:
-    """Replace the toolkit inside the window adapter; return the roots created."""
+    """Replace the whole toolkit inside the window adapter; return roots created.
+
+    The adapter asks for its toolkit through one call, so a stand-in is a
+    namespace rather than a patched module - which is also why these tests run
+    on an interpreter that has no window toolkit installed at all.
+    """
     from mars777_police.gui import window
 
     made: list[FakeRoot] = []
@@ -105,6 +111,5 @@ def install(monkeypatch: Any) -> list[FakeRoot]:
         made.append(FakeRoot())
         return made[-1]
 
-    monkeypatch.setattr(window.tkinter, "Tk", build)
-    monkeypatch.setattr(window.tkinter, "Canvas", FakeCanvas)
+    monkeypatch.setattr(window, "toolkit", lambda: SimpleNamespace(Tk=build, Canvas=FakeCanvas))
     return made

@@ -986,7 +986,8 @@ gui_main.py              the operator command, `replay` and `live`
 | the GUI cannot affect the game | the driver's only call is `feed.show(...)`, which returns nothing, is guarded, and reaches a one-slot box |
 | the GUI cannot decide anything | `gui/` imports no strategy, turn service, protocol, transport or infrastructure module; no key is bound to anything but navigation |
 | the GUI cannot leave this machine | no module in `gui/` imports `socket`, `http`, `urllib`, `httpx`, `requests`, `ssl`, `subprocess` or `pickle` |
-| the toolkit cannot spread | `tkinter` appears in `gui/window.py` alone and Pillow in `gui/image_renderer.py` alone |
+| the toolkit cannot spread | `tkinter` is named in `gui/window.py` alone and Pillow in `gui/image_renderer.py` alone |
+| a missing toolkit cannot break the package | `gui/toolkit.py` imports `tkinter` only when a window is built — it is packaged separately on Debian and Ubuntu — so importing the package, every layout, the offscreen renderer and `--png` all work without it, and asking for a window is a refusal naming the remedy |
 
 ### Why two renderers rather than one
 

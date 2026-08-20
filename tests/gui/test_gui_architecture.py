@@ -77,9 +77,30 @@ def test_no_drawing_module_can_reach_the_network_or_start_a_process() -> None:
             assert root not in REACHING, f"gui/{name} imports {module}"
 
 
-def test_the_toolkit_appears_in_exactly_one_module() -> None:
-    users = [name for name in GUI if "tkinter" in imports(name)]
-    assert users == ["window.py"]
+def test_the_toolkit_is_named_in_exactly_one_module() -> None:
+    users = [name for name in GUI if any("tkinter" in one for one in imports(name))]
+    assert users == ["window.py"], "only the window adapter may name the toolkit"
+
+
+def test_no_module_imports_the_toolkit_at_import_time() -> None:
+    """Debian and Ubuntu package `tkinter` separately, so it may simply be absent.
+
+    A module-scope `import tkinter` would make the whole graphical package
+    unimportable there - including the layouts and the offscreen renderer, which
+    need no toolkit at all. `gui/toolkit.py` obtains it on demand instead.
+    """
+    for name in GUI:
+        tree = ast.parse(source(name))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import | ast.ImportFrom) and _at_module_scope(tree, node):
+                named = {alias.name for alias in getattr(node, "names", ())}
+                named.add(getattr(node, "module", "") or "")
+                assert "tkinter" not in named, f"gui/{name} imports the toolkit eagerly"
+
+
+def _at_module_scope(tree: ast.Module, node: ast.stmt) -> bool:
+    """Whether *node* is a top-level statement rather than one inside a guard."""
+    return node in tree.body
 
 
 def test_the_offscreen_renderer_is_the_only_module_that_knows_about_pixels() -> None:

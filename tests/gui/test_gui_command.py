@@ -99,3 +99,41 @@ def test_the_viewer_is_runnable_as_a_module(tmp_path: Path) -> None:
 
     assert finished.returncode == 0, finished.stderr
     assert target.exists()
+
+
+def test_a_machine_without_a_toolkit_is_told_what_to_install_and_gets_status_two(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`tkinter` is packaged separately on Debian and Ubuntu, so it may be absent."""
+    from mars777_police.gui import window
+    from mars777_police.gui.toolkit import REMEDY, ToolkitMissingError
+
+    def refuse() -> object:
+        raise ToolkitMissingError(REMEDY)
+
+    monkeypatch.setattr(window, "toolkit", refuse)
+    command = argv(tmp_path)
+    capsys.readouterr()
+
+    status = gui_main.main(command)
+    printed = capsys.readouterr().err
+
+    assert status == 2
+    assert "python3-tk" in printed
+    assert "--png" in printed
+
+
+def test_writing_a_picture_still_works_on_that_same_machine(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from mars777_police.gui import window
+    from mars777_police.gui.toolkit import ToolkitMissingError
+
+    def refuse() -> object:
+        raise ToolkitMissingError("no toolkit here")
+
+    monkeypatch.setattr(window, "toolkit", refuse)
+    target = tmp_path / "headless.png"
+
+    assert gui_main.main(argv(tmp_path, "--png", str(target))) == 0
+    assert target.exists()

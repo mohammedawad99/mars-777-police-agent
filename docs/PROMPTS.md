@@ -589,8 +589,17 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
   against the wrong secret. Stage 9A-2A had not seen it because its fixture
   scripted one role per step. Keyed by `(step, role)`; a whole thirty-five-round
   sub-game now verifies end to end.
+- **Finding (the toolkit claim was only half-verified, and CI proved it).** The
+  first push failed on Ubuntu and passed on Windows: `tkinter` is standard
+  library but *packaged separately* on Debian family, and the Ubuntu runner uses
+  the preinstalled system interpreter, which has none. The local check had used
+  the uv-managed interpreter instead of the one CI actually runs. Corrected by
+  obtaining the toolkit only when a window is built - which the two-adapter
+  design already made natural - and by running the graphical suite against an
+  interpreter where `tkinter` is genuinely unimportable.
 - **Result.** Two windows, one drawing model, 100% coverage of the graphical
-  package, and two screenshots taken from one real sub-game rather than staged.
+  package with **and** without a window toolkit, and two screenshots taken from
+  one real sub-game rather than staged.
 
 ## 3. Practices this project actually learned
 
@@ -634,3 +643,7 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
     tests, a document and a green suite. Rendering one log it had never been
     given - a lockstep one - exposed a false accusation of cheating in it.
     A fixture that only ever exercises half a shape proves half a component.
+16. **Verify against the interpreter that will run it, not the one at hand.**
+    "The standard library has it" and "this machine has it" are different
+    claims, and so are "my interpreter" and "CI's interpreter". The gap between
+    them was one `apt` package wide and failed an entire gating job.

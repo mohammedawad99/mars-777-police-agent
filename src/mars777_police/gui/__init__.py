@@ -17,6 +17,7 @@ from .image_renderer import render, write_png
 from .live_layout import BELIEF_LABEL, live_frame
 from .primitives import Frame, Rect, Text
 from .replay_layout import OFFICIAL, REPLAY, replay_frame
+from .toolkit import ToolkitMissingError, available
 
 __all__ = [
     "BELIEF_LABEL",
@@ -26,6 +27,8 @@ __all__ = [
     "Frame",
     "Rect",
     "Text",
+    "ToolkitMissingError",
+    "available",
     "fit",
     "live_frame",
     "render",

@@ -16,6 +16,10 @@ facade; the window polls a one-slot box and never calls back. Closing the window
 or never opening one, changes nothing about the match. Exit status follows the
 replay viewer's: `0` verified and complete, `2` unreadable, `3` a finding, `4`
 an incomplete audit.
+
+An interpreter without `tkinter` - which Debian and Ubuntu package separately -
+is also a `2`, printed as a sentence naming what to install and pointing at
+`--png`, which needs no toolkit at all.
 """
 
 import argparse
@@ -27,6 +31,7 @@ from pathlib import Path
 from .app.live_view_sink import LatestSnapshot
 from .gui.image_renderer import write_png
 from .gui.replay_app import frame_for
+from .gui.toolkit import ToolkitMissingError
 from .identity import ROLE
 from .replay_main import report
 from .sdk import AgentSdk, ReplayError, StrictSeriesRequest
@@ -96,6 +101,9 @@ def main(argv: list[str] | None = None) -> int:
         return run_replay(arguments)
     except ReplayError as failure:
         print(f"cannot replay: {failure}", file=sys.stderr)
+        return 2
+    except ToolkitMissingError as missing:
+        print(f"cannot open a window: {missing}", file=sys.stderr)
         return 2
 
 

@@ -41,7 +41,8 @@ uv run python -m mars777_police.gui_main live --launch <launch document>
 | `--launch` | `live` | this side's launch document, exactly as the counted entrypoint takes it |
 
 Exit status follows the replay viewer's: `0` verified and complete, `2`
-unreadable evidence or a failed series, `3` a finding, `4` an incomplete audit.
+unreadable evidence, a failed series, or a machine with no window toolkit, `3` a
+finding, `4` an incomplete audit.
 
 ### Keys, in the replay window
 
@@ -104,6 +105,22 @@ doubles everywhere, and against the genuine toolkit wherever a display exists
 
 `tkinter` appears in exactly one module and Pillow in exactly one module, and
 `tests/gui/test_gui_architecture.py` fails if either spreads.
+
+### The toolkit may simply be absent, and that is not an error
+
+`tkinter` is in the standard library but is **packaged separately** on Debian and
+Ubuntu, so a perfectly ordinary Python 3.12 can lack it — including the
+interpreter this project's own Linux CI runs. It is therefore obtained through
+`gui/toolkit.py` **when a window is actually built**, never at import time, so:
+
+* importing `mars777_police.gui` works everywhere;
+* every layout, the offscreen renderer and `--png` work everywhere;
+* asking for a window on such a machine exits `2` with a sentence naming the
+  remedy — `sudo apt install python3-tk` — and pointing at `--png`.
+
+A structural test fails if any module in the package imports the toolkit at
+module scope, and the whole graphical suite is run against an interpreter where
+`tkinter` is genuinely unimportable.
 
 ## 6. The screenshots
 

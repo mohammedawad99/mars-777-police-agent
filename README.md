@@ -238,6 +238,11 @@ uv run python -m mars777_police.gui_main replay \
 uv run python -m mars777_police.gui_main live --launch <launch document>
 ```
 
+`--png` needs no display and no window toolkit, so it works on any machine. The
+interactive window needs `tkinter`, which Debian and Ubuntu package separately
+(`sudo apt install python3-tk`); without it the command exits `2` with that
+remedy rather than a traceback.
+
 The live window shows **local truth only** — own cell, declared barriers, the
 belief heatmap and its numbers, the received hint, and the turn-state banner. It
 never shows the opponent's position, because the value it draws is projected

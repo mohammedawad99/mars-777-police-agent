@@ -97,6 +97,7 @@ def test_every_module_in_the_package_was_covered_by_one_of_these_rules() -> None
         "image_renderer.py",
         "palette.py",
         "primitives.py",
+        "toolkit.py",
         "window.py",
     }
     assert set(GUI) == known
