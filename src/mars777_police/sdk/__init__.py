@@ -26,6 +26,7 @@ from ..app.kit_messages import KitRole
 from ..app.kit_preset import ExternalMode
 from ..app.replay_board import LEGEND, board_lines
 from ..app.replay_session import ReplaySession
+from ..app.replay_status import audit_complete
 from ..app.replay_values import (
     ReplayCheck,
     ReplayError,
@@ -82,5 +83,6 @@ __all__ = [
     "SoftwareVersionError",
     "StrictSeriesRequest",
     "TransportFailureError",
+    "audit_complete",
     "board_lines",
 ]

@@ -4,19 +4,30 @@ The viewer `REPLAY-001` asks for, as a command an operator or a grader can run
 against evidence they were handed. It parses, asks the facade, and formats;
 every verdict it prints came from an authority that already existed.
 
-**Exit status is a classification.** `0` means the replay ran and everything it
-could check verified. `2` means the evidence could not be read or replayed - a
-local refusal, printed as a sentence rather than as a traceback. `3` means the
-replay ran and **found something**: a digest that did not correspond, or a step
-the rules say could not have happened. A grader can gate on `3` without reading
-a word.
+**Exit status is a classification, and absence is not an accusation.** `0` means
+the replay ran and **every source-required applicable** commitment was present
+and matched. `2` means the evidence could not be read or replayed - a local
+refusal, printed as a sentence rather than as a traceback. `3` means the replay
+ran and **found something**: a digest that did not correspond, or a step the
+rules say could not have happened. `4` means the replay ran but the audit is
+**incomplete** - some commitment could not be checked because its nonce was
+never disclosed. A grader can gate on "not 0" without reading a word, and still
+tell an accusation from a gap.
 """
 
 import argparse
 import sys
 from pathlib import Path
 
-from .sdk import AgentSdk, ReplayCheck, ReplayError, ReplaySession, ReplayStep, board_lines
+from .sdk import (
+    AgentSdk,
+    ReplayCheck,
+    ReplayError,
+    ReplaySession,
+    ReplayStep,
+    audit_complete,
+    board_lines,
+)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -66,8 +77,10 @@ def report(session: ReplaySession) -> int:
     print(f"agrees         {found.outcome_agrees}")
     for note in found.notes:
         print(f"note           {note}")
-    verified = found.crypto is ReplayCheck.VERIFIED_OK
-    return 0 if verified and found.semantic_verdict == "CONSISTENT" else 3
+    print(f"complete       {audit_complete(found)}")
+    if found.crypto is ReplayCheck.TAMPERED or found.semantic_verdict != "CONSISTENT":
+        return 3
+    return 0 if audit_complete(found) else 4
 
 
 def main(argv: list[str] | None = None) -> int:

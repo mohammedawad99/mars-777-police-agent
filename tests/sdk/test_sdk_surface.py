@@ -37,6 +37,7 @@ EXPECTED = {
     "ReplayStep",
     "ReplaySummary",
     "ReplayTurn",
+    "audit_complete",
     "board_lines",
 }
 

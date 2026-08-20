@@ -57,6 +57,8 @@ def _entries(raw: object) -> tuple[Mapping[str, object], ...]:
             raise ReplayError(f"a log entry has the unknown phase {phase!r}")
         if phase == "commit" and not isinstance(entry.get("state"), Mapping):
             raise ReplayError("a commit entry has no sealed 'state'")
+        if phase == "commit" and type(entry.get("commit")) is not str:
+            raise ReplayError("a commit entry has no 'commit' digest to check")
         parsed.append(entry)
     return tuple(parsed)
 

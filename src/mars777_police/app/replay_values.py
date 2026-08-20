@@ -31,7 +31,15 @@ class ReplayCheck(StrEnum):
     """The recomputed digest differs. Immediate disqualification, no appeal."""
 
     NOT_APPLICABLE = "NOT_APPLICABLE"
-    """This record carries no commitment to check - an acknowledgement, say."""
+    """This record carries no commitment to check - an acknowledgement, say.
+
+    Not reachable for a projected turn of an **official** log: `LOG_CONTRACT.md`
+    marks the commitment `Required`, so a commit entry without one is corruption
+    rather than a record with nothing to check. It stays in the vocabulary
+    because the evidence layer this project froze at Stage 8A-1R has four words,
+    and because a record with nothing to check must never be counted as a record
+    that failed to check.
+    """
 
     NOT_CHECKABLE = "NOT_CHECKABLE"
     """A commitment exists but its nonce was never disclosed to this side.

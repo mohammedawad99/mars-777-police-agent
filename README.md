@@ -213,9 +213,11 @@ uv run python -m mars777_police.replay_main \
     --log <log artifact> --config <config artifact> [--summary] [--step N]
 ```
 
-Exit status `0` means everything checked verified, `2` that the evidence could
-not be read, and `3` that the replay **found** something. Full guide:
-`docs/reference/REPLAY_VIEWER.md`.
+Exit status `0` means every source-required commitment was present and matched,
+`2` that the evidence could not be read, `3` that the replay **found** something
+(a mismatch or an illegal step), and `4` that the audit is **incomplete** — a
+commitment whose nonce was never disclosed. Absence is never reported as
+tampering. Full guide: `docs/reference/REPLAY_VIEWER.md`.
 
 ### 6.5 Command-line options
 

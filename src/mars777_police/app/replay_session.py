@@ -18,7 +18,8 @@ from ..domain.actions import PhysicalAction
 from .ports import CommitmentPort
 from .replay_crypto import barriers_of, check_commit, sealed_state
 from .replay_log import ReplayLog
-from .replay_values import ReplayCheck, ReplayError, ReplayStep, ReplaySummary, ReplayTurn
+from .replay_status import worst_check
+from .replay_values import ReplayError, ReplayStep, ReplaySummary, ReplayTurn
 from .sealed_record_values import ActorRole
 from .semantic_replay import PlayedTurn, Replay
 from .semantic_values import SemanticRules
@@ -129,7 +130,7 @@ class ReplaySession:
     def summary(self) -> ReplaySummary:
         """What the whole replay establishes, and what it does not."""
         checks = [turn.check for step in self.steps for turn in step.turns]
-        crypto = _worst(checks)
+        crypto = worst_check(checks)
         semantic = {step.semantic for step in self.steps} - {"CONSISTENT"}
         verdict = sorted(semantic)[0] if semantic else "CONSISTENT"
         recorded = str(self.log.semantic.get("verdict", ""))
@@ -156,11 +157,3 @@ def _cell(replay: Replay, role: ActorRole) -> tuple[int, int]:
 
 def _text(value: object) -> str | None:
     return value if type(value) is str else None
-
-
-def _worst(checks: list[ReplayCheck]) -> ReplayCheck:
-    """The strongest thing the whole replay may claim, never stronger."""
-    for status in (ReplayCheck.TAMPERED, ReplayCheck.NOT_CHECKABLE, ReplayCheck.NOT_APPLICABLE):
-        if status in checks:
-            return status
-    return ReplayCheck.VERIFIED_OK if checks else ReplayCheck.NOT_APPLICABLE

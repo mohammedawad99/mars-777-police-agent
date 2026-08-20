@@ -223,8 +223,10 @@ repository and green in CI on the exact commit.
       official log and the config artifact it names, walks the sub-game step by
       step with a textual board, shows `Verified OK` / `TAMPERED` /
       `NOT_CHECKABLE` / `NOT_APPLICABLE` per record beside a separate semantic
-      verdict, and reconciles the terminal outcome. Reachable through the SDK and
-      as a command; documented in `docs/reference/REPLAY_VIEWER.md`.
+      verdict, and reconciles the terminal outcome. Stage 9A-2AF added the
+      completeness rule: a log whose required nonces are not all disclosed exits
+      `4` rather than `0`, without being accused of tampering. Reachable through
+      the SDK and as a command; documented in `docs/reference/REPLAY_VIEWER.md`.
 - [ ] **Live GUI** (`GUI-001/002/003`, MUST). No graphical interface exists.
       Blocks the guideline's screenshot and UI-documentation requirements too.
 - [ ] **Gmail result reporting** (`REPORT-001`, MUST). No mailer exists.

@@ -911,3 +911,30 @@ Development (friendly) evidence, by construction: a contribution carries settled
 facts only and its own contract states it *"deliberately cannot carry a board, a
 position, a barrier set or a nonce"*. The viewer refuses it with that reason
 rather than reconstructing a board it was never given.
+
+### Audit completeness (Stage 9A-2AF)
+
+A supervising question closed after the viewer shipped: could **incomplete**
+source-required evidence produce a successful verification simply because
+everything that happened to be checkable passed?
+
+It could not return `0` — but it was reported with the same exit status as a real
+mismatch, and a legitimately inapplicable record downgraded the whole summary.
+Both were corrected.
+
+| Situation | Per record | Summary | Exit |
+|---|---|---|---|
+| every required commitment present and matching | `Verified OK` | `Verified OK` | `0` |
+| a recomputation performed and mismatched | `TAMPERED` | `TAMPERED` | `3` |
+| a required nonce never disclosed | `NOT_CHECKABLE` | `NOT_CHECKABLE` | **`4`** |
+| a record with no commitment to check | `NOT_APPLICABLE` | does not downgrade | — |
+| a commit entry with no commitment at all | — | refused | `2` |
+
+`worst_check` states the ordering as an invariant: a mismatch outranks an
+absence, an absence outranks every verified record, and `NOT_APPLICABLE` outranks
+nothing. So no later verified step can upgrade an earlier finding, and no absent
+nonce is ever promoted to an accusation.
+
+`audit_complete(summary)` is the programmatic form of the same rule, exported
+from the SDK so a caller never parses human text. It is **derived**, not stored:
+`Verified OK` already means every applicable record was recomputed and matched.

@@ -1,6 +1,6 @@
 # Prompt Register - group MaRs-777
 
-> **Status: CURRENT.** Backfilled through Stage 9A-2A.
+> **Status: CURRENT.** Backfilled through Stage 9A-2AF.
 > **Purpose:** The prompt-engineering log. It records the supervising-reviewer
 > prompts that drove each stage — their goal, their binding constraints, what
 > the AI got wrong, what the human correction was, and what shipped.
@@ -158,7 +158,7 @@ contain no secrets.
 
 ---
 
-## 2. Prompt engineering log (Stages 5 — 9A-2A)
+## 2. Prompt engineering log (Stages 5 — 9A-2AF)
 
 Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text.
 
@@ -536,6 +536,31 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
   textual board, containment-checked reads, and 79 tests over a sub-game that
   production really played.
 
+### Stage 9A-2AF — replay audit completeness
+
+- **Goal.** Answer one question about the shipped viewer: can incomplete
+  source-required evidence produce a successful verification?
+- **Constraints.** Measure before changing. Do not turn `NOT_CHECKABLE` into
+  `TAMPERED` to make automation fail, or a real mismatch into `NOT_CHECKABLE`.
+  Report `PASS_NO_CHANGE` if the invariants already held.
+- **Finding (measured, not assumed).** Success was already safe: a missing nonce
+  returned `3`, never `0`. But `3` is documented as *"found something"*, so a
+  grader could not tell an accusation from a gap - and a record with no
+  commitment to check dragged the whole summary below `Verified OK`, which made
+  an inapplicable record look like an incomplete audit.
+- **Finding (the source sets the bar).** `LOG_CONTRACT.md` marks the nonce
+  `Required`, `CRYPTO-008` releases it at the end-of-game audit, `CRYPTO-007`
+  makes a comprehensive audit a precondition for agreeing the result, and
+  `REPLAY-002` asks for a recomputation *for each log step*. So "everything that
+  happened to be checkable passed" is not the audit the source asks for.
+- **Correction.** Exit `4` for an incomplete audit; `worst_check` states the
+  ordering as an invariant - a mismatch outranks an absence, an absence outranks
+  every verified record, `NOT_APPLICABLE` outranks nothing; a commit entry
+  without its `Required` digest is corruption, not a record with nothing to
+  check; `audit_complete` exported so a caller never parses text.
+- **Result.** Six measured cases, six distinct honest answers, and no accusation
+  inflation in either direction.
+
 ## 3. Practices this project actually learned
 
 1. **Prove it as a process.** Every in-process proof in this project hid at
@@ -568,3 +593,6 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
 12. **Sometimes the requirement names the output string.** `Verified OK` and
     `TAMPERED` are not a status vocabulary to design; they are the words the
     grader is told to look for.
+13. **A green result must say what it verified.** "Everything checkable passed"
+    and "everything required was checked and passed" are different claims, and
+    only the second deserves exit zero.

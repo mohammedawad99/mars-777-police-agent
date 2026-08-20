@@ -26,11 +26,14 @@ uv run python -m mars777_police.replay_main \
 
 | Code | Meaning |
 |---|---|
-| `0` | the replay ran and everything it could check verified |
+| `0` | the replay ran and **every source-required applicable** commitment was present and matched |
 | `2` | the evidence could not be read or replayed — a local refusal, printed as a sentence, never as a traceback |
 | `3` | the replay ran and **found something**: a digest that did not correspond, or a step the rules say could not have happened |
+| `4` | the replay ran but the audit is **incomplete** — a commitment could not be checked because its nonce was never disclosed |
 
-A grader can gate on `3` without reading a word of output.
+A grader can gate on "not `0`" without reading a word, and still tell an
+accusation apart from a gap. **`4` is not an accusation**: absence of evidence is
+never reported as tampering, and tampering is never softened into absence.
 
 ## 3. What the board shows
 
@@ -52,6 +55,29 @@ meaningful, so it gets its own symbol rather than an arbitrary precedence.
 
 `NOT_CHECKABLE` is **never** rendered as `Verified OK`. Missing evidence is not
 proof, and calling it tampering would be the opposite error.
+
+**Success means complete, not lucky.** An official log exists so that *every*
+step's commitment can be recomputed: the log contract marks the nonce
+`Required`, `CRYPTO-008` releases it at the end-of-game audit, and `REPLAY-002`
+asks for a recomputation *for each log step*. So a replay in which some steps
+verified and others could not be checked has **not** performed the audit the
+source asks for, and exits `4` rather than `0`.
+
+| Word | Means |
+|---|---|
+| `Verified OK` | every required applicable commitment was present **and matched** |
+| `TAMPERED` | a recomputation was actually performed and **did not match** |
+| `NOT_CHECKABLE` | required applicable evidence was **missing or unavailable** |
+| `NOT_APPLICABLE` | the record carries **no commitment to check**, so there is nothing to fail |
+
+`NOT_APPLICABLE` alone never makes an audit incomplete. It is also not reachable
+for a projected turn of an official log — the log contract marks the commitment
+`Required`, so a commit entry without one is corruption (exit `2`), not a record
+with nothing to check.
+
+A programmatic caller derives the same distinction without parsing text:
+`sdk.audit_complete(summary)` is `True` exactly when `summary.crypto` is
+`Verified OK`.
 
 The **semantic** line is a separate question, from a separate authority: whether
 the disclosed trajectory could have happened at all — start cell, movement
@@ -82,10 +108,14 @@ the viewer says so instead of implying a guarantee it did not check.
 - **Structural corruption stops the replay.** Bytes that are not JSON, a missing
   file, an absent `entries` list, a commit with no step or no sealed state: the
   viewer refuses, because continuing would require inventing state.
-- **A verification failure does not stop it.** A `TAMPERED` digest or an
-  inconsistent step is a *finding*, so every remaining step is still shown —
-  forensic mode — and the summary marks the whole replay accordingly. Nothing is
-  invented to continue: the later steps are the disclosed values, replayed.
+- **A verification failure does not stop it.** A `TAMPERED` digest, an
+  inconsistent step or an unavailable nonce is a *finding*, so every remaining
+  step is still shown — forensic mode — and the summary marks the whole replay
+  accordingly. Nothing is invented to continue: the later steps are the
+  disclosed values, replayed.
+- **A later verified step can never upgrade an earlier one.** The summary
+  reports the strongest thing the whole replay may claim: a mismatch outranks an
+  absence, and an absence outranks every verified record.
 
 ## 7. Security model
 
