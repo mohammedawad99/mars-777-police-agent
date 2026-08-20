@@ -90,13 +90,16 @@ Stated precisely, because "done" and "not done" are both misleading here.
 - **Graphical interface** — a live window showing local truth and the belief
   heatmap, and a replay window showing both agents and the verification result
   (§6.5). Both are read-only and neither is on the decision path.
+- **Gmail result reporting** — the agreed result artifact is mailed to the fixed
+  lecturer address as a JSON attachment, behind a token-bucket Gatekeeper that
+  honours `429` (§6.6). **No real message has been sent**: sending needs an
+  operator credential and an explicit authorisation, and CI can never send.
 
 ### Not implemented
 
 - a **counted match against another group's agent** — the runs above used either
   a synthetic distinct-group non-counted opponent or the interoperability kit in
   a friendly, explicitly non-counted mode;
-- **Gmail result reporting**;
 - **enforcement** of the negotiated rate limits — the terms are negotiated,
   validated and locked, but no component applies them at call time;
 - the **systematic parameter study, analysis notebook and charts** — deliberately
@@ -251,7 +254,46 @@ could arrive in. The replay window may show both agents, because the audit point
 has passed. Neither window has a control that reaches a decision. Full guide:
 `docs/reference/GUI.md`.
 
-### 6.6 Command-line options
+### 6.6 Reporting a finished game
+
+At the end of every legal game each group sends its own completion report to the
+lecturer, as an attached JSON file (Appendix E rules 32-35 and 51):
+
+```bash
+uv run python -m mars777_police.report_main \
+    --result artifacts/result_<game_id>.json [--root artifacts]
+```
+
+**What is reported** is the agreed result artifact itself, byte-for-byte — the
+same `result_<game_id>.json` the series wrote after both sides agreed. Nothing
+about the game is recomputed to build the email.
+
+**When** is after the mutual audit and the result agreement, never before: a
+result that does not record `mutual_agreement` is refused, so a friendly or KIT
+run can never be reported as a counted game.
+
+**To whom** is `rmisegal+uoh26finalgame@gmail.com`, which Appendix F Table 20
+fixes and marks non-negotiable. It is a constant in the code; no setting can
+redirect it.
+
+**Rate limiting** is the token bucket Appendix E rule 28 names —
+`tokens ← min(C, tokens + r·Δt)`, `allow ⟺ tokens ≥ 1` — with the Quota Manager
+and DOS detector Ch 9 §9.3.1 requires beside it, all inside the one Gatekeeper.
+A `429` is never retried immediately: it backs off, honours `Retry-After` within
+a configured cap, retries a bounded number of times, and then reports failure.
+
+**Credentials** come from the `token.json` that Appendix A's one-time
+authorisation produces, named by `MARS777_GMAIL_TOKEN`. They are never
+committed, never printed and never needed unless a report is actually being
+sent. A scope wider than `gmail.send` is refused.
+
+**Exit status:** `0` the provider accepted it; `2` a local refusal (no
+credential, unreadable result, no agreement) printed as a sentence; `3` the
+report was eligible but the provider did not accept it, so reporting is
+`REPORTING_INCOMPLETE`. A delivery failure never changes who won — the result
+artifact is untouched. Full guide: `docs/reference/REPORTING.md`.
+
+### 6.7 Command-line options
 
 | Option | Where | Meaning |
 |---|---|---|
@@ -265,8 +307,9 @@ has passed. Neither window has a control that reaches a decision. Full guide:
 | `--ngrok` | `kit_gateway_main` | path to the operator's ngrok executable |
 | `--evidence-root` | friendly runs | where development evidence is written |
 | `--png` | `gui_main replay` | write the picture to a file instead of opening a window |
+| `--result` | `report_main` | the agreed result artifact to report |
 
-### 6.7 Exit status
+### 6.8 Exit status
 
 | Code | Meaning |
 |---|---|
@@ -461,6 +504,8 @@ artifacts = asyncio.run(sdk.run_strict_series(StrictSeriesRequest(launch=Path("l
 | `verify_config_artifact(document)` | returns what a stored config artifact proves, or refuses it |
 | `open_replay(log, config, root)` | returns a navigable, already-verified replay of one finished sub-game |
 | `verify_replay(log, config, root)` | returns that replay's summary alone, for a caller that only wants the verdict |
+| `read_game_report(result, root)` | returns the report an agreed result makes eligible; reaches no provider |
+| `send_game_report(result, root)` | sends one game report to the fixed lecturer address, through the gate |
 
 The requests (`StrictSeriesRequest`, `RoleBackendRequest`, `PublicGatewayRequest`)
 and the failures a caller must tell apart (`SettingsError`, `LaunchInputError`,
@@ -499,6 +544,7 @@ stored value, so the two cannot drift.
 | `docs/reference/MATCH_RUNBOOK.md` | the operator procedure for a real match |
 | `docs/reference/REPLAY_VIEWER.md` | how to replay and verify a finished game log |
 | `docs/reference/GUI.md` | the live and replay windows: what they may show, and why they cannot affect a match |
+| `docs/reference/REPORTING.md` | what is reported, to whom, when, and the token-bucket gate in front of it |
 | `docs/GUIDELINE_ALIGNMENT.md` | alignment with the professional-software excellence guideline |
 | `docs/COSTS.md` | measured resource use |
 | `docs/SUBMISSION_CHECKLIST.md` | what still gates delivery |
@@ -565,11 +611,10 @@ git-ignored path. See `docs/SOURCES.md`.
 ## 19. Known limitations
 
 1. No counted match against another group's agent has been played.
-2. No Gmail reporting. The Replay Viewer exists as of Stage 9A-2A and the
-   graphical interface as of Stage 9A-2B, so the `DOC-001` screenshot component
-   is closed (§12); the reporting component is not.
-3. The Gmail reporting rate-limiter the book requires (`REPORT-003`) has no
-   surface yet: the Gatekeeper exists and is proven, but there is no sender.
+2. **No real report has been sent.** Gmail reporting is implemented and proved
+   against a fake provider at the adapter seam (Stage 9A-2C), but no live
+   message has left this project: that needs an operator credential and an
+   explicit one-time authorisation, and CI can never send one.
 4. No parameter study, notebook or charts yet (Stage 9B).
 5. Thirteen tunnel tests require a real ngrok agent and are skipped by default.
 6. One documented Windows-native limitation is isolated in its own CI job so it

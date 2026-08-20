@@ -44,6 +44,12 @@ EXPECTED = {
     "LatestSnapshot",
     "LiveViewSink",
     "LiveViewSnapshot",
+    "REPORTS_ADDRESS",
+    "GameReport",
+    "ReportDelivery",
+    "ReportError",
+    "ReportIneligibleError",
+    "ReportOutcome",
 }
 
 OPERATIONS = {
@@ -54,6 +60,8 @@ OPERATIONS = {
     "verify_config_artifact",
     "open_replay",
     "verify_replay",
+    "read_game_report",
+    "send_game_report",
 }
 
 

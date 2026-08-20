@@ -128,6 +128,8 @@ one vocabulary:
 
 - **Stage 9A-2B - live and replay graphical interface.** Resolved the source first: `GUI-001` (Appendix E rule 8) requires the live interface to show **local truth only**, `GUI-002` (rule 9) forbids the full objective board state on pain of disqualification, `GUI-003` requires a belief heatmap and a turn-state banner, and `PRD07-FR-023` grants the replay - and only the replay, after the audit point - permission to show both agents' true paths. Then chose the toolkit by evidence rather than preference: `tkinter` ships with the interpreter CI installs, so the interactive window costs no dependency, and a pinned Pillow rasterises the identical frame **offscreen**, which is what makes the graphical output provable where no display exists. One toolkit-free layout model, two thin adapters. The live picture is projected from `Observation` - the value the strategy itself is restricted to - so the window structurally cannot show an advantage the agent does not already hold. Publication is a one-slot, lossy, exception-swallowing sink; two real agents play a whole sub-game with the viewer raising on every snapshot and reach the same terminal in the same number of rounds. **A real defect surfaced and was fixed:** the replay viewer keyed disclosed nonces by step alone, so in a lockstep log - where both sides commit at every step - one side's commitments were recomputed with the other side's nonce and reported as `TAMPERED`. Nonces are now keyed by `(step, role)`, and a whole thirty-five-round sub-game verifies end to end. Two real screenshots are committed. **IMPLEMENTED / VERIFIED.**
 
+- **Stage 9A-2C - rate-limited Gmail reporting.** Traced the whole reporting cluster before writing code, and the trace changed the design twice. Ch 9 §9.3.3 and Appendix E rule 34 make the report an **attachment**, not a body, and Appendix F Table 20 names the attached file `result_<game_id>.json` and calls it *"the binding report sent by email"* - which is the artifact the series already writes after a mutual agreement, so the reporting layer attaches those exact bytes and recomputes nothing. Appendix E rule 28 names **token bucket** as the algorithm rather than describing quota behaviour, so the rolling-window admission from 9A-1C was **not** relabelled: the Gatekeeper gained an admission chain, and the Quota Manager, Token Bucket and DOS detector of Ch 9 §9.3.1 now guard the Gmail operation inside the one gate. Eligibility is Appendix E rule 35's mutual agreement, read from the artifact, so a friendly or KIT run is structurally unreportable. The provider is spoken to directly over the standard library - Appendix A binds the mechanism, not the client library, and the Google SDK would have brought a second retry engine and a discovery fetch outside the gate. **No dependency was added.** Two defects surfaced and were fixed: a daily-quota counter that discarded every stamp through an evaluation-order slip, and a rate-limits secret guard that would have failed on the word `token_bucket`. **No real message has been sent**, and sending needs an operator credential plus an explicit authorisation. **IMPLEMENTED / VERIFIED (live send NOT PERFORMED).**
+
 ## 2. Where the project actually stands
 
 **IMPLEMENTED / VERIFIED.** Deterministic game mechanics; the protocol state
@@ -145,8 +147,11 @@ two real screenshots (9A-2B), and provider rate-limit enforcement through a
 versioned Gatekeeper (9A-1C). The SDK façade and the software version authority,
 both required by the professional-software guideline, landed at Stage 9A-1B1.
 
-**PLANNED — what is left of PRD-07.** Gmail result reporting, and the
-rate-limited Gmail sending surface the book actually governs (`REPORT-003`).
+**IMPLEMENTED / VERIFIED — PRD-07 is closed except for a live send.** Gmail
+result reporting and its token-bucket gate landed at Stage 9A-2C. What remains is
+not implementable: an actual message needs an operator credential and an explicit
+one-time authorisation, so `LIVE_GMAIL_SEND: NOT_PERFORMED` is the correct and
+current state.
 
 **PLANNED — research.** The systematic parameter study, the analysis notebook and
 the result charts. Deliberately not started, so that no learning curve is
@@ -163,8 +168,6 @@ and the collaborator grant.
 
 ## 3. Forward plan
 
-- **Stage 9A-2C - Gmail reporting.** `REPORT-001/002/003`, registering one
-  policy with the Gatekeeper that already exists. `PLANNED`.
 - **Stage 9B - competitive optimisation and research.** Parameter study,
   sensitivity analysis, notebook, charts, and strategy tuning measured against a
   benchmark. `PLANNED`.

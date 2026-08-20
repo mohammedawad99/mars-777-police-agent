@@ -1,6 +1,6 @@
 # Prompt Register - group MaRs-777
 
-> **Status: CURRENT.** Backfilled through Stage 9A-2B.
+> **Status: CURRENT.** Backfilled through Stage 9A-2C.
 > **Purpose:** The prompt-engineering log. It records the supervising-reviewer
 > prompts that drove each stage — their goal, their binding constraints, what
 > the AI got wrong, what the human correction was, and what shipped.
@@ -158,7 +158,7 @@ contain no secrets.
 
 ---
 
-## 2. Prompt engineering log (Stages 5 — 9A-2B)
+## 2. Prompt engineering log (Stages 5 — 9A-2C)
 
 Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text.
 
@@ -601,6 +601,36 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
   package with **and** without a window toolkit, and two screenshots taken from
   one real sub-game rather than staged.
 
+### Stage 9A-2C — rate-limited Gmail reporting
+
+- **Goal.** Close `REPORT-001/002/003`, `NET-002`, Appendix E rule 28 and H-09:
+  report each finished game to the lecturer, over the Gatekeeper that exists.
+- **Constraints.** Do not build a second limiter or retry engine. Do not
+  fabricate a counted result. Do not send a real email without explicit operator
+  authorisation. Treat GitHub Actions as scarce: one push per repository, with
+  every feasible gate reproduced locally first.
+- **Finding (the payload was already written).** Ch 9 §9.3.3 makes the report an
+  **attachment**, and Appendix F Table 20 names that attachment
+  `result_<game_id>.json` - the artifact the series already agreed and wrote. So
+  there was no payload to design, and the strongest form of "do not recompute
+  the winner" is a layer that attaches bytes it did not produce.
+- **Finding (the algorithm was named, not described).** Rule 28 says *token
+  bucket*. The rolling-window admission from 9A-1C behaves similarly in the long
+  run and differently in a burst, so relabelling it would have been a false
+  claim with a green test behind it. The Gatekeeper gained an admission chain
+  instead - and adding the bucket honestly meant adding the other two mechanisms
+  Ch 9 §9.3.1 names in the same breath.
+- **Finding (the example was an illustration).** Appendix A shows Google's client
+  libraries, but binds only the API, the OAuth scope and the send call. The SDK
+  would have brought its own retry engine and a discovery fetch outside the gate,
+  so the adapter speaks REST over the standard library - and the stage added no
+  dependency at all, which is also the cheapest thing to verify.
+- **Finding (two defects, both from tests written for something else).** A daily
+  quota that discarded every stamp through an evaluation-order slip, and a
+  secret guard that would have failed on the word `token_bucket`.
+- **Result.** Reporting implemented end to end, 100% coverage, zero new
+  dependencies, and `LIVE_GMAIL_SEND: NOT_PERFORMED` stated rather than blurred.
+
 ## 3. Practices this project actually learned
 
 1. **Prove it as a process.** Every in-process proof in this project hid at
@@ -647,3 +677,12 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
     "The standard library has it" and "this machine has it" are different
     claims, and so are "my interpreter" and "CI's interpreter". The gap between
     them was one `apt` package wide and failed an entire gating job.
+17. **A named algorithm is a requirement, not a description.** "Implement a
+    token-bucket rate limiter" is satisfied by a token bucket. Something with
+    similar long-run behaviour and a different burst response is a different
+    answer, and the only honest options were to build it or to say it was
+    missing.
+18. **The best payload is one you did not design.** The binding report turned
+    out to be a file the system already wrote, so "never recompute the result"
+    stopped being a rule to follow and became a shape: a layer that attaches
+    bytes it cannot produce.

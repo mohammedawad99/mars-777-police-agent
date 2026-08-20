@@ -114,7 +114,22 @@ supervision; assistant token consumption is a property of the development
 sessions, not of this software, and is not metered by anything this repository
 controls. It is therefore **not reported here rather than estimated**.
 
-## 8. Optimisation strategies actually applied
+## 8. Continuous integration as a measured resource
+
+CI runs are **intentionally minimised**: full verification happens locally
+before each push, and the hosted runners are reserved for independent
+confirmation of a change that has already passed every gate on a developer
+machine. Nothing about the gates themselves is reduced to achieve that - the
+same lint, format, strict typing, file-size, full-suite and 100%-coverage checks
+run in both places, on Ubuntu and on Windows.
+
+Practically this means: no speculative push, no "let us see what CI says", no
+empty commit to retrigger a workflow, and no manual re-run of a workflow that is
+already green. Platform-specific behaviour is rehearsed locally first - the
+Stage-9A-2B lesson, where a toolkit was verified against the wrong interpreter
+and cost a whole gating run.
+
+## 9. Optimisation strategies actually applied
 
 - **Zero-token by design.** The hint channel is deterministic, so the largest
   potential recurring cost in a project of this shape simply does not exist.
@@ -123,6 +138,15 @@ controls. It is therefore **not reported here rather than estimated**.
 - **Measure before optimising.** The gateway hop was measured, found to be four
   thousandths of a percent of the turn budget, and left alone.
 - **Small artifacts.** Canonical documents and digests, never recordings.
+- **Reporting is one provider call per game.** A completed game produces exactly
+  one report: one OAuth refresh and one `users.messages.send`, both inside the
+  Gatekeeper. There is no polling, no batching and no periodic re-send, so the
+  steady-state provider cost of this project is bounded by the number of games
+  played. LLM tokens remain **zero**: nothing in the reporting path calls a
+  model.
+- **The Gmail path added no dependency.** It speaks the provider's REST API over
+  the standard library, so there is nothing extra to resolve, download or
+  install - which also means no measurable change to environment setup time.
 - **The graphical interface costs the game nothing.** Publishing a turn to a
   window is one assignment into a one-slot box; drawing happens on the
   viewer's own timer, in the viewer's own thread, and a viewer that is slow

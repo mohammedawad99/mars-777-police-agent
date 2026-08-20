@@ -14,6 +14,12 @@ holds that boundary; this docstring is not the guard.
 
 **Every operation has a named policy**, read from the versioned configuration
 file - there is no "execute anything with a retry count the caller chose".
+
+**Which mechanisms guard an operation is the policy's decision, not this
+module's.** `gatekeeper_admission` builds the chain a configured policy names -
+the rolling minute/hour windows by default, or the Quota Manager, Token Bucket
+and DOS Detector trio that Ch 9 §9.3.1 requires for Gmail reporting. This class
+asks the chain three questions and knows nothing about which answered.
 """
 
 import time
@@ -22,10 +28,10 @@ from dataclasses import dataclass, field
 from typing import TypeVar
 
 from ..shared.rate_limits import RateLimitConfig, RateLimitPolicy
+from .gatekeeper_admission import AdmissionChain, admission_for
 from .gatekeeper_events import CallOutcome, GatekeeperCall
 from .gatekeeper_queue import RateWindowQueue, WaitingRoomFullError
 from .gatekeeper_retry import wait_before_retry, would_retry
-from .gatekeeper_windows import RollingWindows
 
 T = TypeVar("T")
 
@@ -47,7 +53,7 @@ class Gatekeeper:
     sleeper: Callable[[float], None] = time.sleep
     calls: list[GatekeeperCall] = field(default_factory=list)
     _rooms: dict[str, RateWindowQueue] = field(default_factory=dict)
-    _windows: dict[str, RollingWindows] = field(default_factory=dict)
+    _windows: dict[str, AdmissionChain] = field(default_factory=dict)
     _in_flight: dict[str, int] = field(default_factory=dict)
 
     def call(self, operation: str, run: Callable[[], T]) -> T:
@@ -67,9 +73,14 @@ class Gatekeeper:
             self._in_flight[operation] -= 1
 
     def _admit(self, operation: str, policy: RateLimitPolicy, started: float) -> bool:
-        """Wait in the bounded queue until this operation's windows allow a call."""
+        """Wait in the bounded queue until every mechanism admits this call."""
         room = self._room(operation, policy)
         windows = self._window(operation, policy)
+        try:
+            windows.check()
+        except Exception:
+            self._record(operation, CallOutcome.REFUSED, 0, False, False, started)
+            raise
         try:
             ticket = room.join()
         except WaitingRoomFullError as full:
@@ -115,11 +126,9 @@ class Gatekeeper:
             self._rooms[operation] = RateWindowQueue(policy.queue_depth)
         return self._rooms[operation]
 
-    def _window(self, operation: str, policy: RateLimitPolicy) -> RollingWindows:
+    def _window(self, operation: str, policy: RateLimitPolicy) -> AdmissionChain:
         if operation not in self._windows:
-            self._windows[operation] = RollingWindows(
-                policy.requests_per_minute, policy.requests_per_hour, self.monotonic
-            )
+            self._windows[operation] = admission_for(policy, self.monotonic)
         return self._windows[operation]
 
     def _record(

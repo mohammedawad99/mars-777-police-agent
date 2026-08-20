@@ -8,7 +8,8 @@ synthetic rather than an enrolled opponent.
 
 None of this depends on an operator remembering it. `counted_capable` is derived
 from the run class, the readiness gate reads `step0_authenticated` from the same
-fact, and there is no counted mail path in this build at all.
+fact, and the reporting path added at Stage 9A-2C refuses any document that does
+not record the mutual agreement a friendly deliberately never produces.
 """
 
 from mars777_police.app.auth_values import AuthProfile
@@ -59,19 +60,21 @@ def test_the_counted_auth_profile_is_untouched() -> None:
     assert "NONE" not in {one.value for one in AuthProfile}
 
 
-def test_there_is_no_counted_mail_path_for_a_friendly_to_enter() -> None:
-    """No reporting owner exists in this build, so none can be reached by accident."""
-    from pathlib import Path
+def test_a_friendly_result_can_never_be_reported_as_a_counted_one() -> None:
+    """A reporting owner exists since Stage 9A-2C; this is what it refuses.
 
-    src = Path(__file__).resolve().parents[2] / "src"
-    senders = [
-        path.name
-        for path in src.rglob("*.py")
-        if "smtplib" in path.read_text(encoding="utf-8")
-        or "gmail" in path.read_text(encoding="utf-8").lower()
-    ]
+    The KIT/friendly path deliberately produces no `mutual_agreement`, and
+    Appendix E rule 35 makes that agreement the condition for reporting - so the
+    report reader refuses a development document rather than mailing it.
+    """
+    import pytest
 
-    assert senders == []
+    from mars777_police.app.report_source import reportable_facts
+    from mars777_police.app.report_values import ReportIneligibleError
+
+    for document in ({"evidence_class": "FRIENDLY"}, {"mutual_result_agreement": "ABSENT"}):
+        with pytest.raises(ReportIneligibleError, match="mutual agreement"):
+            reportable_facts(document, "friendly evidence")
 
 
 def test_a_friendly_carries_no_counted_metadata() -> None:

@@ -18,6 +18,12 @@ anything.
 two `compose_*` operations return, and a typed caller has to be able to name
 them. They are project session objects, not framework types.
 
+**Reporting is an operation, not a mailer.** `send_game_report` takes the
+result artifact a series already agreed and returns what the provider did with
+it; the Gmail credential, the OAuth exchange and the HTTP request stay behind
+the boundary, and `REPORTS_ADDRESS` is exported because it is a source constant
+a caller may want to show, never one it may change.
+
 **The live view is a seam, not a screen.** `LiveViewSink`, `LatestSnapshot` and
 `LiveViewSnapshot` are exported because a viewer has to be able to attach to a
 running series and name what it receives. The drawing itself lives in
@@ -43,6 +49,14 @@ from ..app.replay_values import (
     ReplaySummary,
     ReplayTurn,
 )
+from ..app.report_values import (
+    REPORTS_ADDRESS,
+    GameReport,
+    ReportDelivery,
+    ReportError,
+    ReportIneligibleError,
+)
+from ..compose_report import ReportOutcome
 from ..identity import ROLE
 from ..kit_backend import KitRoleBackend
 from ..kit_backend_boot import KitBackendBoot
@@ -69,10 +83,12 @@ __all__ = [
     "LEGEND",
     "LIVE",
     "NO_VIEWER",
+    "REPORTS_ADDRESS",
     "ROLE",
     "SOFTWARE_VERSION",
     "AgentSdk",
     "ExternalMode",
+    "GameReport",
     "KitBackendBoot",
     "KitPublicLauncher",
     "KitRole",
@@ -91,6 +107,10 @@ __all__ = [
     "ReplayStep",
     "ReplaySummary",
     "ReplayTurn",
+    "ReportDelivery",
+    "ReportError",
+    "ReportIneligibleError",
+    "ReportOutcome",
     "RoleBackendRequest",
     "SdkError",
     "SettingsError",

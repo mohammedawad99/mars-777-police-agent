@@ -42,18 +42,25 @@ def test_persisting_evidence_does_not_make_the_run_counted() -> None:
     assert held.classification.counted_capable is False
 
 
-def test_no_counted_mail_path_exists_for_persisted_evidence_to_enter() -> None:
-    from pathlib import Path
+def test_persisted_development_evidence_cannot_enter_the_counted_mail_path() -> None:
+    """A reporting owner exists since Stage 9A-2C, and this is what keeps it shut.
 
-    src = Path(__file__).resolve().parents[2] / "src"
-    senders = [
-        path.name
-        for path in src.rglob("*.py")
-        if "smtplib" in path.read_text(encoding="utf-8")
-        or "gmail" in path.read_text(encoding="utf-8").lower()
-    ]
+    The guard used to assert that no mailer existed at all, which stopped being
+    the property once one had to exist. What actually protects a friendly is
+    that the report reader demands the mutual agreement a development document
+    states it does **not** have - so this proves the refusal instead.
+    """
+    from mars777_police.app.friendly_evidence import series_document
+    from mars777_police.app.report_source import reportable_facts
+    from mars777_police.app.report_values import ReportIneligibleError
 
-    assert senders == []
+    _inner, held = persisted()
+    document = series_document(held)
+
+    assert document["evidence_class"]
+    assert "mutual_agreement" not in document
+    with pytest.raises(ReportIneligibleError, match="mutual agreement"):
+        reportable_facts(document, "friendly evidence")
 
 
 def test_persisted_evidence_claims_no_diversity_or_league_credit() -> None:
@@ -93,14 +100,19 @@ class _ResultExchangeStub:
 
 
 def test_the_official_result_document_is_the_only_place_agreement_is_claimed() -> None:
-    """`mutual_agreement` belongs to a file a friendly cannot produce."""
+    """`mutual_agreement` belongs to a file a friendly cannot produce.
+
+    Naming it is not claiming it: the reporting reader added at Stage 9A-2C
+    *demands* the field before it will report, which is the opposite of writing
+    one. So the guard is on the write, which is where the claim is made.
+    """
     from pathlib import Path
 
     src = Path(__file__).resolve().parents[2] / "src"
     claimants = [
         path.name
         for path in src.rglob("*.py")
-        if '"mutual_agreement"' in path.read_text(encoding="utf-8")
+        if '["mutual_agreement"] =' in path.read_text(encoding="utf-8")
     ]
 
     assert claimants == ["artifact_documents.py"]

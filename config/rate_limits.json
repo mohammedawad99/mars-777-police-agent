@@ -21,6 +21,21 @@
         "retry_after_seconds": 0,
         "max_backoff_seconds": 0,
         "retryable_statuses": []
+      },
+      "gmail.send_report": {
+        "admission": "token_bucket",
+        "requests_per_minute": 30,
+        "requests_per_hour": 50,
+        "burst_capacity": 5,
+        "daily_quota": 50,
+        "dos_burst_limit": 10,
+        "dos_window_seconds": 60,
+        "concurrent_max": 2,
+        "queue_depth": 100,
+        "max_retries": 3,
+        "retry_after_seconds": 5,
+        "max_backoff_seconds": 60,
+        "retryable_statuses": [429, 500, 502, 503, 504]
       }
     }
   }

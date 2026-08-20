@@ -29,6 +29,9 @@ class RollingWindows:
     def _trim(self, now: float) -> None:
         self._stamps = [stamp for stamp in self._stamps if now - stamp < HOUR]
 
+    def check(self) -> None:
+        """A window refuses nothing outright; it only ever asks a caller to wait."""
+
     def wait_seconds(self) -> float:
         """Seconds until a call may run: `0.0` when one may run right now."""
         now = self.monotonic()

@@ -996,3 +996,45 @@ offscreen rasteriser is what lets the graphical output be asserted on Ubuntu and
 on Windows, and it is what produced the committed screenshots. The interactive
 window is proved against recording doubles everywhere and against the genuine
 toolkit wherever a display exists.
+
+
+## 13. Gmail reporting (Stage 9A-2C)
+
+**Classification: application policy plus one provider adapter.** The
+application owns *what* may be reported and *when*; infrastructure owns *how*
+Gmail sends it. No OAuth type, HTTP type or provider client reaches `app`.
+
+```
+app/report_values.py       the report, the delivery, and the source's fixed address
+app/report_eligibility.py  the phase and the agreement a report waits for
+app/report_source.py       reading a stored result strictly enough to report it
+app/report_message.py      the exact MIME message, deterministic and injection-proof
+app/report_service.py      ReportSenderPort, and the one path a report takes
+app/gatekeeper_bucket.py   the token bucket Appendix E rule 28 names
+app/gatekeeper_quota.py    the daily Quota Manager of Ch 9 §9.3.1
+app/gatekeeper_dos.py      the DOS detector of Ch 9 §9.3.1 and rule 29
+app/gatekeeper_admission.py the chain, and which policy selects which mechanisms
+infra/gmail_credentials.py the operator's token.json, loaded and never printed
+infra/gmail_sender.py      Gmail v1 users.messages.send over the standard library
+infra/report_evidence.py   delivery status, deliberately outside the official set
+compose_report.py          the composition; the only builder of the Gatekeeper here
+report_main.py             the operator command
+```
+
+### The directions that matter
+
+| Rule | How it is structural |
+|---|---|
+| reporting decides no game fact | the winner, scores, outcome and digest are read from the artifact; `report_service` has no access to a scoring engine |
+| a friendly can never be reported | `report_source` demands `mutual_agreement: true`, which the friendly path deliberately never writes |
+| there is no second limiter | `report_service` takes an injected `gate`; a structural test forbids a queue, a backoff or a sleep in any reporting module |
+| the provider is reached once | `compose_report` is the only module that builds a `Gatekeeper`, and the only one that names `gmail_sender` |
+| a credential cannot leak | `GmailCredentials` renders `<withheld>`, refusals name files and fields, and the adapter's failures carry a status and never a header |
+| delivery is not a game artifact | evidence is written to `reporting/delivery_<game_id>.json`, and a test holds the official set at exactly fourteen |
+
+### The admission seam
+
+`Gatekeeper` asks its admission chain three questions - `check()` for an outright
+refusal, `wait_seconds()` for a delay, `stamp()` to record a call - and knows
+nothing about which mechanism answered. `rolling_window` remains the default for
+every operation that does not ask for anything else.

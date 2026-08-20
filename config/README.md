@@ -15,6 +15,22 @@ never reaches `config_sha256`, Step-0, the KIT wire or any artifact.
 Its `rate_limits.version` is a **string** (`"1.00"`): written as a JSON number it
 would read back as `1.0`, which is a second truth about one value.
 
+**When the version rises.** It guards *representability*, so it is raised only
+when an existing valid document would stop being valid or would change meaning -
+a key removed, a key renamed, a value reinterpreted. Adding a **service entry**
+is data. Adding an **optional key whose default reproduces the previous
+behaviour exactly** is a compatible extension. The admission keys added at Stage
+9A-2C are the second kind, so `1.00` still describes every document this build
+accepts. The rule itself lives in `shared/rate_limits.py`.
+
+### Services
+
+| Service | Admission | Why |
+|---|---|---|
+| `default` | rolling windows | Appendix F Table 19 example values, which its MINIMUM status makes the required defaults |
+| `ngrok.discover_tunnels` | rolling windows | a loopback readiness poll, deliberately faster and never retried |
+| `gmail.send_report` | **token bucket** + daily quota + DOS detector | Appendix E rule 28 names the algorithm, and Ch 9 §9.3.1 names all three mechanisms. See `docs/reference/REPORTING.md` §6-§7 |
+
 ## 2. The shared, signed game configuration (future)
 
 The negotiated physics and scoring contract - board, movement, barriers, scent,

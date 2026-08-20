@@ -18,10 +18,19 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from .. import compose_backend, compose_gateway, compose_replay, compose_series, compose_verify
+from .. import (
+    compose_backend,
+    compose_gateway,
+    compose_replay,
+    compose_report,
+    compose_series,
+    compose_verify,
+)
 from ..app.config_artifact_values import ConfigArtifactContent
 from ..app.replay_session import ReplaySession
 from ..app.replay_values import ReplaySummary
+from ..app.report_values import GameReport
+from ..compose_report import ReportOutcome
 from ..kit_backend import KitRoleBackend
 from ..kit_backend_boot import KitBackendBoot
 from ..kit_public_launcher import KitPublicLauncher
@@ -73,3 +82,11 @@ class AgentSdk:
     def verify_replay(self, log: Path, config: Path, root: Path | None = None) -> ReplaySummary:
         """Replay one sub-game and return what the replay establishes."""
         return compose_replay.open_replay(log, config, root).summary()
+
+    def read_game_report(self, result: Path, root: Path | None = None) -> GameReport:
+        """Return the report an agreed result makes eligible. Sends nothing."""
+        return compose_report.read_report(result, root)
+
+    def send_game_report(self, result: Path, root: Path | None = None) -> ReportOutcome:
+        """Send one game report to the fixed lecturer address, through the gate."""
+        return compose_report.send_game_report(result, root)

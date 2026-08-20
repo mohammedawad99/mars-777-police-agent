@@ -130,11 +130,58 @@ def test_a_malformed_value_is_refused_by_the_value_object(tmp_path: Path) -> Non
         load_rate_limits(written(tmp_path, document))
 
 
-def test_the_file_carries_no_secret() -> None:
+CREDENTIAL_NAMES = (
+    "authtoken",
+    "auth_token",
+    "access_token",
+    "refresh_token",
+    "client_secret",
+    "api_key",
+    "private_key",
+    "password",
+    "bearer",
+    "credential",
+)
+"""What a credential is actually called. Checked instead of the bare word "token",
+which is also the first half of `token_bucket` - the algorithm Appendix E rule 28
+requires by name. A guard that failed on its own requirement would teach the next
+author to rename the requirement."""
+
+ALLOWED_TEXT = frozenset({"1.00", "rolling_window", "token_bucket"})
+"""Every string a limits file may legitimately hold. Anything else is refused
+whether or not it looks like a secret, which is stronger than a word list."""
+
+
+def test_the_file_names_no_credential() -> None:
     text = RATE_LIMITS_PATH.read_text(encoding="utf-8").lower()
 
-    for forbidden in ("token", "secret", "password", "authtoken", "key"):
+    for forbidden in CREDENTIAL_NAMES:
         assert forbidden not in text
+
+
+def test_every_value_in_the_file_is_a_number_or_a_known_word() -> None:
+    """A secret cannot hide in a file whose only strings are enumerated."""
+    document = json.loads(RATE_LIMITS_PATH.read_text(encoding="utf-8"))
+    strings: list[str] = []
+    numbers: list[object] = []
+    _collect(document, strings, numbers)
+
+    assert set(strings) <= ALLOWED_TEXT, sorted(set(strings) - ALLOWED_TEXT)
+    assert all(type(one) is int for one in numbers)
+
+
+def _collect(value: object, strings: list[str], numbers: list[object]) -> None:
+    """Walk the document, gathering every leaf so none escapes the check."""
+    if isinstance(value, dict):
+        for item in value.values():
+            _collect(item, strings, numbers)
+    elif isinstance(value, list):
+        for item in value:
+            _collect(item, strings, numbers)
+    elif isinstance(value, str):
+        strings.append(value)
+    else:
+        numbers.append(value)
 
 
 def test_a_service_that_is_not_an_object_is_refused(tmp_path: Path) -> None:

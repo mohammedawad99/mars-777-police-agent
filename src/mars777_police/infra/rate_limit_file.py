@@ -33,6 +33,20 @@ FIELDS: Final[tuple[str, ...]] = (
     "max_backoff_seconds",
     "retryable_statuses",
 )
+"""Required of every service. A document missing one of these is refused."""
+
+OPTIONAL: Final[tuple[str, ...]] = (
+    "admission",
+    "burst_capacity",
+    "daily_quota",
+    "dos_burst_limit",
+    "dos_window_seconds",
+)
+"""The admission extension. Absent, a service keeps the rolling windows exactly.
+
+Optional rather than required because that is what keeps every already-valid
+`1.00` document valid and unchanged in behaviour - see the version-bump policy
+in `shared/rate_limits`."""
 
 
 def _section(document: object) -> dict[str, object]:
@@ -45,7 +59,7 @@ def _section(document: object) -> dict[str, object]:
 def _policy(name: str, raw: object) -> RateLimitPolicy:
     if not isinstance(raw, dict):
         raise RateLimitConfigError(f"service {name!r} is not an object")
-    unknown = sorted(set(raw) - set(FIELDS))
+    unknown = sorted(set(raw) - set(FIELDS) - set(OPTIONAL))
     if unknown:
         raise RateLimitConfigError(f"service {name!r} has unknown key(s): {', '.join(unknown)}")
     missing = sorted(set(FIELDS) - set(raw))
@@ -55,6 +69,7 @@ def _policy(name: str, raw: object) -> RateLimitPolicy:
     if not isinstance(statuses, list):
         raise RateLimitConfigError(f"service {name!r} retryable_statuses must be a list")
     values = {field: raw[field] for field in FIELDS if field != "retryable_statuses"}
+    values.update({field: raw[field] for field in OPTIONAL if field in raw})
     return RateLimitPolicy(retryable_statuses=tuple(statuses), **values)
 
 

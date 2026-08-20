@@ -5,7 +5,8 @@
 > Stage 1A statuses are one of: **EXTRACTED**, **REVIEW REQUIRED**, **CONFLICT**,
 > **NOT APPLICABLE**. Nothing is IMPLEMENTED or VERIFIED. Full details and
 > citations live in `docs/spec/REQUIREMENT_CATALOG.md`; conflicts in
-> `docs/CONFLICT_REGISTER.md` (**C-01…C-14** currently; C-10 added post-lock in
+> `docs/CONFLICT_REGISTER.md` (**C-01…C-15** currently; C-15 added at Stage 9A-2C - the reference config's
+> `mode = "draft"` against the send-only Gmail scope; C-10 added post-lock in
 > Stage 3B-FIX2 — scent state bound vs additive update; C-14 added at Stage 5-R8 —
 > full scent-model agreement vs the three-scalar config). "Component" = planned PRD/area.
 

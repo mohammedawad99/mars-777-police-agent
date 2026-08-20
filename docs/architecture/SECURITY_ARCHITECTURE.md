@@ -152,3 +152,35 @@ exposure surface rather than as decoration.
 - **Committed screenshots carry no secret.** Both show development identities,
   disclosed evidence and verification words only — no token, no key, no private
   path and no live URL.
+
+
+## Gmail reporting exposure (Stage 9A-2C)
+
+Reporting adds the first component that holds a **live credential for a third
+party**, so it is treated as the highest-value secret in the project.
+
+- **The credential never enters the repository.** `credentials.json` and
+  `token.json` were already in `.gitignore`, as Appendix A and rule 40 require,
+  and a test asserts both that the rules are present and that neither file
+  exists in the tree.
+- **The credential never renders.** `GmailCredentials` overrides `repr` and
+  `str` to `<withheld>`; refusals name the *file* and the *field*, never a
+  value; the `Authorization` header is built at the last moment and appears in
+  no log, no evidence document and no exception message. A test asserts that a
+  raised failure carries none of the three secret values it was constructed with.
+- **Least privilege is checked, not assumed.** A `token.json` claiming any scope
+  other than `https://www.googleapis.com/auth/gmail.send` is **refused** rather
+  than used, which is rule 30 enforced instead of documented.
+- **Header injection is refused, not escaped.** A `game_id` is text a peer
+  proposed, so every header component is validated for `\r`, `\n` and `\x00`
+  before a message exists; a hostile identifier cannot append a `Bcc`.
+- **The attachment cannot break its own envelope.** A result document containing
+  the multipart separator is refused rather than serialised into a corrupt
+  message.
+- **A real send cannot happen by accident.** It requires an explicit opt-in, a
+  credential path and an explicit recipient, all three; a credential that merely
+  exists authorises nothing, and CI sets none of them.
+- **The account cannot be spammed by our own bug.** The DOS detector latches the
+  gate shut on a burst that can only be a loop, and does not reopen on a timer.
+- **A delivery failure cannot rewrite a game.** The result artifact, the agreed
+  digest and the winner are untouched by anything the provider does.
