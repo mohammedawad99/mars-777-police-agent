@@ -10,6 +10,7 @@ survive the switch: neither backend has to be told them, and neither can drift.
 """
 
 import pytest
+from kit_backend_builders import backend
 from r16_builders import config  # noqa: F401 - repo-normalized fixture import
 
 from mars777_police.app.kit_messages import KitRole
@@ -77,7 +78,6 @@ def test_a_series_is_six_sub_games_and_the_schedule_says_so_once() -> None:
 
 def test_a_backend_refuses_a_sub_game_the_schedule_did_not_give_it() -> None:
     """This repository's role never plays the other side, and the refusal is structural."""
-    from kit_backend_builders import backend
 
     from mars777_police.__main__ import ROLE
 

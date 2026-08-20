@@ -16,7 +16,8 @@ import json
 import subprocess
 from pathlib import Path
 
-import executable_process as process
+import executable_evidence as evidence
+import executable_outcome as outcome
 from boot_builders import SECRET
 
 REAL = "real CLI"
@@ -47,7 +48,7 @@ class FakeProcess:
 
 def test_a_finished_process_is_described_whole() -> None:
     child = FakeProcess(4242, 4, out="series stdout", err="the fatal stack")
-    ran = process.finished(REAL, child, timeout=1.0)
+    ran = outcome.finished(REAL, child, timeout=1.0)
 
     assert (ran.name, ran.pid, ran.status) == (REAL, 4242, 4)
     assert (ran.out, ran.err) == ("series stdout", "the fatal stack")
@@ -57,7 +58,7 @@ def test_a_finished_process_is_described_whole() -> None:
 def test_a_hanging_process_is_killed_and_still_described() -> None:
     """The evidence is the point; `TimeoutExpired` escaping would discard it."""
     child = FakeProcess(7, 0, out="partial", err="held open", hangs=True)
-    ran = process.finished(PEER, child, timeout=0.01)
+    ran = outcome.finished(PEER, child, timeout=0.01)
 
     assert ran.timed_out and child.killed
     assert (ran.out, ran.err) == ("partial", "held open")
@@ -66,9 +67,9 @@ def test_a_hanging_process_is_killed_and_still_described() -> None:
 
 def test_a_failing_side_does_not_hide_the_other(tmp_path: Path) -> None:
     """Either order: whichever process failed, both records reach the report."""
-    ours = process.finished(REAL, FakeProcess(11, 4, "ours out", "ours stack"), timeout=1.0)
-    theirs = process.finished(PEER, FakeProcess(22, 1, "theirs out", "theirs stack"), timeout=1.0)
-    report = process.two_process_report(
+    ours = outcome.finished(REAL, FakeProcess(11, 4, "ours out", "ours stack"), timeout=1.0)
+    theirs = outcome.finished(PEER, FakeProcess(22, 1, "theirs out", "theirs stack"), timeout=1.0)
+    report = evidence.two_process_report(
         (ours, theirs), ((REAL, tmp_path / "a"), (PEER, tmp_path / "b"))
     )
 
@@ -84,8 +85,8 @@ def test_a_failing_side_does_not_hide_the_other(tmp_path: Path) -> None:
 
 
 def test_the_report_names_a_killed_survivor(tmp_path: Path) -> None:
-    hung = process.finished(PEER, FakeProcess(9, 0, hangs=True), timeout=0.01)
-    report = process.two_process_report((hung,), ((PEER, tmp_path),))
+    hung = outcome.finished(PEER, FakeProcess(9, 0, hangs=True), timeout=0.01)
+    report = evidence.two_process_report((hung,), ((PEER, tmp_path),))
 
     assert "killed after timeout" in report
 
@@ -114,7 +115,7 @@ def test_the_snapshot_places_a_stall_between_the_last_config_and_the_last_log(
     for index in (1, 2, 3, 4, 5):
         _write(root, f"log_G1_g0{index}.json", _log(index))
 
-    text = process.snapshot(REAL, root)
+    text = evidence.snapshot(REAL, root)
 
     assert "highest locked config: g06" in text
     assert "highest completed log: g05" in text
@@ -124,7 +125,7 @@ def test_the_snapshot_places_a_stall_between_the_last_config_and_the_last_log(
 
 
 def test_the_snapshot_reports_a_side_that_wrote_nothing(tmp_path: Path) -> None:
-    text = process.snapshot(PEER, tmp_path / "never-created")
+    text = evidence.snapshot(PEER, tmp_path / "never-created")
 
     assert "0 file(s)" in text
     assert "highest locked config: none" in text
@@ -138,14 +139,14 @@ def test_the_snapshot_survives_an_unreadable_log(tmp_path: Path) -> None:
     root.mkdir()
     (root / "log_G1_g01.json").write_text("{not json", encoding="utf-8")
 
-    assert "unreadable (JSONDecodeError)" in process.snapshot(REAL, root)
+    assert "unreadable (JSONDecodeError)" in evidence.snapshot(REAL, root)
 
 
 def test_a_completed_series_reports_its_result_file(tmp_path: Path) -> None:
     root = tmp_path / "mars777"
     _write(root, "result_G1.json", {"mutual_agreement": True})
 
-    text = process.snapshot(REAL, root)
+    text = evidence.snapshot(REAL, root)
     assert "result: yes" in text
     assert "highest completed log: none" in text
 
@@ -153,15 +154,15 @@ def test_a_completed_series_reports_its_result_file(tmp_path: Path) -> None:
 def test_the_highest_token_ignores_a_family_it_was_not_asked_about() -> None:
     names = ["config_G1_g01.json", "config_G1_g02.json", "log_G1_g01.json"]
 
-    assert process.highest(names, "config_") == "g02"
-    assert process.highest(names, "log_") == "g01"
-    assert process.highest(names, "result_") == "none"
+    assert outcome.highest(names, "config_") == "g02"
+    assert outcome.highest(names, "log_") == "g01"
+    assert outcome.highest(names, "result_") == "none"
 
 
 def test_the_secret_never_reaches_the_published_report(tmp_path: Path) -> None:
     """The streams are asserted clean separately; this is the second line."""
-    leaky = process.finished(REAL, FakeProcess(1, 1, f"out {SECRET}", f"err {SECRET}"), timeout=1.0)
-    report = process.two_process_report((leaky,), ((REAL, tmp_path),))
+    leaky = outcome.finished(REAL, FakeProcess(1, 1, f"out {SECRET}", f"err {SECRET}"), timeout=1.0)
+    report = evidence.two_process_report((leaky,), ((REAL, tmp_path),))
 
     assert SECRET not in report
     assert report.count("<secret redacted>") == 2

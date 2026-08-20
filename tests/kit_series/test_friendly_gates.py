@@ -7,7 +7,8 @@ counted mail, league diversity, and the counted writers themselves.
 
 import pytest
 from r16_builders import GAME_ID
-from test_friendly_evidence import _Store, evidence
+from test_friendly_evidence import evidence
+from test_friendly_evidence_store import _Store
 from test_readiness_gate import facts
 
 from mars777_police.app.friendly_evidence import (

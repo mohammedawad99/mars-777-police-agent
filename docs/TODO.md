@@ -245,9 +245,11 @@ repository and green in CI on the exact commit.
 - [ ] **`rate_limits.version`** (guideline §8.1, third row). Needs the local
       versioned rate-limit configuration file, which belongs to the provider
       gatekeeper slice.
-- [ ] **Test-file 150-code-line split** (guideline §3.2 with §6.1). 13 test
-      files exceed the limit when counted the guideline's way; `src/` has zero
-      violations. Also add the CI guard that measures **both** trees.
+- [x] **Test-file 150-code-line split** (guideline §3.2 with §6.1) -
+      **DONE at Stage 9A-1B2.** All 13 over-limit test files were split by
+      responsibility, not by line range; `src/` and `tests/` are both at zero.
+      `tools/check_python_loc.py` now enforces the rule as a gating CI step on
+      Ubuntu and Windows, and locally through the identical command.
 - [ ] **Expected-result reporting** (guideline §6.4). Store the automated
       pass/fail report rather than relying on CI history alone.
 

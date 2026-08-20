@@ -1,13 +1,9 @@
-"""The permanent boot path: serve, connect, Step-0, one series, stop.
+"""The permanent boot path: serve, reach the opponent, and stop either way.
 
-Stage 6C-C1 proved a production `SeriesDriver` plays six sub-games; the shipped
-`python -m` process still only served and waited. This is the layer between
-them, and it owns **process lifecycle only**: readiness, a bounded outbound
-connection, our Step-0, the wait for the peer's, exactly one `play_series`, and
-a shutdown that runs whatever happened.
-
-Every gameplay decision stays where 6C-C1 put it. The tests below therefore
-assert *sequence and ownership*, never a move, an outcome or a cadence.
+Joining is a bounded startup step, because two teams start independently and the
+first one up finds nothing to reach. What is pinned here is the shape of that
+bound - only a transport failure is retried, the budget really ends, and a
+failure still closes the runtime it opened.
 """
 
 import asyncio
@@ -15,7 +11,6 @@ import socket
 from pathlib import Path
 
 import boot_builders as build
-import composed_builders as compose
 import pytest
 from r16_builders import GROUP_A, GROUP_B
 
@@ -136,69 +131,6 @@ def test_a_peer_that_appears_late_is_still_joined(tmp_path: Path) -> None:
     asyncio.run(run())
 
 
-def test_step0_is_signalled_only_after_the_state_is_installed(tmp_path: Path) -> None:
-    """The event reports a fact that is already true; it is never the fact."""
-    a, b = pair()
-
-    async def run() -> None:
-        await a.serve()
-        await b.serve()
-        try:
-            assert not a.composition.pregame.milestones.step0_seen.is_set()
-            assert a.composition.pregame.peer is None
-            await b.connect()
-            await b.composition.peer_runner.send_step0(b.composition.identity.declaration)
-            await asyncio.wait_for(a.composition.pregame.milestones.step0_seen.wait(), 10.0)
-            assert a.composition.pregame.peer == GROUP_B
-            assert a.composition.pregame.declaration.teams.group_b is not None
-        finally:
-            await a.stop()
-            await b.stop()
-
-    asyncio.run(run())
-
-
-def test_a_step0_that_arrived_first_is_not_missed(tmp_path: Path) -> None:
-    """`asyncio.Event` latches, so boot may start waiting after the arrival."""
-    a, b = pair()
-
-    async def run() -> None:
-        await a.serve()
-        await b.serve()
-        try:
-            await b.connect()
-            await b.composition.peer_runner.send_step0(b.composition.identity.declaration)
-            await asyncio.wait_for(a.composition.pregame.milestones.step0_seen.wait(), 10.0)
-            await asyncio.wait_for(a.composition.pregame.milestones.step0_seen.wait(), 0.1)
-        finally:
-            await a.stop()
-            await b.stop()
-
-    asyncio.run(run())
-
-
-def test_boot_owns_no_gameplay_vocabulary() -> None:
-    """The coordinator sequences owners; it never decides anything they own."""
-    import inspect
-
-    source = inspect.getsource(boot)
-    for forbidden in (
-        "MoveAction",
-        "BarrierAction",
-        "Outcome.",
-        "choose_action",
-        "close_turn",
-        "close_sub_game",
-        "send_config_proposal",
-        "send_config_lock",
-        "adopt_config",
-        "open_result_agreement",
-        "respond_to_result",
-        "legal_moves",
-    ):
-        assert forbidden not in source
-
-
 def test_a_budget_must_be_positive_in_both_directions() -> None:
     """A non-positive bound or cadence is a local defect, not a fast retry."""
     for total, pause in ((0.0, 0.1), (1.0, 0.0), (-1.0, 0.1)):
@@ -221,37 +153,23 @@ def test_the_startup_variant_refuses_a_runtime_that_is_not_serving() -> None:
     asyncio.run(attempt())
 
 
-def test_a_signalled_step0_without_a_peer_is_refused(tmp_path: Path) -> None:
-    """The event says *when*; `pregame.peer` is the fact, and boot re-reads it."""
-    import r7_builders as r7
+def test_boot_owns_no_gameplay_vocabulary() -> None:
+    """The coordinator sequences owners; it never decides anything they own."""
+    import inspect
 
-    from mars777_police.autonomous_boot import AutonomousBoot
-    from mars777_police.infra.settings import RuntimeSettings
-
-    composition = build.agent(
-        GROUP_A, "group_a", ActorRole.POLICE, f"http://{HOST}:{closed_port()}/mcp"
-    )
-    runtime = AgentRuntime(composition, HOST, build.free_port())
-    settings = compose.settings_for(ActorRole.POLICE, f"http://{HOST}:1/mcp", 8080)
-    boot = AutonomousBoot(
-        runtime,
-        RuntimeSettings(
-            settings.role,
-            settings.local,
-            settings.key_id,
-            settings.secret,
-            settings.opponent,
-            tmp_path,
-        ),
-        r7.CONFIG,
-        ActorRole.POLICE,
-    )
-    pregame = composition.pregame
-    pregame.milestones.step0_seen.set()
-
-    async def attempt() -> None:
-        with pytest.raises(LocalDefectError, match="without an authenticated peer"):
-            await boot.await_peer_step0(pregame)
-
-    assert pregame.peer is None
-    asyncio.run(attempt())
+    source = inspect.getsource(boot)
+    for forbidden in (
+        "MoveAction",
+        "BarrierAction",
+        "Outcome.",
+        "choose_action",
+        "close_turn",
+        "close_sub_game",
+        "send_config_proposal",
+        "send_config_lock",
+        "adopt_config",
+        "open_result_agreement",
+        "respond_to_result",
+        "legal_moves",
+    ):
+        assert forbidden not in source

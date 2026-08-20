@@ -36,3 +36,7 @@ def backend(first: KitRole) -> KitRoleBackend:
         deadline=5.0,
         first_role=first,
     )
+
+
+async def drop(message: object) -> None:
+    """A send that goes nowhere, for a test about what is never sealed."""

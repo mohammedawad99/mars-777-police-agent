@@ -21,13 +21,16 @@ the standard this project would follow with more than one author.
 3. Reference a **requirement ID** from `docs/REQUIREMENTS_TRACEABILITY.md`.
 4. Add or update **tests** for every behavior change.
 5. Pass **all quality gates** locally before opening a PR:
+   - `uv run python tools/check_python_loc.py`
    - `uv run ruff check .`
    - `uv run ruff format --check .`
-   - `uv run mypy --strict src`
+   - `uv run mypy --strict`
    - `uv run pytest --cov --cov-report=term-missing --cov-fail-under=90`
    - `uv build`
 6. Keep every Python file — **tests included** — within **150 code lines**
-   (blank and comment lines excluded). Split it; never compress it to fit.
+   (blank and comment lines excluded; docstrings counted). Split it by
+   responsibility; never compress it to fit. `tools/check_python_loc.py` is the
+   authority, and it is the same check CI gates on.
 7. Never include **secrets** of any kind.
 8. Never claim completion without evidence (exact commands + results).
 9. Never access the **opposing agent's** private state, config, or strategy.

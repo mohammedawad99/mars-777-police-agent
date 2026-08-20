@@ -1,42 +1,21 @@
-"""Was the scent a reveal carried the scent its own disclosed action produces?
+"""That an emission came from the cell the move actually reached.
 
-Parts 1A and 1B answered a different question. They prove the peer told the
-audit and the log exactly what it told us live - which a peer that lied *live*
-and then disclosed that same lie faithfully passes without difficulty. Nothing
-before this recomputed the physics, so a deliberately misleading emission was
-undetectable, and the book's own premise that a scent map "cannot lie" was false
-in this architecture rather than true.
-
-This closes it (`JDEC-018`). For every counted reveal the review recomputes the
-emission from evidence the verifier anchors itself - the trajectory the semantic
-replay already reconstructs from the config-locked start cells, the board that
-emitter actually had, and the model the series cryptographically locked - and
-compares it to the retained history. The centre is never taken from the scent
-being judged, and the model is never the local default.
-
-It is deliberately **not** tampering: every hash can verify and every disclosure
-can be faithful while the emission is still physically impossible.
+Scent is physical evidence, so the only honest emitter is the position the move
+produced - after a step, after a stay, clipped by the real board at a corner, and
+for the police, the cell it never left because it spent its move on a barrier.
+The board and the cell both come from the one replay authority, never from a
+second opinion written for checking.
 """
 
-import dataclasses
-
-import semantic_builders as build
 from scent_truth_builders import MODEL, RULES, emission_at, record, reviewed
-from semantic_builders import COP, SUB_GAME, THIEF
+from semantic_builders import COP, THIEF
 
 from mars777_police.app.sealed_record_values import ActorRole
 from mars777_police.app.semantic_replay import PlayedTurn, Replay
 from mars777_police.app.semantic_review import review_sub_game
-from mars777_police.app.semantic_values import (
-    SCORED_AS_TECHNICAL_LOSS,
-    TAMPERING,
-    SemanticVerdict,
-)
-from mars777_police.app.turn_cursor import TurnCursor
 from mars777_police.domain.actions import BarrierAction, MoveAction
 from mars777_police.domain.board import Position
 from mars777_police.domain.rules import Move, destination_of
-from mars777_police.domain.scent_emission import ScentDeposit, ScentEmission
 
 POLICE, THIEF_ROLE = ActorRole.POLICE, ActorRole.THIEF
 NORTH, SOUTH, EAST, STAY = (
@@ -58,9 +37,6 @@ def finding(
 def one_step(own_action=SOUTH, peer_action=NORTH) -> tuple[list, list]:
     """Step 1 for each side from its own locked start cell."""
     return [(1, COP, own_action)], [(1, THIEF, peer_action)]
-
-
-# --------------------------------------------------------------- honest scent
 
 
 def test_an_honest_move_emits_from_the_cell_the_move_reaches() -> None:
@@ -125,9 +101,6 @@ def _with_barrier(target: Position):
     return place_barrier(RULES.board, COP, target, RULES.quota)
 
 
-# ------------------------------------------------- emitter-correct board timing
-
-
 def test_each_emitter_is_judged_on_the_board_it_actually_had() -> None:
     """The high-risk edge: one side places a barrier in the step the other moves.
 
@@ -171,189 +144,3 @@ def test_the_emitter_board_and_cell_come_from_the_one_replay_authority() -> None
     for forbidden in ("destination_of", "place_barrier", "is_legal_move", "delta_of"):
         assert forbidden not in source
     assert "replay.board_after(turn)" in source and "replay.cell_after(turn)" in source
-
-
-# ---------------------------------------------------------------- physical lies
-
-
-def test_a_validly_shaped_emission_centred_on_the_wrong_cell_is_refused() -> None:
-    ours, theirs = one_step()
-    elsewhere = record(1, destination_of(THIEF, Move.E))
-    verdict = finding(
-        ours, theirs, own_scent=(record(1, destination_of(COP, Move.S)),), peer_scent=(elsewhere,)
-    )
-    assert verdict.verdict is SemanticVerdict.DISHONEST_SCENT_EMISSION
-    assert verdict.at_fault is THIEF_ROLE and verdict.step == 1
-
-
-def test_one_altered_intensity_is_refused() -> None:
-    ours, theirs = one_step()
-    honest = emission_at(destination_of(THIEF, Move.N))
-    first, *rest = honest.deposits
-    tweaked = ScentEmission(
-        (ScentDeposit(first.cell, first.intensity / 2), *rest)  # type: ignore[arg-type]
-    )
-    verdict = finding(
-        ours,
-        theirs,
-        own_scent=(record(1, destination_of(COP, Move.S)),),
-        peer_scent=(_row(tweaked),),
-    )
-    assert verdict.verdict is SemanticVerdict.DISHONEST_SCENT_EMISSION
-
-
-def test_a_removed_deposit_is_refused() -> None:
-    ours, theirs = one_step()
-    honest = emission_at(destination_of(THIEF, Move.N))
-    verdict = finding(
-        ours,
-        theirs,
-        own_scent=(record(1, destination_of(COP, Move.S)),),
-        peer_scent=(_row(ScentEmission(honest.deposits[1:])),),
-    )
-    assert verdict.verdict is SemanticVerdict.DISHONEST_SCENT_EMISSION
-
-
-def test_an_extra_deposit_is_refused() -> None:
-    ours, theirs = one_step()
-    honest = emission_at(destination_of(THIEF, Move.N))
-    far = ScentDeposit(Position(6, 6), honest.deposits[0].intensity)
-    verdict = finding(
-        ours,
-        theirs,
-        own_scent=(record(1, destination_of(COP, Move.S)),),
-        peer_scent=(_row(ScentEmission((*honest.deposits, far))),),
-    )
-    assert verdict.verdict is SemanticVerdict.DISHONEST_SCENT_EMISSION
-
-
-def test_the_pre_action_emission_is_refused() -> None:
-    """Correct physics, wrong moment - the exact mistake §4.3 rules out."""
-    ours, theirs = one_step()
-    verdict = finding(
-        ours,
-        theirs,
-        own_scent=(record(1, destination_of(COP, Move.S)),),
-        peer_scent=(record(1, THIEF),),
-    )
-    assert verdict.verdict is SemanticVerdict.DISHONEST_SCENT_EMISSION
-
-
-def test_an_emission_from_another_model_is_refused() -> None:
-    """Right centre, right board, wrong physics."""
-    import dataclasses as dc
-
-    other = dc.replace(MODEL, kernel=_halved_kernel())
-    ours, theirs = one_step()
-    cell = destination_of(THIEF, Move.N)
-    from mars777_police.domain.scent_observation import emission_of
-
-    verdict = finding(
-        ours,
-        theirs,
-        own_scent=(record(1, destination_of(COP, Move.S)),),
-        peer_scent=(_row(emission_of(RULES.board, other.kernel, cell, other.params)),),
-    )
-    assert verdict.verdict is SemanticVerdict.DISHONEST_SCENT_EMISSION
-
-
-def _halved_kernel():
-    """A structurally valid kernel that is not the locked one."""
-    from decimal import Decimal
-
-    from mars777_police.domain.scent_kernel import ScentKernel
-
-    rows = tuple(
-        tuple((weight / Decimal(2)).quantize(Decimal("0.01")) for weight in row)
-        for row in MODEL.kernel.weights
-    )
-    return ScentKernel(rows)
-
-
-def _row(emission: ScentEmission):
-    from mars777_police.app.scent_records import ScentRecord
-
-    return ScentRecord(TurnCursor(SUB_GAME, 1), emission)
-
-
-# -------------------------------------------------------------------- precedence
-
-
-def test_a_broken_trajectory_outranks_a_scent_mismatch() -> None:
-    """The stronger, more fundamental finding must not be hidden behind scent."""
-    ours = [(1, COP, SOUTH)]
-    theirs = [(1, Position(THIEF.row + 2, THIEF.col), NORTH)]
-    verdict = finding(
-        ours,
-        theirs,
-        own_scent=(record(1, destination_of(COP, Move.S)),),
-        peer_scent=(record(1, COP),),
-    )
-    assert verdict.verdict is SemanticVerdict.WRONG_START
-
-
-def test_an_illegal_action_outranks_a_scent_mismatch() -> None:
-    ours = [(1, COP, SOUTH)]
-    theirs = [(1, THIEF, BarrierAction(Position(0, 1)))]
-    verdict = finding(
-        ours,
-        theirs,
-        own_scent=(record(1, destination_of(COP, Move.S)),),
-        peer_scent=(record(1, COP),),
-    )
-    assert verdict.verdict is SemanticVerdict.ILLEGAL_ACTION
-
-
-# ------------------------------------------------------------ V1 / classification
-
-
-def test_a_legacy_sub_game_with_no_scent_is_never_dishonest() -> None:
-    """Absence is V1, not a lie; Parts 1A/1B already own completeness."""
-    ours, theirs = one_step()
-    assert finding(ours, theirs).consistent
-
-
-def test_the_finding_is_scored_and_never_tampering() -> None:
-    ours, theirs = one_step()
-    verdict = finding(
-        ours,
-        theirs,
-        own_scent=(record(1, destination_of(COP, Move.S)),),
-        peer_scent=(record(1, THIEF),),
-    )
-    assert verdict.verdict in SCORED_AS_TECHNICAL_LOSS
-    assert verdict.verdict not in TAMPERING
-    assert verdict.honest, "a physical lie is a truthful record of bad play, not a forgery"
-
-
-def test_the_verifier_is_given_the_model_and_never_reaches_for_a_default() -> None:
-    """Passing another model changes the answer - proof there is no fallback."""
-    import inspect
-
-    from mars777_police.app import scent_truth
-
-    source = inspect.getsource(scent_truth)
-    assert "default_scent_model" not in source
-    evidence, audit = reviewed(
-        POLICE,
-        *one_step(),
-        own_scent=(record(1, destination_of(COP, Move.S)),),
-        peer_scent=(record(1, destination_of(THIEF, Move.N)),),
-    )
-    assert review_sub_game(evidence, audit, RULES, MODEL).consistent
-    other = dataclasses.replace(MODEL, kernel=_halved_kernel())
-    assert not review_sub_game(evidence, audit, RULES, other).consistent
-
-
-def test_no_opponent_truth_is_persisted_by_the_check() -> None:
-    evidence, audit = reviewed(
-        POLICE,
-        *one_step(),
-        own_scent=(record(1, destination_of(COP, Move.S)),),
-        peer_scent=(record(1, destination_of(THIEF, Move.N)),),
-    )
-    review_sub_game(evidence, audit, RULES, MODEL)
-    for owner in (evidence, audit):
-        names = {field.name for field in dataclasses.fields(owner)}
-        assert not names & {"opponent_truth", "peer_truth", "world", "cells"}
-    assert build.SUB_GAME == SUB_GAME

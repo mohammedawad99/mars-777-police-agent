@@ -22,14 +22,14 @@ never because "the code was written".
 | Git hygiene | clean tree, empty index, HEAD = origin/main = ls-remote |
 | CI | green on **ubuntu-latest and windows-latest**. Ubuntu runs every test; the Windows gating suite excludes exactly one test, the documented native two-process exact-six stall (`CONCURRENCY_MODEL.md` §6), which runs in its own visible non-gating job |
 | Secret scan | 0 findings in tree and history |
-| File-size rule | every Python file ≤ **150 code lines** — see *The file-size rule* below |
+| File-size rule | every Python file ≤ **150 code lines**, enforced by `tools/check_python_loc.py` — see below |
 | Dependency rules | import-graph DAG; no forbidden import; no cross-repo import |
 
-**Status (Stage 9A-1A): PASS on every row except the file-size rule.** `uv sync
---frozen`, ruff, `ruff format --check`, `mypy --strict`, the full suite,
-coverage, `uv build`, Git hygiene, cross-OS CI, the secret scan and the
-dependency rules are all green on the exact HEAD commit. The file-size rule
-passes for `src/**` and **fails for `tests/**`.**
+**Status (Stage 9A-1B2): PASS on every row.** `uv sync --frozen`, the file-size
+gate, ruff, `ruff format --check`, `mypy --strict`, the full suite, coverage,
+`uv build`, Git hygiene, cross-OS CI, the secret scan and the dependency rules
+are all green on the exact HEAD commit. The file-size rule now passes for
+`src/**` **and** `tests/**`, and is enforced automatically rather than audited.
 
 ### The file-size rule
 
@@ -44,19 +44,27 @@ transparency, and code is **split, never compressed** to fit — semicolon
 packing or removing docstrings to pass the count is a violation of the rule's
 purpose, not compliance with it.
 
-**Measured at Stage 9A-1B1F.**
+**Measured at Stage 9A-1B2.**
 
 | Tree | Files | Over the limit |
 |---|---|---|
 | `src/**/*.py` | 248 | **0** |
-| `tests/**/*.py` | 397 | **13** |
+| `tests/**/*.py` | 430 | **0** |
 
-**Enforcement gap.** CI does **not** check this rule at all today — neither for
-`src/` nor for `tests/`. It is measured by hand at each audit. The guard to be
-added must (a) count code lines by the rule above, (b) inspect **both** trees,
-and (c) fail the build rather than warn. The thirteen test files are scheduled
-for splitting at Stage 9A-1B; the guard lands with them, because adding it first
-would simply break CI on a known, tracked debt.
+**Enforcement: automatic.** `tools/check_python_loc.py` is the one authority for
+this rule. It counts code lines exactly as defined above, inspects **both**
+trees, prints every offender in sorted order, and exits non-zero. It runs as a
+**gating** step in CI on Ubuntu **and** Windows, and the command a contributor
+runs locally is the same command:
+
+```bash
+uv run python tools/check_python_loc.py
+```
+
+The checker is itself covered by tests: exactly 150 passes, 151 fails, blank and
+comment-only lines are excluded, docstrings and inline-commented code lines are
+counted, non-Python files and files outside the two trees are ignored, and the
+failure list is sorted so the output is deterministic.
 
 ## Gate 2 — PROTOCOL GATE
 

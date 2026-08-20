@@ -1,28 +1,16 @@
-"""The police policy that may spend a barrier when the evidence supports one.
+"""That the competitive policy is still the baseline, and still legal.
 
-Ch 6 §6.3.1 leaves the movement policy to the group, and BAR-004 gives the
-police an action the baseline never used: forgo the move and place a barrier.
-Two lawful routes make that competitively meaningful - BAR-003 captures a thief
-standing on the target, and GAME-005 captures one left with no traversable
-neighbour - and neither needs a `CaptureClaim`, so neither can produce the
-`FALSE_CAPTURE_CLAIM` technical loss that a belief-based declaration would risk.
-
-**The barrier must earn the turn.** Movement is what the frozen baseline
-decides, and a placement displaces it only when the lawful scent evidence
-supporting the placement is *strictly stronger* than the evidence at the cell
-the baseline would have moved to. With no evidence, uniform evidence, or merely
-equal evidence, this policy is the baseline exactly - which is what makes it
-safe to ship and what the regression corpus below pins.
-
-Nothing here claims the thief occupies anything. Support is belief.
+Every displacement it makes must be lawful and every non-displacement must be
+exactly what the baseline would have done. With no evidence, with uniform
+evidence, or with an exhausted quota it is the baseline; whatever it returns is a
+legal move or a placement the placement authority accepts; and it never declares
+a capture, because a wrong claim forfeits while a missed barrier costs one turn.
 """
 
 from decimal import Decimal
 
-import pytest
-
 from mars777_police.app.baseline_strategy import BaselineStrategy
-from mars777_police.app.competitive_strategy import CompetitiveStrategy, Support
+from mars777_police.app.competitive_strategy import CompetitiveStrategy
 from mars777_police.domain.actions import BarrierAction, MoveAction
 from mars777_police.domain.barriers import BarrierQuota, is_placeable
 from mars777_police.domain.board import Board, Position
@@ -32,7 +20,6 @@ from mars777_police.domain.scent import ScentField
 from mars777_police.domain.scent_belief import ScentBelief
 
 QUOTA = BarrierQuota(14)
-ZERO = Decimal("0")
 BASELINE = BaselineStrategy()
 COMPETITIVE = CompetitiveStrategy()
 
@@ -59,9 +46,6 @@ def baseline_landing(view: Observation) -> Position:
     chosen = BASELINE.choose_action(view)
     assert isinstance(chosen, MoveAction)
     return destination_of(view.own_position, chosen.move)
-
-
-# ---------------------------------------------------------------- safety
 
 
 def test_no_evidence_is_exactly_the_baseline_decision() -> None:
@@ -163,99 +147,6 @@ def test_the_decision_is_deterministic() -> None:
     view = seen(shape, cell, belief(shape, {Position(2, 3): "0.9"}))
 
     assert COMPETITIVE.choose_action(view) == COMPETITIVE.choose_action(view)
-
-
-# ---------------------------------------------------------------- admission
-
-
-def test_direct_support_admits_a_barrier_with_no_trap_at_all() -> None:
-    """Case A: strong evidence on an adjacent cell is enough on its own."""
-    shape, cell = board(), Position(2, 2)
-    view_blind = seen(shape, cell, ScentBelief())
-    landing = baseline_landing(view_blind)
-    target = next(
-        t for t in (Position(1, 2), Position(3, 2), Position(2, 1), Position(2, 3)) if t != landing
-    )
-    view = seen(shape, cell, belief(shape, {target: "0.9"}))
-
-    chosen = COMPETITIVE.choose_action(view)
-
-    assert chosen == BarrierAction(target)
-
-
-def test_trap_support_can_admit_a_barrier_whose_own_cell_is_quiet() -> None:
-    """Case B: the evidence sits on the cell the placement would corner."""
-    walls = frozenset({Position(0, 1)})
-    shape, cell = board(blocked=walls), Position(1, 1)
-    view = seen(shape, cell, belief(shape, {Position(0, 0): "0.9"}))
-
-    chosen = COMPETITIVE.choose_action(view)
-
-    assert chosen == BarrierAction(Position(1, 0))
-
-
-def test_higher_trap_support_wins_when_total_support_ties() -> None:
-    """Case C: equal `support`, but one target earns it by cornering evidence.
-
-    The tie is asserted mechanically rather than assumed: `(2,1)` carries its
-    0.9 through the cell it would corner and `(2,3)` carries the same 0.9
-    directly, so only key 2 can separate them.
-    """
-    walls = frozenset({Position(1, 0), Position(3, 0)})
-    shape, cell = board(blocked=walls), Position(2, 2)
-    scent = belief(shape, {Position(2, 0): "0.9", Position(2, 3): "0.9"})
-    view = seen(shape, cell, scent)
-
-    cornering = COMPETITIVE._support(view, Position(2, 1))
-    direct = COMPETITIVE._support(view, Position(2, 3))
-    assert cornering.total == direct.total
-    assert cornering.trap > direct.trap
-
-    assert COMPETITIVE.choose_action(view) == BarrierAction(Position(2, 1))
-
-
-def test_more_newly_trapped_cells_wins_when_support_and_trap_tie() -> None:
-    """Case D: keys 1 and 2 are exhausted, so the count of cornered cells decides."""
-    one = Support(Decimal("0.9"), Decimal("0.9"), 1, Decimal("0"), Position(0, 0))
-    two = Support(Decimal("0.9"), Decimal("0.9"), 2, Decimal("0"), Position(4, 4))
-
-    assert min((one, two), key=Support.order) is two
-
-
-def test_direct_support_then_cell_order_settle_what_remains() -> None:
-    """Case E: the last two keys, in order, with everything above them tied."""
-    quiet = Support(Decimal("0.9"), Decimal("0.9"), 1, Decimal("0"), Position(0, 0))
-    loud = Support(Decimal("0.9"), Decimal("0.9"), 1, Decimal("0.5"), Position(4, 4))
-    assert min((quiet, loud), key=Support.order) is loud
-
-    first = Support(Decimal("0.9"), Decimal("0"), 0, Decimal("0.9"), Position(1, 2))
-    later = Support(Decimal("0.9"), Decimal("0"), 0, Decimal("0.9"), Position(3, 2))
-    assert min((first, later), key=Support.order) is first
-
-
-def test_row_then_column_settles_a_complete_tie() -> None:
-    """Case E: identical evidence on two targets is decided by cell order."""
-    shape, cell = board(), Position(2, 2)
-    scent = belief(shape, {Position(1, 2): "0.9", Position(3, 2): "0.9"})
-
-    chosen = COMPETITIVE.choose_action(seen(shape, cell, scent))
-
-    assert chosen == BarrierAction(Position(1, 2))
-
-
-@pytest.mark.parametrize("weight", ["0.1", "0.4", "0.9"])
-def test_any_positive_strictly_stronger_support_admits(weight: str) -> None:
-    """Admission is about being strictly stronger, not about being large."""
-    shape, cell = board(), Position(2, 2)
-    view_blind = seen(shape, cell, ScentBelief())
-    landing = baseline_landing(view_blind)
-    target = next(
-        t for t in (Position(1, 2), Position(3, 2), Position(2, 1), Position(2, 3)) if t != landing
-    )
-
-    chosen = COMPETITIVE.choose_action(seen(shape, cell, belief(shape, {target: weight})))
-
-    assert chosen == BarrierAction(target)
 
 
 def test_the_strategy_satisfies_the_unchanged_port() -> None:

@@ -6,6 +6,8 @@ import subprocess
 from collections.abc import Coroutine
 from pathlib import Path
 
+import executable_evidence as evidence
+import executable_outcome as outcome
 import executable_process as process
 import pytest
 from boot_builders import SECRET, free_port
@@ -88,14 +90,14 @@ def test_the_real_module_serves_and_stops_cleanly(tmp_path: Path) -> None:
     port, launch = free_port(), process.written_launch(tmp_path)
     child = process.spawn("mars777_police", launch, process.environment(port))
     try:
-        assert process.await_application(child, port) == process.NOT_ACCEPTABLE
+        assert outcome.await_application(child, port) == process.NOT_ACCEPTABLE
         child.send_signal(process.STOP_EVENT)
         out, err = child.communicate(timeout=30)
     finally:
         if child.poll() is None:
             child.kill()
             child.communicate(timeout=10)
-    process.assert_clean_operator_stop(child.returncode, out, err)
+    evidence.assert_clean_operator_stop(child.returncode, out, err)
 
 
 GRACEFUL = "\n".join(process.GRACEFUL_MARKERS)
@@ -115,10 +117,10 @@ def test_the_clean_operator_stop_contract_is_platform_exact(
 ) -> None:
     """Windows may report 3 after a control event; that alone is never success."""
     if clean:
-        process.assert_clean_operator_stop(status, "", err, windows=windows)
+        evidence.assert_clean_operator_stop(status, "", err, windows=windows)
         return
     with pytest.raises(AssertionError):
-        process.assert_clean_operator_stop(status, "", err, windows=windows)
+        evidence.assert_clean_operator_stop(status, "", err, windows=windows)
 
 
 def test_the_platform_stop_mapping_is_exact_and_never_sigint_on_windows() -> None:

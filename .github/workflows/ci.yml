@@ -27,6 +27,9 @@ jobs:
       - name: Sync (frozen)
         run: uv sync --frozen
 
+      - name: File size (<= 150 code lines, src and tests)
+        run: uv run python tools/check_python_loc.py
+
       - name: Ruff lint
         run: uv run ruff check .
 
@@ -34,7 +37,7 @@ jobs:
         run: uv run ruff format --check .
 
       - name: Mypy (strict)
-        run: uv run mypy --strict src
+        run: uv run mypy --strict
 
       # Linux runs every test there is, including the two-process exact-six
       # series. Windows runs the same suite minus the one documented native

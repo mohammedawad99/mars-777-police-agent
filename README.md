@@ -251,12 +251,19 @@ so there is no second configuration schema.
 ## 8. Testing and quality
 
 ```bash
+uv run python tools/check_python_loc.py   # every file <= 150 code lines
 uv run ruff check .
 uv run ruff format --check .
-uv run mypy --strict src
+uv run mypy --strict
 uv run pytest --cov --cov-report=term-missing
 uv build
 ```
+
+The first command is the file-size gate. It counts code lines the way the
+professional-software guideline defines them - blank lines and comment-only
+lines excluded, docstrings counted - across **`src/` and `tests/` alike**, and
+it is the same command CI runs, so a size failure is never a surprise at push
+time.
 
 The coverage gate is `fail_under = 90` in `pyproject.toml`; the suite currently
 measures **100%**. CI runs all of the above on Ubuntu and Windows for every push.

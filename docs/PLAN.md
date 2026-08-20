@@ -118,6 +118,8 @@ one vocabulary:
 
 - **Stage 9A-1B1F - configuration version compatibility.** Closed the distinction the version work had left open: two peers agreeing on a configuration version is not the same as either of them supporting it. `domain/config_schema.py` states what this build can represent, and `NegotiatedConfig` refuses anything else at construction - so an unsupported revision is not a value this code produces, whether it arrives from an operator's launch document, a peer's proposal or the interoperability backend's local document. No configuration digest changed, no wire field was added, no peer software version is consulted, and there is no fallback. **IMPLEMENTED / VERIFIED.**
 
+- **Stage 9A-1B2 - test modularity and automatic size enforcement.** Split every test file that exceeded the guideline's 150-code-line rule - thirteen in the police repository, twelve in the thief - by **responsibility** rather than by line range, extracting shared doubles and builders into modules named for what they build. Then turned the rule from a documented claim into a gating CI check: `tools/check_python_loc.py` counts code lines exactly as the guideline defines them, inspects `src/` **and** `tests/`, and runs on Ubuntu and Windows. No production code changed - the coverage totals are byte-for-byte the entry ones - and no test was lost, weakened, skipped or merged away. **IMPLEMENTED / VERIFIED.**
+
 ## 2. Where the project actually stands
 
 **IMPLEMENTED / VERIFIED.** Deterministic game mechanics; the protocol state
@@ -151,9 +153,6 @@ and the collaborator grant.
 
 ## 3. Forward plan
 
-- **Stage 9A-1B2 - test modularity.** Split the test files that exceed the
-  guideline's 150-code-line rule, then add the CI guard that measures both
-  trees. `PLANNED`.
 - **Stage 9A-1C - external-call control.** A gatekeeper for **provider** calls
   (tunnel API, and reporting when it exists): rate limits from versioned
   configuration, a bounded FIFO queue with backpressure, retries and call

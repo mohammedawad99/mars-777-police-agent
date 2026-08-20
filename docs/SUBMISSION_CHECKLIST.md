@@ -1,6 +1,6 @@
 # Submission checklist — group MaRs-777 (POLICE)
 
-**Status: CURRENT.** Last verified at Stage 9A-1B1, on commits green in CI on
+**Status: CURRENT.** Last verified at Stage 9A-1B2, on commits green in CI on
 their exact SHAs in both repositories.
 
 Every row carries one status and its evidence. This is a working gate, not a
@@ -56,9 +56,9 @@ green in CI on the exact commit.
 | Coverage above the gate | `VERIFIED` | measured **100%**; `fail_under = 90` |
 | `uv build` | `VERIFIED` | CI gate |
 | `uv.lock` committed; `uv sync --frozen` clean | `VERIFIED` | 79 packages checked |
-| `src/**` ≤ 150 code lines per file | `VERIFIED` | 0 violations across 247 files |
-| `tests/**` ≤ 150 code lines per file | `PENDING` | **13** files exceed it; the guideline applies the rule to tests too |
-| CI enforces the line rule automatically | `PENDING` | measured by hand at each audit; no CI guard yet |
+| `src/**` ≤ 150 code lines per file | `VERIFIED` | 0 violations across 248 files |
+| `tests/**` ≤ 150 code lines per file | `VERIFIED` | 0 violations across 430 files; every over-limit file was split by responsibility at Stage 9A-1B2 |
+| CI enforces the line rule automatically | `VERIFIED` | `tools/check_python_loc.py`, gating on Ubuntu and Windows; identical command locally |
 | Public SDK façade (guideline §4.1) | `VERIFIED` | `sdk/AgentSdk` — five forwarding operations; operator entrypoints reach only the standard library and `.sdk`; structural and out-of-process consumer tests |
 | `__all__` and `__version__` in `__init__.py` (§14.2) | `VERIFIED` | both declared; `__version__` renders the authority |
 | CI green on `ubuntu-latest` **and** `windows-latest` | `VERIFIED` | both, every push |

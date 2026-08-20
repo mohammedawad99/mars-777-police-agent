@@ -1,13 +1,9 @@
-"""The five capture routes, played by two real agents and read back off disk.
+"""What a played sub-game leaves on disk, and how it replays from those bytes.
 
-Each case runs one whole sub-game between two composed agents over the real
-FastMCP transport, closes it through the production closure, and then opens the
-official `log_<game_id>_g01.json` that was written. Nothing is asserted against
-the runtime that produced the file - only against the bytes.
-
-The thief plays no turn in these sub-games. That is deliberate: the questions
-are all the police's, and a role that never moved still has a cell, which is
-exactly what the replay reconstructs from the config it locked.
+Each case plays a real turn and then reads the file back: an ordinary turn is a
+question nobody asked, a true declaration replays as caught, a false one replays
+as the claimant's own fault, and an illegal move is written as a technical loss
+with the evidence that proves it.
 """
 
 import asyncio
@@ -17,107 +13,29 @@ from pathlib import Path
 import pytest
 import r7_builders as r7
 import test_two_agent_series as live
-from r16_builders import GAME_ID, GROUP_A, GROUP_B
+from r16_builders import GAME_ID
+from semantic_disk_harness import play, run, semantic, steps_of, transcript
 
 from mars777_police.app.artifact_store import log_name
 from mars777_police.app.capture_values import CaptureAnswer, CaptureClaim
 from mars777_police.app.protocol_values import FinalAuditVerdict
 from mars777_police.app.sealed_record_values import ActorRole
 from mars777_police.app.semantic_values import SemanticVerdict
-from mars777_police.app.turn_cursor import TurnCursor
 from mars777_police.domain.actions import BarrierAction, MoveAction
 from mars777_police.domain.board import Position
 from mars777_police.domain.rules import Move
 from mars777_police.domain.terminal import Outcome
-from mars777_police.series_runtime import SeriesRuntime
 
 POLICE, THIEF = ActorRole.POLICE, ActorRole.THIEF
 COP, HIDDEN = r7.CONFIG.board_and_agents.cop_start, r7.CONFIG.board_and_agents.thief_start
 SOUTH = r7.ACTIONS[POLICE]
 Step = tuple[object, CaptureClaim | None]
-
-
-def steps_of(*steps: Step) -> tuple[Step, ...]:
-    """The police's whole sub-game: one action, and one declaration or none."""
-    return steps
-
-
 TRAP = steps_of(
     (SOUTH, None),
     (BarrierAction(Position(1, 0)), None),
     (BarrierAction(COP), None),
 )
 """Walk off the corner, then close both of the thief's ways out (GAME-005)."""
-
-
-async def play(
-    a: SeriesRuntime, b: SeriesRuntime, steps: tuple[Step, ...], legal: bool = True
-) -> list[CaptureAnswer]:
-    """One real sub-game of police turns, closed and written by production."""
-    answers: list[CaptureAnswer] = []
-    async with live.started(a, b):
-        for series, group in ((a, GROUP_A), (b, GROUP_B)):
-            r7.open_config(series, group, 1)
-        r7.lock_round(a, b)
-        for series in (a, b):
-            series.lock_config(r7.CONFIG)
-        a.open_sub_game(r7.evidence_for(POLICE, 1), r7.audit_for(THIEF, GROUP_B, 1))
-        b.open_sub_game(r7.evidence_for(THIEF, 1), r7.audit_for(POLICE, GROUP_A, 1))
-        cell, truth, walls = COP, None, ()
-        for step, (action, claim) in enumerate(steps, start=1):
-            cursor = TurnCursor(1, step)
-            a.composition.runtime_context.bind_turn(
-                r7.turn_for(POLICE, cursor, r7.own_truth(cell, walls))
-            )
-            b.composition.runtime_context.bind_turn(r7.turn_for(THIEF, cursor, truth))
-            outcome = (
-                await r7.one_turn(a, b, POLICE, cursor, action, claim, cell, walls)
-                if legal
-                else await r7.one_unvalidated_turn(a, b, POLICE, cursor, action, cell, walls)
-            )
-            answers.append(outcome.capture)
-            cell, walls = r7.moved(cell, action), r7.placed(walls, action)
-            truth = b.composition.runtime_context.current_turn().truth
-            for series in (a, b):
-                series.close_turn(series.composition.runtime_context.current_turn())
-        for series in (a, b):
-            await series.composition.peer_runner.send_final_nonce_reveal()
-        for series in (a, b):
-            await series.composition.peer_runner.send_audit_disclosure()
-        for series in (a, b):
-            series.close_sub_game(Outcome.CAPTURE)
-    return answers
-
-
-def run(root: Path, steps: tuple[Step, ...]) -> tuple[dict[str, object], list[CaptureAnswer]]:
-    """Play the case and return the police's official log, read back from disk."""
-    a, b = live.pair_for(root)
-    answers = asyncio.run(play(a, b, steps))
-    written = root / "police" / log_name(GAME_ID, 1)
-    return json.loads(written.read_text(encoding="utf-8")), answers
-
-
-def own_reveals(log: dict[str, object]) -> list[dict[str, object]]:
-    """Every reveal the police wrote for itself, in step order."""
-    entries = log["entries"]
-    assert isinstance(entries, list)
-    return [
-        entry for entry in entries if entry["phase"] == "reveal" and entry["role"] == POLICE.value
-    ]
-
-
-def transcript(log: dict[str, object]) -> list[tuple[object, object]]:
-    """The capture transcript exactly as the official file records it."""
-    return [(one["capture_claim"], one["capture_answer"]) for one in own_reveals(log)]
-
-
-def semantic(log: dict[str, object]) -> dict[str, object]:
-    """The finding the replay wrote into the audit block."""
-    audit = log["audit"]
-    assert isinstance(audit, dict)
-    found = audit["semantic"]
-    assert isinstance(found, dict)
-    return found
 
 
 def test_an_ordinary_turn_is_written_as_a_question_nobody_asked(tmp_path: Path) -> None:

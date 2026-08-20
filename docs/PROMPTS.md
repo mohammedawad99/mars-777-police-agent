@@ -1,6 +1,6 @@
 # Prompt Register - group MaRs-777
 
-> **Status: CURRENT.** Backfilled through Stage 9A-1B1F.
+> **Status: CURRENT.** Backfilled through Stage 9A-1B2.
 > **Purpose:** The prompt-engineering log. It records the supervising-reviewer
 > prompts that drove each stage — their goal, their binding constraints, what
 > the AI got wrong, what the human correction was, and what shipped.
@@ -158,7 +158,7 @@ contain no secrets.
 
 ---
 
-## 2. Prompt engineering log (Stages 5 — 9A-1B1F)
+## 2. Prompt engineering log (Stages 5 — 9A-1B2)
 
 Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text.
 
@@ -443,6 +443,39 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
   reported at the operator boundary as a local refusal naming the version. The
   frozen configuration digest vector is unchanged.
 
+### Stage 9A-1B2 — test modularity and the 150-line gate
+
+- **Goal.** Clear the known test-file size debt and make the rule enforceable
+  instead of auditable.
+- **Constraints.** Split by responsibility, never `part1`/`part2`. No production
+  change of any kind. No test semantics lost - same assertions, same parameter
+  sets, same marks, same skips. Docstrings **count** as code lines: a checker
+  that excluded them would reward deleting documentation to pass a size gate.
+- **Method, stated honestly.** The splits are a **refactor of existing tests**,
+  so no RED was manufactured for moving code. The **checker** is new behaviour
+  and was written RED-first: its rule tests (blank lines, comment-only lines,
+  inline comments, docstrings, decorators, multi-line expressions, exactly 150,
+  151) and its scanner tests (both trees, non-Python ignored, sorted output)
+  all failed before it existed.
+- **Finding.** The checker's own "this repository is clean" test was RED for the
+  whole stage and only went green when the last file was split - which is the
+  most useful test in the batch, because it is the one CI will run.
+- **Finding.** Two helpers were shared across the new files and had to be
+  extracted rather than duplicated (`drop`, `empty_chain`); both lost their
+  leading underscore because they became imported names. Two module pairs would
+  otherwise have imported each other, so their shared doubles moved into
+  modules of their own instead.
+- **Finding.** `r7_builders` had twenty-nine consumers. Rather than repoint all
+  of them, the implementations were grouped into three modules by what they
+  build and the original module became the family's explicit re-export surface -
+  the same boundary pattern the production SDK uses.
+- **Correction.** An automated import-linker bound a name called `play` to the
+  wrong module - two helper modules defined that name. Caught by the suite, not
+  by review, and fixed by importing from the module that actually owns it.
+- **Result.** Police 13 and thief 12 over-limit files became zero; every original
+  test function is present and mapped; production coverage totals are unchanged;
+  the gate is now automatic on both operating systems.
+
 ## 3. Practices this project actually learned
 
 1. **Prove it as a process.** Every in-process proof in this project hid at
@@ -465,3 +498,6 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
 9. **Agreement is not compatibility.** Two parties holding identical bytes is a
    different fact from either party being able to run them, and only one of the
    two was ever checked.
+10. **A rule nobody checks is a claim.** The 150-line rule was published,
+    audited by hand three times, and still drifted. It stopped drifting the day
+    a command returned a non-zero status.
