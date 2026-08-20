@@ -132,6 +132,8 @@ one vocabulary:
 
 - **Stage 9A-2CF - exact Gmail attachment-only contract.** Closed one contradiction before `REPORT-001` could be final. The shipped message was parsed rather than described, and it really did carry a `text/plain` covering body of report identifiers - which `PRD07-FR-143` forbids as *"an arbitrary email-body representation"* and `PRD07-AC-032` requires a reporter to refuse. The locked PRD was right, so the correction went to the code: the message is now `multipart/mixed` with exactly **one** leaf part, `application/json`, and no textual part in any form. The attachment's SHA-256 is unchanged. Appendix A's `MIMEText(body)` was classified `ILLUSTRATIVE_REFERENCE` rather than promoted to a requirement. Nothing else moved - token bucket, DOS detector, 429, OAuth, recipient, subject, eligibility, Gatekeeper and the exact-fourteen artifact set are untouched. **IMPLEMENTED / VERIFIED.**
 
+- **Stage 9B-0 - competitive research laboratory and baseline freeze.** Built the court before the race: a research harness that decides nothing itself - legality and both trajectories come from the same `Replay` the live audit uses, capture from `domain.terminal`, the score from Appendix F Table 17 - and swept the two frozen production strategies over seven legal opponent families, six configuration families and three disjoint seed banks, 6,048 games per role, entirely locally. Metrics, statistics and **promotion gates were frozen before any candidate existed**, including a numeric definition of material regression. Two source facts shaped the corpus: `grid_size` is an Appendix F **MINIMUM** of 7x7, so the 5x5 board the stage suggested is **not source-permitted** and is excluded; and the counted path never issues a capture claim, so the only reachable captures are `BAR-003` and `GAME-005` - a harness granting contact capture would have flattered the police with wins production cannot obtain. **The first benchmark run was discarded**: measured directly, the seed changed the outcome in 0 of 42 cells, so 64 seeds were replaying one game and the intervals were meaningless; seeds now select the opening cells that Table 13 leaves NEGOTIABLE, and 26 of 42 cells vary. **No production strategy was changed.** **IMPLEMENTED / VERIFIED.**
+
 ## 2. Where the project actually stands
 
 **IMPLEMENTED / VERIFIED.** Deterministic game mechanics; the protocol state
@@ -155,9 +157,14 @@ not implementable: an actual message needs an operator credential and an explici
 one-time authorisation, so `LIVE_GMAIL_SEND: NOT_PERFORMED` is the correct and
 current state.
 
-**PLANNED — research.** The systematic parameter study, the analysis notebook and
-the result charts. Deliberately not started, so that no learning curve is
-fabricated.
+**IMPLEMENTED / VERIFIED — the research laboratory.** The systematic parameter
+study and the result charts landed at Stage 9B-0, over real local experiments.
+No learning curve is fabricated: this project trains nothing, so the figures are
+labelled for what they are - performance by opponent family, by configuration
+family and by revision - and never as a training loss.
+
+**PLANNED — candidate work.** Stage 9B-1 designs Police candidates against the
+frozen baseline evidence. The gates they must pass are already written down.
 
 **PARTNER_DEPENDENT.** A counted match against another group's agent. Every run
 so far used either a synthetic distinct-group non-counted opponent or the

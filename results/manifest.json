@@ -1,0 +1,42 @@
+{
+  "analysis": "analysis-1",
+  "baseline": {
+    "commit": "9aca53d2b26a2c512abb6b4800d02e871d7220e5",
+    "package": "mars777_police",
+    "role": "police",
+    "source_sha256": "c708d903ecf7ceea764743cffa53a88762162e75c66de005c230e6e3ed000fe5",
+    "sources": "app/competitive_strategy.py,app/baseline_strategy.py",
+    "strategy": "CompetitiveStrategy"
+  },
+  "config_corpus_sha256": "24fe07211fc682ae7108cd005524e6fd34f9c609dd9d7d3f780af9d4e57baf50",
+  "opponent_corpus": {
+    "families": [
+      "random_legal",
+      "center_mobility",
+      "evasive",
+      "pursuit",
+      "barrier_aware",
+      "scent_aware",
+      "adversarial_corner"
+    ],
+    "observation_budget": "board, own cell, own quota, own folded scent belief",
+    "sha256": "efe5098bb26173a25ed312d4ebfd9e556271337f0072c0d2272b77ccb17a2547"
+  },
+  "reproduce": "uv run python -m research.bench_main all --out results",
+  "schema": "research-1",
+  "seed_banks": {
+    "development": {
+      "sha256": "a4c515e45a8597e706c6e9f934dc5cf2298c42609793918973965f696ffac873",
+      "size": 64
+    },
+    "holdout": {
+      "sha256": "ea6355b7269fd834b0ce283a2798e50ab7e35d4cda1a339876014370808942d7",
+      "size": 64
+    },
+    "stress": {
+      "sha256": "d66f25a4b671ebc6b13e1c0fc0787ea733d9f2ab4b4b955a57b74208ed64fa97",
+      "size": 16
+    }
+  },
+  "seed_namespace": "mars777-research/v1/"
+}

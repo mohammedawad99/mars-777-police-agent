@@ -38,7 +38,12 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["src", "tools"]
+files = ["src", "tools", "research"]
+# Resolve `mars777_police` from source rather than from the installed wheel: the
+# distribution ships no `py.typed` marker, so an importer would otherwise be told
+# the package is untyped. Adding that marker is a packaging change and belongs to
+# the packaging slice, not to a research stage.
+mypy_path = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -49,7 +54,7 @@ markers = [
 
 [tool.coverage.run]
 branch = true
-source = ["mars777_police"]
+source = ["mars777_police", "research"]
 
 [tool.coverage.report]
 show_missing = true

@@ -29,6 +29,10 @@ client_secret*.json
 *.p12
 ngrok.yml
 
+# --- Research scratch: committed evidence is explicit, everything else is not ---
+results/scratch/
+results/**/raw_*.csv
+
 # --- Runtime state and logs (regenerated per game, never tracked) ---
 runtime/logs/
 runtime/state/

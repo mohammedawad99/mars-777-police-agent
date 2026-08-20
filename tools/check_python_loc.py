@@ -28,7 +28,7 @@ from pathlib import Path
 LIMIT = 150
 """The guideline's maximum code lines per Python file."""
 
-TREES = ("src", "tests")
+TREES = ("src", "tests", "research")
 """The two trees the rule covers: production and tests alike."""
 
 

@@ -1,6 +1,6 @@
 # Prompt Register - group MaRs-777
 
-> **Status: CURRENT.** Backfilled through Stage 9A-2CF.
+> **Status: CURRENT.** Backfilled through Stage 9B-0.
 > **Purpose:** The prompt-engineering log. It records the supervising-reviewer
 > prompts that drove each stage — their goal, their binding constraints, what
 > the AI got wrong, what the human correction was, and what shipped.
@@ -158,7 +158,7 @@ contain no secrets.
 
 ---
 
-## 2. Prompt engineering log (Stages 5 — 9A-2CF)
+## 2. Prompt engineering log (Stages 5 — 9B-0)
 
 Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text.
 
@@ -654,6 +654,32 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
   and a regression test that fails on any future banner, greeting or duplicated
   JSON.
 
+### Stage 9B-0 — the competitive research laboratory
+
+- **Goal.** Build and freeze the experiment system that will decide whether any
+  future strategy candidate deserves promotion. Change no strategy.
+- **Constraints.** All benchmark computation local; GitHub Actions is scarce and
+  is not the benchmark engine. Freeze metrics and promotion gates *before* any
+  candidate exists. Do not fabricate machine learning.
+- **Finding (the stage's own suggestion was not source-legal).** A 5×5 board was
+  proposed for the config corpus; Appendix F Table 13 makes `grid_size` a
+  **MINIMUM** of 7×7 and `domain.config_model` refuses anything smaller. The
+  corpus is 7, 9, 11 and the exclusion is recorded with its provenance.
+- **Finding (the counted path is narrower than the rulebook).** `SubGameDriver`
+  never passes a `claim`, and `StrategyPort` cannot express one - so contact
+  capture is unreachable in production, and only `BAR-003` and `GAME-005`
+  remain. A harness that granted contact capture would have measured a different
+  game and flattered the police.
+- **Finding (the first benchmark was measuring nothing).** It reported win rates
+  of exactly 0 and exactly 1/3 with tight intervals. Measured directly, the seed
+  changed the outcome in **0 of 42** cells: every policy is a deterministic
+  function of position, so 64 seeds replayed one game. Seeds now select the
+  opening cells Table 13 leaves NEGOTIABLE, and 26 of 42 cells vary. The
+  discarded run is recorded rather than quietly replaced.
+- **Result.** 6,048 games per role, frozen gates, eight figures, zero new
+  dependencies, and a police baseline win rate of 5.3% that is now a measurement
+  instead of an impression.
+
 ## 3. Practices this project actually learned
 
 1. **Prove it as a process.** Every in-process proof in this project hid at
@@ -713,3 +739,10 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
     restated only what the attachment already carried, so it could add nothing
     and could still be the non-JSON text a grader trips over. When a part earns
     nothing, its remaining risk is its whole value.
+20. **A number with a confidence interval can still be measuring nothing.** The
+    first benchmark had 6,048 observations and 42 distinct games. Before
+    trusting an interval, check that the thing you varied actually varies the
+    outcome - the check is three lines and it invalidated a whole run.
+21. **Freeze the gates while you still do not know the answer.** Promotion
+    thresholds written after seeing a candidate's numbers are not thresholds,
+    they are a description of that candidate.

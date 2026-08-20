@@ -274,6 +274,16 @@ repository and green in CI on the exact commit.
       are now met.
 - [ ] **Expected-result reporting** (guideline §6.4). Store the automated
       pass/fail report rather than relying on CI history alone.
+- [x] **Competitive research laboratory** (guideline §9.1/§9.3) - **DONE at
+      Stage 9B-0.** `research/` runs deterministic legal games through the
+      production authorities - `Replay` for legality and both trajectories,
+      `domain.terminal` for capture and the end event, `domain.scoring` for the
+      Appendix F score - and sweeps seven opponent families over six
+      source-legal configuration families and three disjoint seed banks. Metrics
+      and promotion gates are frozen **before** any candidate exists, the
+      holdout bank is separate by construction, and every figure regenerates
+      from committed rows by one command. **No production strategy changed.**
+      `docs/research/COMPETITIVE_RESEARCH.md`.
 
 ### Research (Stage 9B)
 

@@ -102,8 +102,12 @@ Stated precisely, because "done" and "not done" are both misleading here.
   a friendly, explicitly non-counted mode;
 - **enforcement** of the negotiated rate limits — the terms are negotiated,
   validated and locked, but no component applies them at call time;
-- the **systematic parameter study, analysis notebook and charts** — deliberately
-  deferred to Stage 9B rather than fabricated.
+- a **strategy candidate that beats the frozen baseline** — Stage 9B-0 built and
+  froze the laboratory that would judge one; no candidate exists yet;
+- the **analysis notebook** — every statistic is a tested function and one
+  command regenerates every table and figure, so the guideline's *"or
+  equivalent"* is met; a Jupyter surface on top is deferred rather than added as
+  a large optional dependency.
 
 The project is therefore neither "foundation only" nor "complete", and this
 section is the authoritative boundary.
@@ -296,7 +300,25 @@ report was eligible but the provider did not accept it, so reporting is
 `REPORTING_INCOMPLETE`. A delivery failure never changes who won — the result
 artifact is untouched. Full guide: `docs/reference/REPORTING.md`.
 
-### 6.7 Command-line options
+### 6.7 Reproducing the competitive research
+
+The benchmark that will judge any future strategy candidate runs entirely
+locally and never on CI:
+
+```bash
+uv run python -m research.bench_main all --out results
+```
+
+That plays every seed bank against the whole opponent and configuration corpus
+(6,048 games for this role, about twelve minutes on one core), writes the result
+rows, regenerates every table and figure, measures decision latency and rewrites
+the manifest. There is no network, no credential and no live game.
+
+**Nothing about the shipped strategy changed to make this possible**, and the
+metrics and promotion gates were frozen before any candidate existed. Full
+guide: `docs/research/COMPETITIVE_RESEARCH.md`.
+
+### 6.8 Command-line options
 
 | Option | Where | Meaning |
 |---|---|---|
@@ -311,8 +333,9 @@ artifact is untouched. Full guide: `docs/reference/REPORTING.md`.
 | `--evidence-root` | friendly runs | where development evidence is written |
 | `--png` | `gui_main replay` | write the picture to a file instead of opening a window |
 | `--result` | `report_main` | the agreed result artifact to report |
+| `--out` | `research.bench_main` | where benchmark rows, tables and figures are written |
 
-### 6.8 Exit status
+### 6.9 Exit status
 
 | Code | Meaning |
 |---|---|
@@ -548,6 +571,7 @@ stored value, so the two cannot drift.
 | `docs/reference/REPLAY_VIEWER.md` | how to replay and verify a finished game log |
 | `docs/reference/GUI.md` | the live and replay windows: what they may show, and why they cannot affect a match |
 | `docs/reference/REPORTING.md` | what is reported, to whom, when, and the token-bucket gate in front of it |
+| `docs/research/COMPETITIVE_RESEARCH.md` | the benchmark corpus, the frozen baselines, the metrics and the promotion gates |
 | `docs/GUIDELINE_ALIGNMENT.md` | alignment with the professional-software excellence guideline |
 | `docs/COSTS.md` | measured resource use |
 | `docs/SUBMISSION_CHECKLIST.md` | what still gates delivery |

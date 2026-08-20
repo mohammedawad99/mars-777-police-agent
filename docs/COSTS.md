@@ -138,6 +138,13 @@ and cost a whole gating run.
 - **Measure before optimising.** The gateway hop was measured, found to be four
   thousandths of a percent of the turn budget, and left alone.
 - **Small artifacts.** Canonical documents and digests, never recordings.
+- **The research laboratory added no dependency either.** Figures are drawn with
+  the deterministic renderer the GUI stage already ships, so there is no
+  `matplotlib`, no `numpy`, no `pandas` and no Jupyter in the runtime or in CI.
+  A benchmark sweep is pure CPU: **6,048 games per role in ~12 minutes** on one
+  developer core, ~0.12 s per game, peak memory in the tens of megabytes, and
+  about 2 MB of committed result rows, tables and figures per repository.
+  Benchmarks never run on GitHub Actions.
 - **Reporting is one provider call per game.** A completed game produces exactly
   one report: one OAuth refresh and one `users.messages.send`, both inside the
   Gatekeeper. There is no polling, no batching and no periodic re-send, so the

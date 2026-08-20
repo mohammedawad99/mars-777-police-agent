@@ -80,6 +80,8 @@ green in CI on the exact commit.
 | Architecture documentation | `VERIFIED` | 21 documents under `docs/architecture/` |
 | Architecture **diagrams** | `PENDING` | no diagram of any kind is committed yet |
 | Prompt book | `VERIFIED` | `docs/PROMPTS.md` backfilled through Stage 9A-0, honestly labelled |
+| Systematic parameter study / result visualisation (guideline §9.1/§9.3) | `VERIFIED` | `research/` + `results/`: 6,048 games per role over seven opponent families, six source-legal configuration families and three disjoint seed banks; eight figures regenerated from committed rows by `uv run python -m research.bench_main all --out results`. `docs/research/COMPETITIVE_RESEARCH.md` |
+| Results-analysis notebook (guideline §9.2) | `PARTIAL` | the guideline's *"or equivalent"*: every statistic is a tested function and one command regenerates every table and figure. A Jupyter surface is deliberately deferred rather than added as a large optional dependency |
 | Guideline alignment document | `VERIFIED` | `docs/GUIDELINE_ALIGNMENT.md`, written against the actual v3.00 PDF |
 | Cost analysis | `VERIFIED` | `docs/COSTS.md`, measured |
 | Decision log | `VERIFIED` | `docs/DECISIONS.md` |

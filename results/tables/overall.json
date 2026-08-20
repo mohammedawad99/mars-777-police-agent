@@ -1,0 +1,55 @@
+{
+  "baseline": {
+    "commit": "9aca53d2b26a2c512abb6b4800d02e871d7220e5",
+    "package": "mars777_police",
+    "role": "police",
+    "source_sha256": "c708d903ecf7ceea764743cffa53a88762162e75c66de005c230e6e3ed000fe5",
+    "sources": "app/competitive_strategy.py,app/baseline_strategy.py",
+    "strategy": "CompetitiveStrategy"
+  },
+  "games": 6048,
+  "overall": {
+    "capture_rate": {
+      "ci_high": 0.058201,
+      "ci_low": 0.046627,
+      "mean": 0.052579,
+      "median": 0.0,
+      "n": 6048
+    },
+    "mean_barriers": {
+      "ci_high": 3.467923,
+      "ci_low": 3.33168,
+      "mean": 3.397487,
+      "median": 3.0,
+      "n": 6048
+    },
+    "mean_score": {
+      "ci_high": 5.873016,
+      "ci_low": 5.699405,
+      "mean": 5.78869,
+      "median": 5.0,
+      "n": 6048
+    },
+    "mean_steps": {
+      "ci_high": 35.153935,
+      "ci_low": 34.732474,
+      "mean": 34.934524,
+      "median": 35.0,
+      "n": 6048
+    },
+    "survival_rate": {
+      "ci_high": 0.953373,
+      "ci_low": 0.941964,
+      "mean": 0.947421,
+      "median": 1.0,
+      "n": 6048
+    },
+    "win_rate": {
+      "ci_high": 0.058201,
+      "ci_low": 0.046627,
+      "mean": 0.052579,
+      "median": 0.0,
+      "n": 6048
+    }
+  }
+}
