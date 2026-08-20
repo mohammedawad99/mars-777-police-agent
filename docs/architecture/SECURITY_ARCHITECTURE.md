@@ -102,3 +102,22 @@ no header, no URL, no provider payload and no credential enters a
 address, and a test asserts that the committed file contains none of those words.
 The tunnel credential remains the operator's own agent configuration, which this
 project never reads, and the peer key remains environment-only and unprintable.
+
+## Replay Viewer input handling (Stage 9A-2A)
+
+The viewer is the one component that reads files this project did not write, so
+its reader is a boundary rather than a convenience.
+
+- **Containment after resolution.** `--root` confines every path, and the check
+  runs on the resolved path, so a symlink pointing outside the root is refused by
+  the same rule that refuses `../`.
+- **Bounded reads.** A file above 8 MB is refused before it is read; a complete
+  six-game artifact set is a few hundred kilobytes.
+- **Parsing only.** `json` and nothing else: no `pickle`, no `eval`, no `exec`,
+  and nothing the evidence names is ever imported or executed.
+- **Refusals are sentences.** Every malformed, missing or contradictory input
+  ends in a `ReplayError` naming what failed; a traceback is never the user
+  interface.
+- **No secret is shown.** The viewer projects disclosed evidence — cells,
+  barriers, actions, hints, commitments and nonced verification results — and
+  never key material, a private belief or an internal runtime object.

@@ -861,3 +861,53 @@ so no rate limit, queue or backpressure can stand between this agent and putting
 its tunnel away. That is the smallest safe design — the existing direct
 idempotent path — rather than a reserved-capacity lane that would have to be
 correct under cancellation.
+
+## 11. The Replay Viewer (Stage 9A-2A)
+
+**Classification: user-facing projection over existing authorities.** Not an
+engine. `REPLAY-001` asks for a viewer that replays a game log and
+cryptographically verifies it; Appendix E rule 20 makes it a threshold for
+approving audits and for submission.
+
+### What it is made of
+
+```
+app/replay_values.py     the public immutable projection, and the four statuses
+app/replay_log.py        the strict inverse of `log_document.finalized_log`
+app/replay_crypto.py     per-step digest correspondence, asked of the port
+app/replay_board.py      the textual board a human reads
+app/replay_session.py    the ordered, navigable sequence of whole steps
+infra/replay_files.py    the defensive reader: containment, size, JSON only
+transport/codec_replay.py a logged action back to its domain value
+compose_replay.py        two files plus the commitment authority
+replay_main.py           the operator command
+```
+
+### What it delegates, and to whom
+
+| Question | Authority |
+|---|---|
+| could this turn have happened here? | `app/semantic_replay.Replay` — the engine the live audit used |
+| is this move legal? | `domain.rules`, `domain.barriers` |
+| does the digest correspond? | `CommitmentPort` → `protocol/audit_commitment` |
+| is this configuration the logged one? | `protocol/config_lock.config_sha256` |
+| what shape is a logged action? | `transport/codec_turn.decode_action` |
+
+A structural test asserts the viewer computes no digest of its own (`hashlib`,
+`hexdigest`, `sha256(` all absent), imports no rule module, and that the command
+reaches nothing but the standard library and `.sdk`.
+
+### The four statuses, and why there are four
+
+`Verified OK` and `TAMPERED` are `REPLAY-002`'s own words and are used
+literally. `NOT_CHECKABLE` exists because a commitment whose nonce was never
+disclosed to this side is not verified and is not tampered — collapsing it into
+either would be a false claim. `NOT_APPLICABLE` covers records that carry no
+commitment at all.
+
+### What it will not replay
+
+Development (friendly) evidence, by construction: a contribution carries settled
+facts only and its own contract states it *"deliberately cannot carry a board, a
+position, a barrier set or a nonce"*. The viewer refuses it with that reason
+rather than reconstructing a board it was never given.

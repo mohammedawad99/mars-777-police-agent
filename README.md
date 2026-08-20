@@ -203,7 +203,21 @@ uv run python -m mars777_police.kit_gateway_main \
 The full operator procedure, including what to check before and after the match,
 is `docs/reference/MATCH_RUNBOOK.md`.
 
-### 6.4 Command-line options
+### 6.4 Replaying a finished game
+
+Any grader or operator can replay a sub-game from the artifacts alone and see it
+verified step by step:
+
+```bash
+uv run python -m mars777_police.replay_main \
+    --log <log artifact> --config <config artifact> [--summary] [--step N]
+```
+
+Exit status `0` means everything checked verified, `2` that the evidence could
+not be read, and `3` that the replay **found** something. Full guide:
+`docs/reference/REPLAY_VIEWER.md`.
+
+### 6.5 Command-line options
 
 | Option | Where | Meaning |
 |---|---|---|
@@ -217,7 +231,7 @@ is `docs/reference/MATCH_RUNBOOK.md`.
 | `--ngrok` | `kit_gateway_main` | path to the operator's ngrok executable |
 | `--evidence-root` | friendly runs | where development evidence is written |
 
-### 6.5 Exit status
+### 6.6 Exit status
 
 | Code | Meaning |
 |---|---|
@@ -407,6 +421,7 @@ stored value, so the two cannot drift.
 | `docs/architecture/` | 21 architecture documents — boundaries, dependency rules, state, security, concurrency, quality gates |
 | `docs/spec/` | the book extraction: requirement catalog, appendix crosswalks, numeric inventory, conflict register |
 | `docs/reference/MATCH_RUNBOOK.md` | the operator procedure for a real match |
+| `docs/reference/REPLAY_VIEWER.md` | how to replay and verify a finished game log |
 | `docs/GUIDELINE_ALIGNMENT.md` | alignment with the professional-software excellence guideline |
 | `docs/COSTS.md` | measured resource use |
 | `docs/SUBMISSION_CHECKLIST.md` | what still gates delivery |
@@ -473,7 +488,8 @@ git-ignored path. See `docs/SOURCES.md`.
 ## 19. Known limitations
 
 1. No counted match against another group's agent has been played.
-2. No GUI, no user-facing Replay Viewer, no Gmail reporting.
+2. No GUI and no Gmail reporting. The Replay Viewer exists as of Stage
+   9A-2A; the GUI screenshot `DOC-001` asks for is still pending.
 3. The Gmail reporting rate-limiter the book requires (`REPORT-003`) has no
    surface yet: the Gatekeeper exists and is proven, but there is no sender.
 4. No parameter study, notebook or charts yet (Stage 9B).

@@ -122,6 +122,8 @@ one vocabulary:
 
 - **Stage 9A-1C - versioned provider gatekeeper and rate-limit authority.** Established the source provenance first: the book's Gatekeeper and its 429 rule live in the **Gmail reporting** section (Appendix E rule 28: *"implement a token-bucket rate-limiter for sending reports to Gmail"*), while the excellence guideline's §5.1 is the generic one. Built `config/rate_limits.json` - versioned, validated at load, refusing an unsupported version with no fallback - and one Gatekeeper owning rate windows, concurrency, a bounded FIFO with backpressure, bounded retries with 429/`Retry-After` handling capped by configuration, and per-call observation that records shape and never payload. The one provider surface that exists today, the tunnel Agent API read, is composed through it. **Peer gameplay is held outside by a structural test**, because a generic resend would re-send a turn the opponent already applied. Cleanup was audited and needs no lane at all: no teardown path makes a provider HTTP call. **IMPLEMENTED / VERIFIED.**
 
+- **Stage 9A-2A - user-facing cryptographic Replay Viewer.** Traced `REPLAY-001` to Appendix E rule 20 - *"build a viewer app to replay and verify the game log"*, a threshold for approving audits and for submission - and `REPLAY-002` to the two literal words it requires on screen. Built the viewer **over** the authorities that already existed rather than beside them: legality from `domain.rules`, trajectory from the same `semantic_replay` engine the live audit used, digests from the commitment port. It reads an official log and the config artifact it names, refuses the pair if the config does not hash to the logged `config_sha256`, walks the sub-game step by step with a textual board, and shows `Verified OK` / `TAMPERED` / `NOT_CHECKABLE` / `NOT_APPLICABLE` per record beside a separate semantic verdict. Reachable through the SDK and as `uv run python -m <pkg>.replay_main`. Development evidence is refused with its reason: a friendly contribution carries no board by contract. **IMPLEMENTED / VERIFIED.**
+
 ## 2. Where the project actually stands
 
 **IMPLEMENTED / VERIFIED.** Deterministic game mechanics; the protocol state
@@ -155,8 +157,10 @@ and the collaborator grant.
 
 ## 3. Forward plan
 
-- **Stage 9A-2 - PRD-07 delivery.** Replay Viewer, GUI, Gmail reporting.
-  `PLANNED`.
+- **Stage 9A-2B - the live GUI.** `GUI-001/002/003`, consuming the same replay
+  projection rather than a second one. `PLANNED`.
+- **Stage 9A-2C - Gmail reporting.** `REPORT-001/002/003`, registering one
+  policy with the Gatekeeper that already exists. `PLANNED`.
 - **Stage 9B - competitive optimisation and research.** Parameter study,
   sensitivity analysis, notebook, charts, and strategy tuning measured against a
   benchmark. `PLANNED`.

@@ -156,5 +156,6 @@ would break the protocol.
 ## 7. Where this document must be updated
 
 - when Stage 9B produces the parameter study, notebook and charts (§9.1–§9.3);
-- when a GUI and its screenshots exist (§10, §2.1);
+- when a GUI and its screenshots exist (§10, §2.1) — the terminal Replay
+  Viewer added at Stage 9A-2A is deliberately **not** counted as that screenshot;
 - at the submission freeze (§8.2 tag, §17).

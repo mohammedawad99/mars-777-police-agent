@@ -1,6 +1,6 @@
 # Submission checklist — group MaRs-777 (POLICE)
 
-**Status: CURRENT.** Last verified at Stage 9A-1C, on commits green in CI on
+**Status: CURRENT.** Last verified at Stage 9A-2A, on commits green in CI on
 their exact SHAs in both repositories.
 
 Every row carries one status and its evidence. This is a working gate, not a
@@ -39,7 +39,7 @@ green in CI on the exact commit.
 | Game rules — movement, barriers, capture, scoring, terminal | `VERIFIED` | deterministic engine, 100% covered |
 | Exactly six sub-games per counted series | `VERIFIED` | structurally enforced; a seventh sub-game is not representable |
 | Public network / tunnel | `VERIFIED` | demonstrated end to end on one stable public route with proven teardown |
-| **Replay Viewer** (`REPLAY-001`) | `PENDING` | an audit-time replay **engine** exists; a user-facing **viewer** does not |
+| **Replay Viewer** (`REPLAY-001`, `REPLAY-002`) | `VERIFIED` | `uv run python -m mars777_police.replay_main --log … --config …`; per-step `Verified OK` / `TAMPERED`, textual board, `docs/reference/REPLAY_VIEWER.md` |
 | **GUI** (`GUI-001/002/003`) | `PENDING` | not implemented |
 | **Gmail reporting** (`REPORT-001`) | `PENDING` | not implemented |
 | **Rate-limit enforcement for provider calls** | `VERIFIED` | `app/gatekeeper.py` + versioned `config/rate_limits.json`; the tunnel Agent API is composed through it |

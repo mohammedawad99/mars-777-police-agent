@@ -30,6 +30,14 @@ EXPECTED = {
     "PeerProtocolError",
     "LocalDefectError",
     "PublicIngressError",
+    "LEGEND",
+    "ReplayCheck",
+    "ReplayError",
+    "ReplaySession",
+    "ReplayStep",
+    "ReplaySummary",
+    "ReplayTurn",
+    "board_lines",
 }
 
 OPERATIONS = {
@@ -38,6 +46,8 @@ OPERATIONS = {
     "write_contribution",
     "compose_public_gateway",
     "verify_config_artifact",
+    "open_replay",
+    "verify_replay",
 }
 
 

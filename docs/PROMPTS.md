@@ -1,6 +1,6 @@
 # Prompt Register - group MaRs-777
 
-> **Status: CURRENT.** Backfilled through Stage 9A-1C.
+> **Status: CURRENT.** Backfilled through Stage 9A-2A.
 > **Purpose:** The prompt-engineering log. It records the supervising-reviewer
 > prompts that drove each stage — their goal, their binding constraints, what
 > the AI got wrong, what the human correction was, and what shipped.
@@ -158,7 +158,7 @@ contain no secrets.
 
 ---
 
-## 2. Prompt engineering log (Stages 5 — 9A-1C)
+## 2. Prompt engineering log (Stages 5 — 9A-2A)
 
 Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text.
 
@@ -508,6 +508,34 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
   met, §5.1/§5.2/§5.3 met for every surface where generic control is safe, and a
   structural test in both directions.
 
+### Stage 9A-2A — the cryptographic Replay Viewer
+
+- **Goal.** Deliver the viewer `REPLAY-001` requires, over existing authorities.
+- **Constraints.** No second replay engine - no board movement, barrier
+  legality, scent physics, capture truth, commitment hashing or outcome scoring
+  of its own. Reachable through the SDK. No GUI. No fabricated screenshot.
+- **Finding (the words are the requirement).** `REPLAY-002` does not ask for "a
+  status"; it asks the viewer to show **`Verified OK`** and **`TAMPERED`**. Those
+  are the literals in the code, and the log's own audit block already used the
+  first one - the viewer and the audit now say the same word because they read
+  the same authority.
+- **Finding (four statuses, not two).** A commitment whose nonce was never
+  disclosed to this side is neither verified nor tampered. Collapsing it into
+  `Verified OK` would be a false claim and into `TAMPERED` a defamatory one, so
+  `NOT_CHECKABLE` is preserved end to end, exactly as the evidence-layered audit
+  already did.
+- **Finding (development evidence cannot be replayed, and the code says so).**
+  The friendly contribution's own docstring states it *"deliberately cannot carry
+  a board, a position, a barrier set or a nonce"*. So the viewer refuses it with
+  that reason rather than supporting a shape it cannot reconstruct.
+- **Correction.** A first structural guard forbade the substring `sha256` in
+  viewer modules and failed on `config_sha256` - a **field name**, not a
+  computation. The guard now forbids `hashlib`, `hexdigest` and `sha256(`, which
+  is what it always meant.
+- **Result.** Nine small modules, a command with a three-value exit contract, a
+  textual board, containment-checked reads, and 79 tests over a sub-game that
+  production really played.
+
 ## 3. Practices this project actually learned
 
 1. **Prove it as a process.** Every in-process proof in this project hid at
@@ -537,3 +565,6 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
     rate-limiter is about Gmail sends. Building one for tunnel calls is good
     engineering and closes a different clause; calling it REPORT-003 would have
     been a false claim with a real test behind it.
+12. **Sometimes the requirement names the output string.** `Verified OK` and
+    `TAMPERED` are not a status vocabulary to design; they are the words the
+    grader is told to look for.

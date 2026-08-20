@@ -18,8 +18,10 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from .. import compose_backend, compose_gateway, compose_series, compose_verify
+from .. import compose_backend, compose_gateway, compose_replay, compose_series, compose_verify
 from ..app.config_artifact_values import ConfigArtifactContent
+from ..app.replay_session import ReplaySession
+from ..app.replay_values import ReplaySummary
 from ..kit_backend import KitRoleBackend
 from ..kit_backend_boot import KitBackendBoot
 from ..kit_public_launcher import KitPublicLauncher
@@ -63,3 +65,11 @@ class AgentSdk:
     def verify_config_artifact(self, document: Mapping[str, object]) -> ConfigArtifactContent:
         """Return what a stored config artifact proves, or refuse it."""
         return compose_verify.verify_stored_config(document)
+
+    def open_replay(self, log: Path, config: Path, root: Path | None = None) -> ReplaySession:
+        """Return a navigable replay of one sub-game log and its configuration."""
+        return compose_replay.open_replay(log, config, root)
+
+    def verify_replay(self, log: Path, config: Path, root: Path | None = None) -> ReplaySummary:
+        """Replay one sub-game and return what the replay establishes."""
+        return compose_replay.open_replay(log, config, root).summary()

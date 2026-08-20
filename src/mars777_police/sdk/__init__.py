@@ -24,6 +24,15 @@ package is an implementation detail and may move without notice.
 
 from ..app.kit_messages import KitRole
 from ..app.kit_preset import ExternalMode
+from ..app.replay_board import LEGEND, board_lines
+from ..app.replay_session import ReplaySession
+from ..app.replay_values import (
+    ReplayCheck,
+    ReplayError,
+    ReplayStep,
+    ReplaySummary,
+    ReplayTurn,
+)
 from ..identity import ROLE
 from ..kit_backend import KitRoleBackend
 from ..kit_backend_boot import KitBackendBoot
@@ -47,6 +56,7 @@ from .errors import (
 )
 
 __all__ = [
+    "LEGEND",
     "ROLE",
     "SOFTWARE_VERSION",
     "AgentSdk",
@@ -60,10 +70,17 @@ __all__ = [
     "PeerProtocolError",
     "PublicGatewayRequest",
     "PublicIngressError",
+    "ReplayCheck",
+    "ReplayError",
+    "ReplaySession",
+    "ReplayStep",
+    "ReplaySummary",
+    "ReplayTurn",
     "RoleBackendRequest",
     "SdkError",
     "SettingsError",
     "SoftwareVersionError",
     "StrictSeriesRequest",
     "TransportFailureError",
+    "board_lines",
 ]
