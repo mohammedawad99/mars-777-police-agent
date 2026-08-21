@@ -841,3 +841,17 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
 43. **A frozen architectural guard outranks a convenient fix.** Selecting the
     strategy by role inside composition would have worked and was reverted: the
     repositories are role-symmetric by design, and the guard said so.
+44. **Close a gap where it actually is.** The notebook gap was real; the fix was
+    not "add Jupyter to the lock" but "add a notebook that computes nothing and
+    keep the tournament lock minimal". Closing a checkbox and closing a gap are
+    different jobs.
+45. **Read the requirement's own conditional.** `DOC-001` asks for learning
+    curves *if RL is used*. Weeks of worry about a missing learning curve were
+    answered by four words in the catalog.
+46. **Verify a licence, do not recall one.** Every licence in the dependency
+    inventory was read from installed package metadata; the pinned third-party
+    kit's status is recorded as *not asserted*, because it was not verified.
+47. **Draw only what exists.** Every box in the architecture diagrams names a
+    real module or tool, so a diagram that goes stale fails review instead of
+    quietly misleading a reader. Partner- and operator-dependent edges are
+    dashed and labelled rather than drawn as though they had happened.

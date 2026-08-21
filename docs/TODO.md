@@ -388,3 +388,52 @@ reporting with its own rate-limited surface (9A-2C, exact attachment-only MIME
 contract closed at 9A-2CF). What remains of that block is a **live authorised
 send**, which is an operator action rather than an implementation gap. See the
 README's *Implementation status* section for the exact boundary._
+
+
+---
+
+## Final classification — Stage 9A-3
+
+The list above is the project's history. This is its current state, in four
+buckets, so nothing reads as an open development backlog when it is not one.
+
+### CLOSED — completed project work
+
+Protocol, Step-0 and authentication · configuration negotiation and lock ·
+commit/reveal · movement, barriers, scent and hints · both audit gates ·
+exact-six autonomous series · the four artifact families · public-network play ·
+Replay Viewer · live and replay GUI · provider rate limiting · Gmail reporting
+and its attachment-only contract · the competitive research laboratory · the
+sealed holdout · candidate exploration including two rejections · validation ·
+stress · the one-shot final holdout · the production promotion · packaging
+(`py.typed`, six console scripts) · the research notebook · sensitivity
+analysis · architecture diagrams · audit-gate, expected-results and dependency
+evidence.
+
+### DEFERRED — PARTNER_DEPENDENT
+
+- [ ] Friendly interop with another group's live agent.
+- [ ] A counted match, and a counted result agreement with a real opponent.
+
+Blocked on a counterparty, not on this repository. Proved so far against the
+pinned reference kit and our own public loopback, and never presented as more.
+
+### OPERATOR_DEPENDENT
+
+- [ ] One authorised live Gmail send. Implemented, rate-limited, and tested end
+      to end against a fake transport; a real send needs an explicit
+      `MARS777_RUN_LIVE_GMAIL=1` plus a token and a recipient.
+      **`LIVE_GMAIL_SEND: NOT_PERFORMED`.**
+
+### FINALIZATION — Stage 9C only
+
+- [ ] Hostile final audit.
+- [ ] Push the outstanding local commits in one CI run.
+- [ ] Create the final submission tag. **No tag exists yet.**
+
+### Deliberately not doing
+
+- Further strategy optimisation. The holdout is consumed; tuning against it now
+  would invalidate the evidence that justified the promotion.
+- A per-grid weighting candidate — the highest overfitting risk in the study,
+  and it stays untried on purpose.

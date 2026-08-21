@@ -140,6 +140,34 @@ Verify the installation:
 uv run pytest -q
 ```
 
+### Installing the built distribution
+
+```bash
+uv build
+uv pip install dist/mars_777_police_agent-1.0-py3-none-any.whl
+```
+
+The wheel ships a PEP 561 `py.typed` marker, so a consumer of the SDK gets the
+same strict types this project is checked with rather than being told the
+package is untyped. It also installs six console scripts:
+
+| command | equivalent module form |
+|---|---|
+| `mars777-agent` | `python -m mars777_police` |
+| `mars777-backend` | `python -m mars777_police.kit_backend_main` |
+| `mars777-gateway` | `python -m mars777_police.kit_gateway_main` |
+| `mars777-gui` | `python -m mars777_police.gui_main` |
+| `mars777-replay` | `python -m mars777_police.replay_main` |
+| `mars777-report` | `python -m mars777_police.report_main` |
+
+Both forms work and take identical arguments; the examples below use the module
+form because it also works straight from a source checkout without installing.
+The `--help` banner names the module form for that reason.
+
+**The research commands are not installed.** `research/` is development
+evidence, lives outside the distributed package, and a tournament agent never
+needs it to play.
+
 ## 5. Environment setup
 
 Copy the committed template and fill it in locally:
@@ -314,9 +342,33 @@ That plays every seed bank against the whole opponent and configuration corpus
 rows, regenerates every table and figure, measures decision latency and rewrites
 the manifest. There is no network, no credential and no live game.
 
-**Nothing about the shipped strategy changed to make this possible**, and the
-metrics and promotion gates were frozen before any candidate existed. Full
-guide: `docs/research/COMPETITIVE_RESEARCH.md`.
+The candidate study that produced the shipped barrier rule replays committed
+scenarios rather than sweeping fresh ones:
+
+```bash
+uv run python -m research.candidate_main screen     --out results
+uv run python -m research.candidate_main full       --candidate C4 --out results
+uv run python -m research.candidate_main validation --out results
+uv run python -m research.candidate_main stress     --out results
+uv run python -m research.candidate_main freeze     --out results
+uv run python -m research.candidate_main figures    --out results
+uv run python -m research.candidate_main evidence   --out results
+```
+
+**There is deliberately no command that re-runs the final holdout.** It was
+sealed before any candidate existed and evaluated exactly once; the runner lives
+behind its own module and an explicit confirmation flag, and refuses a second
+run for the same commitment and candidate.
+
+For a narrated read-through — baseline, the two rejected candidates, validation,
+stress, the one-shot holdout and the promotion — open
+`notebooks/competitive_research.ipynb`. It renders as text on GitHub and needs no
+Jupyter to read; it computes nothing of its own, and every figure it shows
+regenerates with the commands above.
+
+**Metrics and promotion gates were frozen before any candidate existed.** Full
+guide: `docs/research/COMPETITIVE_RESEARCH.md`; evidence index:
+`docs/research/EVIDENCE_INDEX.md`; sensitivity: `docs/research/SENSITIVITY.md`.
 
 ### 6.8 Command-line options
 
@@ -439,6 +491,18 @@ Architecture: `docs/architecture/API_BOUNDARIES.md`.
 
 ## 11. Strategies
 
+**On "learning curves".** `DOC-001` component (4) asks for learning curves
+**if reinforcement learning is used** (`docs/spec/REQUIREMENT_CATALOG.md`, PDF
+p.97/134/148, book 81/118/132, Appendix E-42). No reinforcement learning is
+used here — nothing is trained, there is no model, no parameter update, no epoch,
+no gradient and no reward signal — so that component is **conditionally not
+applicable**, and inventing a loss curve would be a fabricated result.
+
+What is provided instead, voluntarily, is the **strategy research progression**:
+one point per candidate revision in the order it was evaluated, each a separate
+replayed evaluation against a frozen baseline, with the rejected candidates left
+visible. See `results/figures/candidates/strategy_research_progression.png`.
+
 Three strategy artefacts exist behind one `StrategyPort`, so swapping them
 changes no other code.
 
@@ -477,9 +541,11 @@ opponent is unknown and the seven opponent families are models, not the field.
 It is not Bayes, not reinforcement learning, and not a claim of optimality.
 
 **Deliberately absent.** No learning of any kind is implemented, so **no
-learning curve is presented**. Producing one would require the systematic
-parameter study that is scheduled for Stage 9B; inventing one now would be a
-fabricated result.
+learning curve is presented** — see the ruling at the top of this section. The
+systematic parameter study it once waited on has since been done (Stage 9B-0
+onward) and is reported in `docs/research/COMPETITIVE_RESEARCH.md`; it measures
+revisions of a deterministic policy, which is not training and is not labelled
+as such.
 
 ## 12. Screenshots and demonstrations
 
@@ -587,7 +653,14 @@ stored value, so the two cannot drift.
 | `docs/reference/REPLAY_VIEWER.md` | how to replay and verify a finished game log |
 | `docs/reference/GUI.md` | the live and replay windows: what they may show, and why they cannot affect a match |
 | `docs/reference/REPORTING.md` | what is reported, to whom, when, and the token-bucket gate in front of it |
-| `docs/research/COMPETITIVE_RESEARCH.md` | the benchmark corpus, the frozen baselines, the metrics and the promotion gates |
+| `docs/research/COMPETITIVE_RESEARCH.md` | the benchmark corpus, the frozen baselines, the metrics, the promotion gates and every result |
+| `docs/research/EVIDENCE_INDEX.md` | one index of every research artifact, so no number has to be hunted for |
+| `docs/research/SENSITIVITY.md` | post-hoc sensitivity to board size, quota, horizon, opponent family, threshold and latency |
+| `notebooks/competitive_research.ipynb` | the research story as a narrated read-through; explains and displays, computes nothing |
+| `docs/architecture/DIAGRAMS.md` | system, component, sequence and deployment diagrams (Mermaid source) |
+| `docs/reference/AUDIT_GATES.md` | what Gate 1 (commitments) and Gate 2 (semantics) check, and their evidence |
+| `docs/reference/EXPECTED_TEST_RESULTS.md` | every quality command, its expected result and the last measured state |
+| `docs/reference/DEPENDENCIES.md` | dependency and licence inventory, read from installed metadata |
 | `docs/GUIDELINE_ALIGNMENT.md` | alignment with the professional-software excellence guideline |
 | `docs/COSTS.md` | measured resource use |
 | `docs/SUBMISSION_CHECKLIST.md` | what still gates delivery |
