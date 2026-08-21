@@ -107,4 +107,4 @@ def test_the_notebook_documents_how_to_reproduce_it_without_jupyter() -> None:
     prose = "\n".join(_cells("markdown"))
 
     assert "research.candidate_main figures" in prose
-    assert "not in the committed lockfile" in prose
+    assert "optional dependency group" in prose

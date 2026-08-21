@@ -40,23 +40,22 @@ tree), no ORM, no logging framework, no LLM SDK.
 Ranges rather than exact pins: these do not affect a played game, and a newer
 linter finding a real defect is a benefit rather than a reproducibility risk.
 
-## Optional `notebook` group — declared, not locked
+## Optional `notebook` group — locked, but not installed by default
 
 | package | constraint | licence | purpose |
 |---|---|---|---|
 | `jupyter` | `>=1.1,<2.0` | BSD-3-Clause | executing `notebooks/competitive_research.ipynb` |
 | `nbconvert` | `>=7.16,<8.0` | BSD-3-Clause | re-executing it in place |
 
-**Deliberately absent from `uv.lock`.** Declaring the group records the intent
-and the version range; locking it would pull a large stack into the tournament
-lockfile for something no agent needs to play a game. `uv sync --frozen`
-therefore never installs it, and the notebook's figures and tables regenerate
-without Jupyter at all. Install with `uv sync --group notebook` when you want to
-execute it.
+**Present in `uv.lock`, absent from a default install.** The group is resolved
+in the lockfile, so `uv sync --group notebook` reproduces exactly one set of
+versions rather than whatever PyPI offers today. It is **not** a default group,
+so plain `uv sync --frozen` - what CI runs and what a tournament agent needs -
+installs only the three runtime dependencies and never a notebook stack.
+`uv lock --check` passes, so `pyproject.toml` and the lock agree.
 
-*(These two licences are the projects' published terms; unlike the rows above
-they are not verified from a local install, because the group is not installed
-here. Stated as what they are.)*
+The notebook's figures and tables also regenerate without Jupyter at all, so
+nothing in the research evidence depends on this group being installed.
 
 ## Python
 
