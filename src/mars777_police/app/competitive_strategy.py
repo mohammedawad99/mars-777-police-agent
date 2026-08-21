@@ -14,18 +14,39 @@ claimant, while a barrier that simply misses is an ordinary legal action that
 produces no finding at all. Belief may therefore fund a barrier; it may never
 fund a declaration.
 
-**The barrier must earn the turn.** `BaselineStrategy` stays the frozen
-reference and decides the move; a placement displaces that move only when the
-evidence supporting it is *strictly* stronger than the evidence at the cell the
-baseline would have moved to. Empty, uniform or merely equal evidence therefore
-reproduces the baseline exactly - which is what makes this safe to ship and what
-the regression corpus pins.
+**The gate is an absolute floor, and this is the measured correction.** Until
+Stage 9B-2 a placement had to be supported *strictly more strongly* than the
+cell the mover was already stepping onto. Instrumenting the belief showed that
+rule blocked **334 of 375** belief-carrying decisions against a well-located
+evader (mean evidence at that landing cell **0.822**), while blocking at most
+8.2% against every other opponent family: the policy walked onto the hottest
+square and then forbade itself the barrier. A hot landing cell is evidence to
+act, not a reason to abstain, so the landing cell is no longer consulted and the
+floor is absolute.
+
+**The score is an expectation over the lawful belief**, not the single strongest
+route:
+
+    value(t) = belief[t]                          # BAR-003 would capture there
+             + SUM belief[c] * TRAP_BONUS         # c newly cornered: GAME-005
+             + SUM belief[c]                      # c adjacent to t: less room
+
+`TRAP_BONUS = 10` because cornering ends the game while a mobility reduction
+only shrinks it, and ten is an order of magnitude above any single cell, which
+Appendix F Table 16 caps at **0.9**. The floor is that same FIXED source
+strength: act when the expected evidence is worth a full emission at its source.
+
+**`BaselineStrategy` still decides every move.** That is a measured result, not
+an omission: a belief-directed mover was evaluated as its own candidate and
+**collapsed**, losing every game the shipped policy had won, and the ablation
+that kept this mover beat the one that replaced it. Empty belief therefore
+reproduces the baseline exactly.
 
 **Two families, one gate, no weighted score.** Moves and placements are never
-mixed into a single tuple: the admission gate decides *whether* a placement
-competes, and a separate lexicographic order decides *which*. Every comparison
-is exact - `Decimal` from the scent authority and integers - so no coefficient
-is invented and no platform can disagree.
+mixed into a single tuple: the gate decides *whether* a placement competes, and
+a separate lexicographic order decides *which*. Every comparison is exact -
+`Decimal` from the scent authority and integers - so no coefficient is invented
+and no platform can disagree.
 
 Nothing here claims the thief occupies anything, and nothing here decides
 legality: candidates come from `is_placeable` and `legal_moves`, and
@@ -34,39 +55,38 @@ legality: candidates come from `is_placeable` and `legal_moves`, and
 
 from dataclasses import dataclass, field
 from decimal import Decimal
+from typing import Final
 
 from ..domain.actions import BarrierAction, PhysicalAction
 from ..domain.barrier_effect import newly_trapped
 from ..domain.barriers import is_placeable
 from ..domain.board import Position
 from ..domain.observation import Observation
-from ..domain.rules import destination_of
 from .baseline_strategy import BaselineStrategy
 
 NO_SUPPORT = Decimal("0")
 """The evidence a cell nobody has been near carries."""
 
+CONSERVATIVE: Final[Decimal] = Decimal("0.9")
+"""The floor: one full emission at its source (Appendix F Table 16, FIXED)."""
 
-@dataclass(frozen=True, slots=True)
-class Support:
-    """What one candidate placement has going for it, in ranking order."""
+TRAP_BONUS: Final[Decimal] = Decimal(10)
+"""Cornering ends the game; crowding only shrinks it."""
 
-    total: Decimal
-    trap: Decimal
-    cornered: int
-    direct: Decimal
-    target: Position
 
-    def order(self) -> tuple[Decimal, Decimal, int, Decimal, int, int]:
-        """The lexicographic key, negated where a larger value should win."""
-        return (
-            -self.total,
-            -self.trap,
-            -self.cornered,
-            -self.direct,
-            self.target.row,
-            self.target.col,
-        )
+def believed_cells(observation: Observation) -> tuple[tuple[Position, Decimal], ...]:
+    """Every cell carrying lawful evidence, with its intensity. Empty when silent."""
+    if not observation.scent.has_evidence:
+        return ()
+    board = observation.board
+    found: list[tuple[Position, Decimal]] = []
+    for row in range(board.rows):
+        for col in range(board.cols):
+            cell = Position(row + board.start_index, col + board.start_index)
+            intensity = observation.scent.intensity_at(cell)
+            if intensity > NO_SUPPORT:
+                found.append((cell, intensity))
+    return tuple(found)
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,18 +96,12 @@ class CompetitiveStrategy:
     baseline: BaselineStrategy = field(default_factory=BaselineStrategy)
 
     def choose_action(self, observation: Observation) -> PhysicalAction:
-        """The baseline move, unless a placement is better supported than it is."""
-        move = self.baseline.choose_action(observation)
-        landing = destination_of(observation.own_position, move.move)  # type: ignore[union-attr]
-        admitted = [
-            support
-            for target in self._targets(observation)
-            if (support := self._support(observation, target)).total > NO_SUPPORT
-            and support.total > observation.scent.intensity_at(landing)
-        ]
-        if not admitted:
-            return move
-        return BarrierAction(min(admitted, key=Support.order).target)
+        """Place when the expected evidence clears the floor, otherwise move."""
+        mass = believed_cells(observation)
+        best = self._best_target(observation, mass)
+        if best is None:
+            return self.baseline.choose_action(observation)
+        return BarrierAction(best)
 
     def _targets(self, observation: Observation) -> tuple[Position, ...]:
         """The lawful placements this policy is willing to consider.
@@ -104,17 +118,38 @@ class CompetitiveStrategy:
             if is_placeable(board, actor, neighbour, observation.quota)
         )
 
-    def _support(self, observation: Observation, target: Position) -> Support:
-        """How strongly the lawful evidence backs placing a barrier on *target*.
+    def _best_target(
+        self, observation: Observation, mass: tuple[tuple[Position, Decimal], ...]
+    ) -> Position | None:
+        """The most valuable placement that clears the floor, or nothing."""
+        if not mass:
+            return None
+        scored = [
+            (self._value(observation, mass, target), target)
+            for target in self._targets(observation)
+        ]
+        admitted = [one for one in scored if one[0] >= CONSERVATIVE]
+        if not admitted:
+            return None
+        return min(admitted, key=lambda one: (-one[0], one[1].row, one[1].col))[1]
 
-        Two independent routes, and the stronger one speaks: the evidence on the
-        target itself (BAR-003 would capture a thief standing there) and the
-        strongest evidence on any cell the placement would newly corner
-        (GAME-005 would capture a thief left there). Neither asserts occupancy.
-        """
-        direct = observation.scent.intensity_at(target)
-        cornered = newly_trapped(
-            observation.board, observation.own_position, target, observation.quota
+    def _value(
+        self,
+        observation: Observation,
+        mass: tuple[tuple[Position, Decimal], ...],
+        target: Position,
+    ) -> Decimal:
+        """Expected worth of placing on *target*, against the lawful belief only."""
+        trapped = set(
+            newly_trapped(observation.board, observation.own_position, target, observation.quota)
         )
-        trap = max((observation.scent.intensity_at(cell) for cell in cornered), default=NO_SUPPORT)
-        return Support(max(direct, trap), trap, len(cornered), direct, target)
+        neighbours = set(observation.board.orthogonal_neighbours(target))
+        total = NO_SUPPORT
+        for cell, weight in mass:
+            if cell == target:
+                total += weight
+            if cell in trapped:
+                total += weight * TRAP_BONUS
+            elif cell in neighbours:
+                total += weight
+        return total

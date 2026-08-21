@@ -11,10 +11,9 @@ from pathlib import Path
 import pytest
 from research.candidates.registry import BUILDERS, CANDIDATES
 from research.compare import compare, replay, replay_all
+from research.records import read_csv
 from research.screening import SHARE_PER_MILLE, screened
 from test_research_records import record
-
-from mars777_police.app.competitive_strategy import CompetitiveStrategy
 
 
 def test_each_candidate_has_a_stable_identity_that_tracks_its_source() -> None:
@@ -73,16 +72,36 @@ def test_a_paired_comparison_refuses_scenarios_that_do_not_line_up() -> None:
         compare(left, right)
 
 
-def test_a_replay_reproduces_the_baseline_when_handed_the_baseline() -> None:
-    """The pairing machinery must be a no-op for the policy that produced the rows."""
-    from research.records import read_csv
+def test_the_committed_baseline_rows_predate_the_promotion_and_say_so() -> None:
+    """The pairing machinery is a no-op for the policy that produced the rows.
 
+    That policy is no longer `CompetitiveStrategy`: Stage 9B-2 promoted the C4
+    barrier rule into it, so the shipped class now decides differently from the
+    rows committed at Stage 9B-0. The rows remain valid historical evidence -
+    every paired comparison in the research record was measured against them -
+    and they carry the identity of the strategy that produced them, which is
+    what makes that still checkable.
+    """
     root = Path(__file__).resolve().parents[2] / "results" / "baseline"
     if not (root / "games_development.csv").exists():
         pytest.skip("no committed development rows in this working tree")
     rows = tuple(read_csv(root / "games_development.csv"))[:12]
 
-    again = replay_all(CompetitiveStrategy(), rows, ("CompetitiveStrategy", "d" * 64))
+    assert {one.strategy for one in rows} == {"CompetitiveStrategy"}
+    assert len({one.strategy_sha256 for one in rows}) == 1
+
+
+def test_a_replay_is_a_no_op_for_the_policy_that_produced_its_rows() -> None:
+    """Determinism of the pairing machinery, on rows this policy really produced."""
+    from research.candidates.registry import BUILDERS
+
+    root = Path(__file__).resolve().parents[2] / "results" / "candidates"
+    if not (root / "full_C4.csv").exists():
+        pytest.skip("no committed candidate rows in this working tree")
+    rows = tuple(read_csv(root / "full_C4.csv"))[:12]
+    identity = (rows[0].strategy, rows[0].strategy_sha256)
+
+    again = replay_all(BUILDERS["C4"](), rows, identity)
 
     assert [one.outcome for one in again] == [one.outcome for one in rows]
     assert [one.barriers_placed for one in again] == [one.barriers_placed for one in rows]

@@ -17,6 +17,7 @@ from research import bench_main, candidate_main, freeze, validation
 ROOT = Path(__file__).resolve().parents[2]
 SEAL = ROOT / "results" / "final_holdout.json"
 COMMITMENT = "99bd72e102d8a31e0b0937813166d87afd13034f5e191d834002df9e13358f47"
+CANDIDATE_SHA = "1cc0a20d40680874a337dd3f7f2e552924763e42f291066990cb0dc8385c2884"
 
 
 def test_no_working_sweep_can_reach_the_sealed_bank() -> None:
@@ -89,17 +90,32 @@ def test_the_seal_still_reports_no_results() -> None:
     assert "scenarios" not in document
 
 
-def test_no_final_holdout_result_file_exists() -> None:
+def test_exactly_one_final_holdout_result_exists_and_it_is_the_one_shot() -> None:
+    """Updated at Stage 9B-2, when the set was legitimately spent.
+
+    Before the evaluation this asserted that **no** result existed. The property
+    that matters now is that there is exactly **one**, produced by the single
+    official run - a second file would mean the holdout had been replayed.
+    """
     produced = sorted(
         one.name
-        for one in (ROOT / "results").rglob("*")
+        for one in (ROOT / "results").rglob("*.json")
         if one.is_file() and "final_holdout" in one.name and one.name != "final_holdout.json"
     )
+    rows = sorted(one.name for one in (ROOT / "results").rglob("*final_holdout*.csv"))
 
-    assert produced == []
+    assert produced == ["final_holdout_result.json"]
+    assert rows == [], "the sealed set has no committed row dump; only its summary"
 
 
-def test_the_freeze_records_that_the_holdout_was_never_evaluated() -> None:
+def test_the_freeze_still_records_the_state_it_was_frozen_in() -> None:
+    """The freeze is history and is not rewritten by what happened afterwards.
+
+    It was written before the evaluation and says so. The record of the
+    evaluation lives in its own one-shot result file; editing the freeze to
+    match later events would destroy the evidence that the candidate really was
+    fixed beforehand.
+    """
     path = ROOT / "results" / "candidates" / "freeze_C4.json"
     if not path.exists():
         pytest.skip("no committed freeze in this working tree")
@@ -107,4 +123,5 @@ def test_the_freeze_records_that_the_holdout_was_never_evaluated() -> None:
 
     assert document["final_holdout_evaluated"] is False
     assert document["production_promotion"] is False
+    assert document["candidate_sha256"] == CANDIDATE_SHA
     assert document["final_holdout"]["results_present"] is False

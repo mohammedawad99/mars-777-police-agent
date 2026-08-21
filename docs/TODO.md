@@ -331,6 +331,22 @@ repository and green in CI on the exact commit.
       **~49%** locally with no gate weakened. **Local commit only — no push, no
       Actions run.**
 
+- [x] **One-shot final holdout and production promotion** (Stage 9B-2). The
+      sealed set was verified against the 9B-1B freeze, then evaluated **once**
+      behind an explicit confirmation, with every refusal (commitment moved,
+      candidate moved, result exists, seal already reports results, atomic
+      publish, overwrite) proved on **fake seals only**. Result over **N=2,226**:
+      baseline 153 wins → C4 **312**, gains/losses **196/37**, paired
+      **+0.0714, 95% CI [+0.0593, +0.0863]**, zero legality failures. **All 7
+      families and all 6 configurations improved**, each interval excluding zero;
+      the predeclared `random_legal` risk finished **+0.0409 [+0.0094, +0.0723]**.
+      **FINAL_HOLDOUT_PASS** → C4 promoted into `CompetitiveStrategy` as the
+      smallest semantically-equal change, proved equivalent to the frozen
+      candidate on a 3,125-state matrix, four wall layouts and committed
+      development/validation/stress games — **the sealed set was not replayed**.
+      Promoted latency p95 2.28 ms (`grid9`) / 3.34 ms (`grid11`). Thief
+      unchanged.
+
 ### Research (Stage 9B)
 
 - [ ] Systematic parameter study and sensitivity analysis.
@@ -340,8 +356,9 @@ repository and green in CI on the exact commit.
       *(9B-0 produced the baseline charts and 9B-1A the candidate charts; the
       progression figure is labelled as exploration order, not training —
       nothing is learned, so no learning curve is claimed.)*
-- [ ] Competitive strategy tuning, measured against a benchmark. *(9B-1A
-      explored; nothing is tuned into production.)*
+- [x] Competitive strategy tuning, measured against a benchmark. *(Explored at
+      9B-1A, validated at 9B-1B, confirmed on the sealed holdout and promoted at
+      9B-2.)*
 
 ### Partner-dependent
 

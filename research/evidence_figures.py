@@ -19,10 +19,17 @@ from .charts import save
 from .curve import Point, progression
 from .delta_chart import Delta, diverging
 
-LABEL = "VALIDATION / STRESS RESEARCH EVIDENCE - NOT FINAL HOLDOUT - NOT YET PRODUCTION"
+LABEL = "STRATEGY RESEARCH EVIDENCE - one-shot final holdout shown once, never re-estimated"
 
 STATUS = {"C1": "REJECTED_GATE", "C2": "NOT_ADVANCED", "C3": "REJECTED_GATE", "C4": "ADVANCED"}
-SHORT = {"development": "C4 dev", "validation": "C4 val", "stress": "C4 stress"}
+SHORT = {
+    "development": "C4 dev",
+    "validation": "C4 val",
+    "stress": "C4 stress",
+    "final_holdout": "C4 HOLDOUT",
+}
+FINAL_NAME = "final_holdout_result.json"
+"""The one-shot result. Read, never recomputed: it is shown once."""
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -91,7 +98,11 @@ def search_figure(screening: dict[str, Any], documents: dict[str, dict[str, Any]
         if key in screening
     ]
     points += [
-        Point(SHORT[name], float(one["overall"]["delta"]), "VALIDATED")
+        Point(
+            SHORT[name],
+            float(one["overall"]["delta"]),
+            "PROMOTED" if name == "final_holdout" else "VALIDATED",
+        )
         for name, one in documents.items()
     ]
     return progression(
@@ -103,11 +114,18 @@ def search_figure(screening: dict[str, Any], documents: dict[str, dict[str, Any]
 
 
 def write_all(root: Path) -> tuple[Path, ...]:
-    """Redraw every validation and stress figure from the committed results."""
+    """Redraw every evidence figure from the committed results.
+
+    The final-holdout point is read from its recorded one-shot result. It is
+    never re-estimated, and no figure recomputes it.
+    """
     documents = {
         name: _read(root / "candidates" / f"{name}_C4.json") for name in ("validation", "stress")
     }
     documents = {"development": _read(root / "candidates" / "full_C4.json"), **documents}
+    final = root / "candidates" / FINAL_NAME
+    if final.exists():
+        documents["final_holdout"] = _read(final)
     out = root / "figures" / "candidates"
     written = [
         save(bank_figure(documents), out / "c4_by_bank.png"),
@@ -116,6 +134,9 @@ def write_all(root: Path) -> tuple[Path, ...]:
             out / "strategy_research_progression.png",
         ),
     ]
-    for name in ("validation", "stress"):
-        written.append(save(family_figure(documents[name], name), out / f"c4_{name}_family.png"))
+    for name in ("validation", "stress", "final_holdout"):
+        if name in documents:
+            written.append(
+                save(family_figure(documents[name], name), out / f"c4_{name}_family.png")
+            )
     return tuple(written)

@@ -689,3 +689,112 @@ and `strategy_research_progression.png`, all labelled **VALIDATION / STRESS
 RESEARCH EVIDENCE — NOT FINAL HOLDOUT — NOT YET PRODUCTION**. The progression
 keeps every rejected candidate visible and is **not** a learning curve: nothing
 is trained, and the x axis is the order things were evaluated.
+
+## 18. Stage 9B-2 — the one-shot final holdout, and promotion
+
+### 18.1 What was sealed, and that it had not moved
+
+Before a single sealed scenario was played, the current state was checked
+against the Stage-9B-1B freeze record: seal file SHA `206ee57b…`, commitment
+`99bd72e1…`, count **2,226**, `results_present: false`, candidate source
+`1cc0a20d…`, freeze record digest `6b82388e…`. All matched. Production still
+built the pre-promotion strategy and no final-holdout result existed.
+
+### 18.2 One shot, enforced rather than promised
+
+The evaluation lives behind its own module and its own explicit confirmation
+(`python -m research.final_main --i-am-consuming-the-final-holdout`) so no
+`all`, default or habit can reach it. Before anything is played the runner
+refuses if a result already exists, if the seal reports results, if the
+commitment differs, if the candidate hash has moved, or if re-enumerating the
+sealed scenarios fails to reproduce the committed commitment. Publication is
+atomic and refuses to overwrite. Every one of those refusals is tested **on fake
+seals only** — a security test that opened the holdout to prove it was closed
+would consume the thing it protects.
+
+There was no preview, no sample and no dry run. The first performance evaluation
+against the sealed set is the one reported here, and the second-run refusal was
+then demonstrated against the real directory.
+
+### 18.3 The result — N = 2,226, one shot
+
+| metric | baseline | C4-ablation r1 |
+|---|---|---|
+| wins | 153 | **312** |
+| win rate | 0.068733 | **0.140162** |
+| mean barriers | 3.247 | 3.168 |
+| paired gains / losses / unchanged | — | **196 / 37 / 1,993** |
+| paired delta | — | **+0.071429** |
+| 95% CI | — | **[+0.059299, +0.086253]** |
+| legality failures | 0 | 0 |
+
+Result digest `0d23b0c708306717460289c3a4561f04be9747d4d48e5d80c53230daf2ce599d`.
+
+**Every opponent family improved**, each with an interval excluding zero:
+
+| family | N | baseline | C4 | delta | 95% CI |
+|---|---|---|---|---|---|
+| `adversarial_corner` | 318 | 46 | 91 | **+0.1415** | [+0.0912, +0.1981] |
+| `center_mobility` | 318 | 32 | 69 | +0.1164 | [+0.0723, +0.1572] |
+| `pursuit` | 318 | 16 | 44 | +0.0881 | [+0.0472, +0.1226] |
+| `evasive` | 318 | 4 | 25 | +0.0660 | [+0.0409, +0.0943] |
+| `random_legal` | 318 | 28 | 41 | **+0.0409** | [+0.0094, +0.0723] |
+| `barrier_aware` | 318 | 20 | 30 | +0.0314 | [+0.0157, +0.0535] |
+| `scent_aware` | 318 | 7 | 12 | +0.0157 | [+0.0000, +0.0314] |
+
+Every configuration improved: `grid7` and `grid7-quota22` +0.0726, `grid9` and
+`grid9-horizon45` +0.0714, `grid11` +0.0658, each with an interval excluding
+zero. `appendixF-example` is **N = 7** — a sparse reference cell reported
+separately and given no statistical weight.
+
+**`random_legal`, the risk predeclared at 9B-1A, is resolved.** It measured
+−0.0156 on development, +0.0063 on validation, −0.0123 on stress and **+0.0409
+with an interval excluding zero** on the sealed set. Under the unchanged frozen
+rule it was never a material regression, and the final evidence is positive.
+
+**Gate I** — the gain is not one opponent's doing: 7 of 7 families improve, and
+the two weakest baseline families (`evasive` at 4 wins, `scent_aware` at 7)
+both improve rather than being traded away.
+
+**Decision: FINAL_HOLDOUT_PASS.** Every frozen gate in §9 holds.
+
+### 18.4 Promotion — the same behaviour, not a new interpretation
+
+`CompetitiveStrategy` keeps its name, its mover and its legality sources; only
+the scoring and the gate changed, which is the smallest change that makes
+production semantically equal to C4. Production imports nothing from `research/`.
+
+| | SHA-256 |
+|---|---|
+| old production strategy | `655ca8576130bbd3fcaa3f1b8de9a0f7e47a2f055dde0d2fb1bef90e7b169331` |
+| new production strategy | `c7f5584ff8ade44fd3f1ef7c8e3d3c2ee796f24b3671252b7a555485a74ff598` |
+| frozen research C4 | `1cc0a20d40680874a337dd3f7f2e552924763e42f291066990cb0dc8385c2884` |
+
+The hashes differ because the code lives in different modules with different
+prose. **Behavioural equivalence is the requirement, and it is proved**, not
+asserted: identical actions across an exhaustive 5×5 matrix of every actor cell
+× every single-source belief cell × five intensities (**3,125 states**), across
+four wall/trap layouts, and identical outcome, step count, barrier count and
+score on committed development, validation and stress scenarios. **The sealed
+set was not replayed** — it is consumed, and the result above belongs to the
+frozen candidate that production is proved equal to.
+
+Two shipped tests changed behaviour rather than being deleted, and both are
+recorded as intended consequences: a synthetic **uniform** belief field now
+funds a placement (an expectation over many believed cells is genuinely large,
+and a uniform field is unreachable under the Table 16 radial kernel), and the
+**landing cell no longer enters admission at all** — which was the defect.
+
+### 18.5 Latency after promotion
+
+Measured at the `StrategyPort` surface: `grid9` p50/p95/max **2.17 / 2.28 /
+2.90 ms** (N=213); `grid11` **3.20 / 3.34 / 4.17 ms** (N=210). Ceiling 25 ms.
+Within noise of the frozen research C4 measurement, as equivalence implies.
+
+### 18.6 What this does and does not claim
+
+C4 is a **validated improvement across this project's frozen legal benchmark
+corpus**, confirmed by a single pre-committed holdout evaluation. It is not a
+guarantee of winning any particular match. The external opponent is unknown, the
+corpus is our own construction, and the seven opponent families are models
+rather than the field.

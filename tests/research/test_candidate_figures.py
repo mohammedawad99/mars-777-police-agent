@@ -5,17 +5,13 @@ zero line for a signed quantity, every candidate present, and the rejected ones
 marked rather than dropped.
 """
 
-import csv
 import json
-from collections import Counter
 from pathlib import Path
 
 import pytest
 from research.curve import Point, progression
 from research.delta_chart import Delta, diverging
-from research.gates import ADVANCED, NOT_ADVANCED, REJECTED_GATE
-
-from research import candidate_tables
+from research.gates import ADVANCED, REJECTED_GATE
 
 KEPT = Delta("C4", 0.0722, 0.0446, 0.1019, 471, True, ADVANCED)
 LOST = Delta("C1", -0.0488, -0.0679, -0.0318, 471, False, REJECTED_GATE)
@@ -87,49 +83,6 @@ def test_the_progression_puts_zero_where_zero_is() -> None:
     assert abs(dots[0].top - marked[0].top) <= 10
 
 
-def test_the_rows_carry_every_candidate_in_the_order_tried(tmp_path: Path) -> None:
-    document = {
-        "screening": {"n": 471},
-        **{
-            key: {
-                "revision": "r1",
-                "summary": key,
-                "overall": {
-                    "n": 471,
-                    "baseline_wins": 23,
-                    "candidate_wins": 1,
-                    "gains": 1,
-                    "losses": 1,
-                },
-                "paired_ci": {"mean": 0.01, "ci_low": 0.0, "ci_high": 0.02},
-            }
-            for key in candidate_tables.ORDER
-        },
-    }
-    source = tmp_path / "screening.json"
-    source.write_text(json.dumps(document), encoding="utf-8")
-
-    written = candidate_tables.write_all(source, tmp_path)
-
-    body = (tmp_path / "tables" / "candidates" / "screening.csv").read_text(encoding="utf-8")
-    parsed = list(csv.DictReader(body.splitlines()))
-    verdicts = Counter(one["verdict"] for one in parsed)
-    assert [one.name for one in written] == [
-        "screening.csv",
-        "candidate_delta.png",
-        "exploration_progression.png",
-    ]
-    assert [one["candidate"] for one in parsed] == list(candidate_tables.ORDER)
-    assert verdicts[ADVANCED] == len(candidate_tables.SELECTED)
-    assert verdicts[NOT_ADVANCED] == 1, "C2 measured positive; it was not rejected"
-    assert verdicts[REJECTED_GATE] == 2, "C1 and C3 failed on their own evidence"
-
-
-def test_the_committed_figures_carry_the_development_only_label() -> None:
-    assert "NOT FINAL HOLDOUT" in candidate_tables.LABEL
-    assert "NOT PRODUCTION PROMOTION" in candidate_tables.LABEL
-
-
 def test_a_bar_that_is_not_a_candidate_carries_no_verdict_word() -> None:
     """An opponent family is not a candidate, so it is not "advanced"."""
     frame = diverging("t", "u", (Delta("evasive", 0.07, 0.04, 0.10, 317, True),), "c")
@@ -174,3 +127,48 @@ def test_an_older_result_document_is_read_without_being_rewritten(tmp_path: Path
     assert found["overall"]["delta"] == 0.06008
     assert found["overall"]["ci_low"] == 0.046729
     assert found["overall"]["ci_high"] == 0.074766
+
+
+def test_the_evidence_figures_work_before_a_holdout_result_exists(tmp_path: Path) -> None:
+    """The one-shot point is optional: it is drawn only once it has been recorded."""
+    from research.evidence_figures import write_all
+
+    cell = {"n": 9, "delta": 0.06, "ci_low": 0.04, "ci_high": 0.08}
+    result = {
+        "overall": dict(cell),
+        "family": {"evasive": dict(cell)},
+        "config": {"grid7": dict(cell)},
+    }
+    candidates = tmp_path / "candidates"
+    candidates.mkdir(parents=True)
+    for name in ("full", "validation", "stress"):
+        (candidates / f"{name}_C4.json").write_text(json.dumps(result), encoding="utf-8")
+    (candidates / "screening.json").write_text(
+        json.dumps(
+            {
+                "screening": {"n": 9},
+                **{
+                    key: {
+                        "revision": "r1",
+                        "summary": key,
+                        "overall": {
+                            "n": 9,
+                            "baseline_wins": 1,
+                            "candidate_wins": 2,
+                            "gains": 1,
+                            "losses": 0,
+                        },
+                        "paired_ci": {"mean": 0.01, "ci_low": 0.0, "ci_high": 0.02},
+                    }
+                    for key in ("C1", "C2", "C3", "C4")
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    written = write_all(tmp_path)
+
+    drawn = sorted(one.name for one in written)
+    assert "c4_final_holdout_family.png" not in drawn
+    assert "strategy_research_progression.png" in drawn

@@ -814,3 +814,20 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
 35. **Give a status to the thing that has one, and to nothing else.** Candidates
     earn verdicts; opponent families do not, and a chart that captioned every
     family bar "advanced" was saying something meaningless.
+36. **Build the refusals before the run, and test them on fakes.** Every
+    one-shot guard - commitment moved, candidate moved, result already exists,
+    overwrite - was proved against synthetic seals. A security test that opened
+    the holdout to prove the holdout was closed would have consumed it.
+37. **Name the irreversible flag after what it costs.**
+    `--i-am-consuming-the-final-holdout` cannot be typed by accident, and no
+    default or `all` command reaches it.
+38. **Promote behaviour, not source.** The production and research hashes differ
+    because the modules differ; what had to be proved was that they *decide* the
+    same thing - 3,125 exhaustive states plus whole games on three banks.
+39. **When a shipped test changes meaning, rewrite it with its reason.** The old
+    "uniform evidence reproduces the baseline" test encoded the very gate the
+    promotion replaced. Deleting it would have hidden the change; keeping it
+    unchanged would have blocked a validated improvement.
+40. **A tautological assertion is worse than no assertion.** `assert x or True`
+    passed review by looking like a test. It was replaced by building the real
+    composed agent and asking it to choose.

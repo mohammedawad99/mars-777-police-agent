@@ -54,22 +54,48 @@ def test_no_evidence_is_exactly_the_baseline_decision() -> None:
         assert COMPETITIVE.choose_action(view) == BASELINE.choose_action(view)
 
 
-def test_uniform_evidence_is_exactly_the_baseline_decision() -> None:
-    """Nothing is *strictly* stronger than anything, so nothing displaces a move."""
+def test_uniform_evidence_now_funds_a_placement_and_this_is_deliberate() -> None:
+    """Changed at Stage 9B-2, and recorded rather than quietly dropped.
+
+    Under the old gate nothing was *strictly* stronger than anything, so a
+    synthetic uniform field reproduced the baseline. The promoted rule scores an
+    **expectation over the whole belief**, so a board that is believed
+    everywhere is a board worth acting on: five cells at 0.5 sum well past the
+    0.9 floor.
+
+    This state is synthetic rather than reachable - the source kernel is a 5x5
+    radial decay (Appendix F Table 16), so a real field is never uniform - and
+    the behaviour it describes was measured on 2,226 sealed scenarios before
+    being promoted. What still holds unconditionally is the silent case below.
+    """
     shape, cell = board(), Position(2, 2)
     everywhere = {Position(r, c): "0.5" for r in range(5) for c in range(5)}
     view = seen(shape, cell, belief(shape, everywhere))
 
-    assert COMPETITIVE.choose_action(view) == BASELINE.choose_action(view)
+    chosen = COMPETITIVE.choose_action(view)
+
+    assert isinstance(chosen, BarrierAction)
+    assert is_placeable(shape, cell, chosen.target, QUOTA)
 
 
-def test_support_equal_to_the_moves_support_still_moves() -> None:
+def test_the_landing_cell_no_longer_enters_the_admission_decision() -> None:
+    """Replaces the old "equal support still moves" rule, which was the defect.
+
+    Comparing a placement against the cell the mover was already stepping onto
+    blocked 334 of 375 belief-carrying decisions against a well-located evader.
+    The promoted gate is an absolute floor, so an identical belief field admits
+    or refuses the same way wherever the baseline happens to be walking.
+    """
     shape, cell = board(), Position(2, 2)
-    view_blind = seen(shape, cell, ScentBelief())
-    landing = baseline_landing(view_blind)
-    view = seen(shape, cell, belief(shape, {landing: "0.6", Position(2, 3): "0.6"}))
+    landing = baseline_landing(seen(shape, cell, ScentBelief()))
+    with_landing_hot = belief(shape, {landing: "0.9", Position(1, 2): "0.9"})
+    without = belief(shape, {Position(1, 2): "0.9"})
 
-    assert isinstance(COMPETITIVE.choose_action(view), MoveAction)
+    hot_choice = COMPETITIVE.choose_action(seen(shape, cell, with_landing_hot))
+    cool_choice = COMPETITIVE.choose_action(seen(shape, cell, without))
+
+    assert isinstance(hot_choice, BarrierAction)
+    assert isinstance(cool_choice, BarrierAction)
 
 
 def test_an_exhausted_quota_leaves_only_movement() -> None:

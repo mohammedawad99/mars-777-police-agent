@@ -1,110 +1,115 @@
 """Which cell the barrier goes on, and what settles it when two cells tie.
 
-The policy displaces the baseline's move only when the evidence for a placement
-is **strictly** stronger than the evidence where the baseline would have gone.
-These pin the whole ordering: direct support, then trap support, then how many
-cells the placement newly traps, then row and column - deterministic all the way
-down, because a strategy that broke ties by chance could not be replayed.
+Rewritten at Stage 9B-2, when the barrier rule was replaced by the revision the
+final holdout judged. The old rule scored a placement by its single strongest
+route and admitted it only when that beat the cell the mover was stepping onto;
+the promoted rule scores an **expectation over the whole lawful belief** and
+admits on an absolute floor. These pin the new ordering just as tightly: value
+first, then row, then column - deterministic all the way down, because a
+strategy that broke ties by chance could not be replayed.
 """
 
 from decimal import Decimal
 
-import pytest
-from test_competitive_strategy import baseline_landing, belief, board, seen
+from test_competitive_strategy import belief, board, seen
 
-from mars777_police.app.competitive_strategy import CompetitiveStrategy, Support
-from mars777_police.domain.actions import BarrierAction
+from mars777_police.app.competitive_strategy import (
+    CONSERVATIVE,
+    CompetitiveStrategy,
+    believed_cells,
+)
+from mars777_police.domain.actions import BarrierAction, MoveAction
 from mars777_police.domain.board import Position
-from mars777_police.domain.scent_belief import ScentBelief
 
 COMPETITIVE = CompetitiveStrategy()
 
 
-def test_direct_support_admits_a_barrier_with_no_trap_at_all() -> None:
-    """Case A: strong evidence on an adjacent cell is enough on its own."""
+def test_direct_evidence_on_the_target_admits_a_barrier_with_no_trap_at_all() -> None:
+    """Case A: a full source emission next door clears the floor by itself."""
     shape, cell = board(), Position(2, 2)
-    view_blind = seen(shape, cell, ScentBelief())
-    landing = baseline_landing(view_blind)
-    target = next(
-        t for t in (Position(1, 2), Position(3, 2), Position(2, 1), Position(2, 3)) if t != landing
-    )
-    view = seen(shape, cell, belief(shape, {target: "0.9"}))
+    view = seen(shape, cell, belief(shape, {Position(1, 2): "0.9"}))
 
-    chosen = COMPETITIVE.choose_action(view)
-
-    assert chosen == BarrierAction(target)
+    assert COMPETITIVE.choose_action(view) == BarrierAction(Position(1, 2))
 
 
-def test_trap_support_can_admit_a_barrier_whose_own_cell_is_quiet() -> None:
+def test_a_hot_landing_cell_no_longer_suppresses_the_placement() -> None:
+    """The measured defect the promotion fixed.
+
+    The evidence sits on the cell the mover is standing next to *and* on a
+    lawful target. Under the old strictly-greater gate this was refused; the
+    promoted floor does not consult the landing cell at all.
+    """
+    shape, cell = board(), Position(2, 2)
+    view = seen(shape, cell, belief(shape, {Position(1, 2): "0.9", Position(2, 2): "0.9"}))
+
+    assert isinstance(COMPETITIVE.choose_action(view), BarrierAction)
+
+
+def test_trap_evidence_can_admit_a_barrier_whose_own_cell_is_quiet() -> None:
     """Case B: the evidence sits on the cell the placement would corner."""
     walls = frozenset({Position(0, 1)})
     shape, cell = board(blocked=walls), Position(1, 1)
     view = seen(shape, cell, belief(shape, {Position(0, 0): "0.9"}))
 
-    chosen = COMPETITIVE.choose_action(view)
-
-    assert chosen == BarrierAction(Position(1, 0))
+    assert COMPETITIVE.choose_action(view) == BarrierAction(Position(1, 0))
 
 
-def test_higher_trap_support_wins_when_total_support_ties() -> None:
-    """Case C: equal `support`, but one target earns it by cornering evidence.
+def test_cornering_weak_evidence_outranks_adjoining_strong_evidence() -> None:
+    """Case C: `TRAP_BONUS` is what makes an ending worth more than a nudge."""
+    shape, cell = board(blocked=frozenset({Position(1, 0)})), Position(0, 2)
+    view = seen(shape, cell, belief(shape, {Position(0, 0): "0.1", Position(0, 4): "0.8"}))
+    mass = believed_cells(view)
 
-    The tie is asserted mechanically rather than assumed: `(2,1)` carries its
-    0.9 through the cell it would corner and `(2,3)` carries the same 0.9
-    directly, so only key 2 can separate them.
-    """
-    walls = frozenset({Position(1, 0), Position(3, 0)})
-    shape, cell = board(blocked=walls), Position(2, 2)
-    scent = belief(shape, {Position(2, 0): "0.9", Position(2, 3): "0.9"})
-    view = seen(shape, cell, scent)
-
-    cornering = COMPETITIVE._support(view, Position(2, 1))
-    direct = COMPETITIVE._support(view, Position(2, 3))
-    assert cornering.total == direct.total
-    assert cornering.trap > direct.trap
-
-    assert COMPETITIVE.choose_action(view) == BarrierAction(Position(2, 1))
-
-
-def test_more_newly_trapped_cells_wins_when_support_and_trap_tie() -> None:
-    """Case D: keys 1 and 2 are exhausted, so the count of cornered cells decides."""
-    one = Support(Decimal("0.9"), Decimal("0.9"), 1, Decimal("0"), Position(0, 0))
-    two = Support(Decimal("0.9"), Decimal("0.9"), 2, Decimal("0"), Position(4, 4))
-
-    assert min((one, two), key=Support.order) is two
-
-
-def test_direct_support_then_cell_order_settle_what_remains() -> None:
-    """Case E: the last two keys, in order, with everything above them tied."""
-    quiet = Support(Decimal("0.9"), Decimal("0.9"), 1, Decimal("0"), Position(0, 0))
-    loud = Support(Decimal("0.9"), Decimal("0.9"), 1, Decimal("0.5"), Position(4, 4))
-    assert min((quiet, loud), key=Support.order) is loud
-
-    first = Support(Decimal("0.9"), Decimal("0"), 0, Decimal("0.9"), Position(1, 2))
-    later = Support(Decimal("0.9"), Decimal("0"), 0, Decimal("0.9"), Position(3, 2))
-    assert min((first, later), key=Support.order) is first
+    assert COMPETITIVE._value(view, mass, Position(0, 1)) == Decimal(1)
+    assert COMPETITIVE._value(view, mass, Position(0, 3)) == Decimal("0.8")
+    assert COMPETITIVE.choose_action(view) == BarrierAction(Position(0, 1))
 
 
 def test_row_then_column_settles_a_complete_tie() -> None:
-    """Case E: identical evidence on two targets is decided by cell order."""
+    """Case D: identical value on two targets is decided by cell order."""
     shape, cell = board(), Position(2, 2)
-    scent = belief(shape, {Position(1, 2): "0.9", Position(3, 2): "0.9"})
+    view = seen(shape, cell, belief(shape, {Position(1, 2): "0.9", Position(3, 2): "0.9"}))
+    mass = believed_cells(view)
 
-    chosen = COMPETITIVE.choose_action(seen(shape, cell, scent))
-
-    assert chosen == BarrierAction(Position(1, 2))
-
-
-@pytest.mark.parametrize("weight", ["0.1", "0.4", "0.9"])
-def test_any_positive_strictly_stronger_support_admits(weight: str) -> None:
-    """Admission is about being strictly stronger, not about being large."""
-    shape, cell = board(), Position(2, 2)
-    view_blind = seen(shape, cell, ScentBelief())
-    landing = baseline_landing(view_blind)
-    target = next(
-        t for t in (Position(1, 2), Position(3, 2), Position(2, 1), Position(2, 3)) if t != landing
+    assert COMPETITIVE._value(view, mass, Position(1, 2)) == COMPETITIVE._value(
+        view, mass, Position(3, 2)
     )
+    assert COMPETITIVE.choose_action(view) == BarrierAction(Position(1, 2))
 
-    chosen = COMPETITIVE.choose_action(seen(shape, cell, belief(shape, {target: weight})))
 
-    assert chosen == BarrierAction(target)
+def test_the_floor_is_absolute_and_weak_evidence_never_buys_a_barrier() -> None:
+    """Admission is now about clearing 0.9, not about beating the landing cell."""
+    shape, cell = board(), Position(2, 2)
+
+    for weight in ("0.1", "0.4", "0.8"):
+        view = seen(shape, cell, belief(shape, {Position(1, 2): weight}))
+        mass = believed_cells(view)
+
+        assert COMPETITIVE._value(view, mass, Position(1, 2)) < CONSERVATIVE
+        assert isinstance(COMPETITIVE.choose_action(view), MoveAction)
+
+
+def test_evidence_exactly_at_the_floor_admits() -> None:
+    """The comparison is `>=`, and that is load-bearing rather than incidental.
+
+    The domain caps a single cell at **0.9** (Appendix F Table 16, FIXED), so a
+    lone cell of direct evidence can only ever *equal* the floor, never exceed
+    it. A strictly-greater comparison would make single-source evidence unable
+    to fund a barrier at all.
+    """
+    shape, cell = board(), Position(2, 2)
+    view = seen(shape, cell, belief(shape, {Position(1, 2): "0.9"}))
+    mass = believed_cells(view)
+
+    assert COMPETITIVE._value(view, mass, Position(1, 2)) == CONSERVATIVE
+    assert COMPETITIVE.choose_action(view) == BarrierAction(Position(1, 2))
+
+
+def test_adjacent_evidence_accumulates_rather_than_taking_the_maximum() -> None:
+    """The promoted score is an expectation, and this is where it differs most."""
+    shape, cell = board(), Position(2, 2)
+    view = seen(shape, cell, belief(shape, {Position(1, 1): "0.5", Position(0, 2): "0.5"}))
+    mass = believed_cells(view)
+
+    assert COMPETITIVE._value(view, mass, Position(1, 2)) == Decimal("1.0")
+    assert COMPETITIVE.choose_action(view) == BarrierAction(Position(1, 2))

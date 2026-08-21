@@ -1,0 +1,18 @@
+{
+  "ceiling_ms": 25.0,
+  "grid11": {
+    "max_ms": 4.1711,
+    "median_ms": 3.2039,
+    "p95_ms": 3.3396,
+    "samples": 210,
+    "within_ceiling": true
+  },
+  "grid9": {
+    "max_ms": 2.9007,
+    "median_ms": 2.1665,
+    "p95_ms": 2.2811,
+    "samples": 213,
+    "within_ceiling": true
+  },
+  "label": "PROMOTED PRODUCTION STRATEGY - measured at the StrategyPort surface"
+}

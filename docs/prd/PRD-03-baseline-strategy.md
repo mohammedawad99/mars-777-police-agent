@@ -15,15 +15,27 @@
 then re-scoped for implementation by the Stage-6A contract & design lock, whose
 rulings this document now reflects.
 
-**Implementation status: BASELINE IMPLEMENTED (Stage 6B); SCENT TIE-BREAK (7C); COMPETITIVE POLICY PROMOTED (7D-B).**
-`BaselineStrategy` remains shipped as the **frozen reference** and regression
-oracle. Production composes `CompetitiveStrategy`, which keeps the baseline's
-move and may displace it with a lawful `BarrierAction` when the scent evidence
-supporting the placement is strictly stronger than the evidence at the cell the
-baseline would have moved to. It is **PROJECT-DERIVED / OPTIONAL COMPETITIVE
-STRATEGY** - not source-required, not Bayes, not RL - and it earned promotion on
-a development, non-counted benchmark (0 -> 12 captures over 140 deterministic
-7x7 scenarios against a fixed reference opponent). It never creates a
+**Implementation status: BASELINE IMPLEMENTED (Stage 6B); SCENT TIE-BREAK (7C); COMPETITIVE POLICY PROMOTED (7D-B); BARRIER RULE REVISED AND PROMOTED (9B-2).**
+`BaselineStrategy` remains shipped as the **frozen reference**, the regression
+oracle, **and the mover of the production policy** - that last is a measured
+result, since a belief-directed mover was evaluated as its own candidate and
+collapsed. Production composes `CompetitiveStrategy`, which keeps the baseline's
+move and may displace it with a lawful `BarrierAction` when the **expected**
+evidence for that placement clears an absolute floor of `0.9`, one full source
+emission (App F Table 16, FIXED). The score sums belief on the target itself
+(`BAR-003`), belief on any newly cornered cell weighted by 10 (`GAME-005` ends
+the game), and belief on cells the target adjoins.
+
+The earlier rule required the placement to be *strictly stronger* than the
+evidence at the cell the baseline was moving to; instrumentation showed that
+blocked 334 of 375 belief-carrying decisions against a well-located evader, so
+the landing cell no longer enters admission. It is **PROJECT-DERIVED / OPTIONAL
+COMPETITIVE STRATEGY** - not source-required, not Bayes, not RL. The revision
+was confirmed by a single pre-committed holdout evaluation over 2,226 sealed
+scenarios: paired **+0.0714, 95% CI [+0.0593, +0.0863]**, every opponent family
+and configuration improving. That is a validated improvement across this
+project's own frozen corpus, **not** a guarantee against an unknown opponent.
+It never creates a
 `CaptureClaim`. Live in
 `domain/observation.py`, `domain/reachability.py`, `app/strategy_api.py` and
 `app/baseline_strategy.py`: a deterministic, LLM-free, belief-free, scent-free

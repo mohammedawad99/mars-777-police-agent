@@ -450,15 +450,31 @@ Since Stage 7C, when that objective **ties**, the belief folded from the
 opponent's own disclosed scent emissions breaks the tie. No opponent position,
 no LLM, no randomness.
 
-**`CompetitiveStrategy` (Stage 7D-B) — what this repository actually ships.**
-It keeps the baseline's move and displaces it with a lawful barrier placement
-only when the scent evidence supporting the barrier cell is *strictly* stronger
-than the evidence where the baseline would have moved. It never declares a
-capture: a barrier that misses costs one turn, while a wrong capture claim
-forfeits the sub-game. It is **PROJECT-DERIVED** — Ch 6 §6.3.1 leaves the
-movement policy to the group — and was promoted on a development, non-counted
-benchmark (0 → 12 captures over 140 deterministic scenarios). It is not Bayes,
-not reinforcement learning, and not a claim of optimality.
+**`CompetitiveStrategy` — what this repository actually ships.** It keeps the
+baseline's move and displaces it with a lawful barrier placement when the
+**expected** evidence for that placement clears an absolute floor of `0.9` — one
+full source emission (Appendix F Table 16, FIXED). The score sums the belief on
+the target itself (a `BAR-003` capture), the belief on any cell the placement
+would newly corner weighted ten times (a `GAME-005` capture ends the game), and
+the belief on cells the target merely adjoins. It never declares a capture: a
+barrier that misses costs one turn, while a wrong claim forfeits the sub-game.
+It is **PROJECT-DERIVED** — Ch 6 §6.3.1 leaves the movement policy to the group.
+
+The barrier rule was promoted at **Stage 9B-2** after a candidate study whose
+negative results are kept: a belief-directed *mover* was tried and **collapsed**
+(losing every game the shipped policy had won), a more aggressive threshold was
+**rejected**, and the ablation that changed only the barrier rule won. Its gate
+replaced an earlier rule that required a placement to beat the cell the mover
+was already stepping onto — measurement showed that blocked 334 of 375
+belief-carrying decisions against a well-located evader. It was then confirmed
+by a **single pre-committed holdout evaluation** over 2,226 sealed scenarios:
+paired win-rate **+0.0714, 95% CI [+0.0593, +0.0863]**, with every opponent
+family and every configuration improving.
+
+That is a validated improvement across this project's own frozen legal benchmark
+corpus. It is **not** a guarantee of winning any particular match: the external
+opponent is unknown and the seven opponent families are models, not the field.
+It is not Bayes, not reinforcement learning, and not a claim of optimality.
 
 **Deliberately absent.** No learning of any kind is implemented, so **no
 learning curve is presented**. Producing one would require the systematic

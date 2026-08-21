@@ -189,3 +189,10 @@ and cost a whole gating run.
   uses a 16-row bank instead of 40, and the latency-path test takes 12 samples
   instead of 200. The committed research datasets are untouched. Windows minutes
   saved are **not** claimed here - that needs a future CI run to measure.
+
+- **The one-shot holdout cost one local run and no CI.** Stage 9B-2 played both
+  sides over 2,226 sealed scenarios locally - 4,452 games - plus the equivalence
+  matrix and the promoted-strategy latency. Zero GitHub Actions runs, zero
+  network calls, zero LLM tokens. The stage deliberately batches its push with
+  the outstanding 9B-1B commit so the whole validation-and-promotion arc costs
+  **one** CI run rather than two.
