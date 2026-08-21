@@ -63,10 +63,11 @@ def test_the_command_line_offers_no_way_to_ask_for_a_held_out_set() -> None:
 def test_no_action_can_reach_a_held_out_file() -> None:
     """Asserted on the code, not on the prose.
 
-    The module docstring says in words that nothing here reaches validation,
-    stress or the final holdout, and a guard that failed on that sentence would
-    teach the next author to delete the documentation rather than keep the
-    property. So docstrings are dropped and the remaining literals are checked.
+    The guard names the **sealed** set only. Stage 9B-1B added lawful
+    `validation` and `stress` actions, so forbidding those words would now fail
+    on the feature rather than on a leak. Docstrings are dropped too: the module
+    documents this property in prose, and a guard that failed on its own
+    documentation would teach the next author to delete the sentence.
     """
     tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
     named = {
@@ -75,9 +76,7 @@ def test_no_action_can_reach_a_held_out_file() -> None:
         if isinstance(node, ast.Constant) and isinstance(node.value, str)
     } - _docstrings(tree)
 
-    assert not any(
-        "final_holdout" in one or "validation" in one or "stress" in one for one in named
-    )
+    assert not any("final_holdout" in one or "final-holdout" in one for one in named)
 
 
 def test_the_development_loader_reads_only_the_development_file(tmp_path: Path) -> None:
@@ -107,3 +106,21 @@ def test_an_unknown_candidate_is_refused_rather_than_guessed(tmp_path: Path) -> 
 
     with pytest.raises(SystemExit, match="unknown candidate"):
         candidate_main.full(tmp_path, "C99")
+
+
+def test_the_entry_routes_the_evaluation_and_freeze_actions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Routing only: the evaluations themselves are proved on their own banks."""
+    from research.validation import BANKS
+
+    from research import candidate_main as module
+
+    seen: list[str] = []
+    monkeypatch.setattr(module, "evaluate", lambda root, bank, sha: seen.append(bank))
+    monkeypatch.setattr(module, "write_freeze", lambda root: seen.append("freeze"))
+
+    for action in (*BANKS, "freeze"):
+        assert module.main([action, "--out", str(tmp_path)]) == 0
+
+    assert seen == [*BANKS, "freeze"]

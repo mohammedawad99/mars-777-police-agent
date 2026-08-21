@@ -16,10 +16,15 @@ from mars777_police.gui.primitives import Frame
 from .charts import save
 from .curve import Point, progression
 from .delta_chart import Delta, diverging
+from .gates import REJECTED_GATE, verdict_for
 
 LABEL = "DEVELOPMENT RESEARCH / NOT FINAL HOLDOUT / NOT PRODUCTION PROMOTION"
 ORDER = ("C1", "C2", "C3", "C4")
-KEPT = ("C4",)
+SELECTED = ("C4",)
+PASSED_GATES = ("C2", "C4")
+"""Candidates whose own numbers cleared the frozen gates. C2 did: it beat the
+baseline by +0.0510 with an interval excluding zero, and lost the *selection*
+to C4. C1 and C3 failed on their own evidence and are a different outcome."""
 FIELDS = (
     "candidate",
     "revision",
@@ -62,7 +67,7 @@ def _cell(key: str, entry: dict[str, Any]) -> dict[str, Any]:
         "delta": interval["mean"],
         "ci_low": interval["ci_low"],
         "ci_high": interval["ci_high"],
-        "verdict": "advanced" if key in KEPT else "rejected",
+        "verdict": verdict_for(passed_gates=key in PASSED_GATES, selected=key in SELECTED),
     }
 
 
@@ -90,7 +95,8 @@ def delta_figure(rows: tuple[dict[str, Any], ...], n: int) -> Frame:
             _maybe(row["ci_low"]),
             _maybe(row["ci_high"]),
             int(row["n"]),
-            str(row["verdict"]) == "advanced",
+            str(row["verdict"]) != REJECTED_GATE,
+            str(row["verdict"]),
         )
         for row in rows
     )
@@ -108,7 +114,7 @@ def progression_figure(rows: tuple[dict[str, Any], ...]) -> Frame:
         Point(
             str(row["candidate"]),
             float(row["delta"]),
-            str(row["verdict"]) == "advanced",
+            str(row["verdict"]),
         )
         for row in rows
     )

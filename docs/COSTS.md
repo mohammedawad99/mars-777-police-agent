@@ -174,3 +174,18 @@ and cost a whole gating run.
   rasteriser the GUI stage already ships, so the research charts cost the same
   as the baseline charts: nothing to install, and identical bytes on Ubuntu and
   Windows.
+
+- **Validation and stress cost nothing remotely.** Stage 9B-1B replayed 2,219
+  validation and 567 stress scenarios **locally**, wrote its figures with the
+  renderer already in the tree, and made **zero** GitHub Actions runs and zero
+  network calls. The stage ends on a local commit precisely to conserve the
+  remaining Actions budget for the final candidate/promotion run.
+- **Recurring CI cost was measured and cut.** The research suite ran **157.6 s**
+  locally at the end of 9B-1A and **80.5 s** after this stage - a **49%**
+  reduction, with no test removed, skipped, xfailed, path-filtered or stripped
+  of coverage. The saving came from replaying fewer *games per test*, never from
+  asserting less: the pipeline fixture drops to one seed per bank, the
+  byte-determinism proof runs on one bank instead of three, the CLI routing test
+  uses a 16-row bank instead of 40, and the latency-path test takes 12 samples
+  instead of 200. The committed research datasets are untouched. Windows minutes
+  saved are **not** claimed here - that needs a future CI run to measure.

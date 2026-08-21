@@ -21,14 +21,18 @@ from mars777_police.domain.board import Position
 from mars777_police.domain.observation import Observation
 
 from .candidates.pursuit import belief_cells
-from .configs import BenchConfig
+from .configs import BenchConfig, corpus
 from .game import SubGame
-from .opponents import opponent
+from .opponents import FAMILIES, opponent
 from .records import write_json
 from .scenario import start_cells
 from .strategy_port import Policy
 
 ZERO = Decimal(0)
+
+SAMPLED = range(50, 62)
+"""Seeds sampled per family. Enough games for a stable share, few enough that a
+diagnostic never becomes the benchmark it is explaining."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,6 +123,13 @@ def report(strategy: Policy, config: BenchConfig, families: tuple[str, ...], out
     found: dict[str, object] = {
         "label": "DEVELOPMENT RESEARCH - not final holdout, not a production promotion",
         "config": config.name,
-        "families": [observe(strategy, config, one, range(50, 62)).as_record() for one in families],
+        "families": [observe(strategy, config, one, SAMPLED).as_record() for one in families],
     }
     return write_json(found, out)
+
+
+def write_belief(root: Path) -> Path:
+    """Measure what the shipped policy believed and what its gate did about it."""
+    from mars777_police.app.competitive_strategy import CompetitiveStrategy
+
+    return report(CompetitiveStrategy(), corpus()[1], FAMILIES, root / "candidates" / "belief.json")

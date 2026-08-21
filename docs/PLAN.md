@@ -185,8 +185,10 @@ and the collaborator grant.
   scenarios only**: two were rejected on their own evidence, one advanced (C4,
   +0.0601 paired over N=2,247), and **nothing was promoted** - production still
   composes the entry strategy. Remaining: candidate evaluation on validation
-  (9B-1B), the parameter study and sensitivity analysis, the results notebook,
-  and any promotion decision.
+  (9B-1B) - **done: C4 is VALIDATED and frozen**, +0.0640 on validation and
+  +0.0935 on stress, with the sealed holdout still untouched. Remaining: the
+  single final-holdout evaluation and the promotion decision (9B-2), the
+  parameter study and sensitivity analysis, and the results notebook.
 - **Stage 9C - submission freeze.** Final checklist verification, the exact
   competition commit and its tag. `FINAL_SUBMISSION_PENDING`.
 - **Real-partner friendly, then counted play.** `PARTNER_DEPENDENT`.

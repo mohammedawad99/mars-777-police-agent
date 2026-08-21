@@ -30,11 +30,21 @@ DROP = "#c2453c"
 
 @dataclass(frozen=True, slots=True)
 class Point:
-    """One candidate in the order it was tried."""
+    """One candidate in the order it was tried, with the status it earned.
+
+    The status is a word rather than a flag because "measured positive but not
+    selected" and "failed a gate" are different research outcomes, and a boolean
+    forces them into the same colour and the same caption.
+    """
 
     label: str
     value: float
-    kept: bool
+    status: str
+
+    @property
+    def kept(self) -> bool:
+        """Whether the point is drawn as a survivor."""
+        return self.status != "REJECTED_GATE"
 
 
 def _box() -> tuple[int, int]:
@@ -74,7 +84,7 @@ def progression(title: str, unit: str, points: tuple[Point, ...], caption: str) 
         rects.append(Rect(x - DOT // 2, y - DOT // 2, DOT, DOT, BAR if one.kept else DROP))
         texts.append(Text(x - 26, y - 22, f"{one.value:+.4f}", INK, 11))
         texts.append(Text(x - 26, TOP + plot_h + 14, one.label[:16], INK, 11))
-        texts.append(Text(x - 26, TOP + plot_h + 30, "kept" if one.kept else "rejected", MUTED, 10))
+        texts.append(Text(x - 30, TOP + plot_h + 30, one.status.lower(), MUTED, 10))
     rects.append(Rect(LEFT, TOP, 1, plot_h, AXIS))
     rects.append(Rect(LEFT, TOP + plot_h // 2, plot_w, 1, AXIS))
     texts.append(Text(LEFT - 92, TOP + plot_h // 2 - 6, "no change (0.0000)", MUTED, 10))

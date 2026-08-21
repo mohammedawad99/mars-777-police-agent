@@ -21,14 +21,26 @@ from research import bench_main, seeds, tables
 
 @pytest.fixture
 def tiny(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Shrink every bank to two seeds so the pipeline runs inside a test."""
-    monkeypatch.setattr(seeds, "DEVELOPMENT_SIZE", 2)
-    monkeypatch.setattr(seeds, "VALIDATION_SIZE", 2)
+    """Shrink the *workload*, never the machinery, so the pipeline runs in a test.
+
+    These tests prove the pipeline produces its artifacts, reproduces byte for
+    byte, and regenerates tables from committed rows. None of those properties
+    is carried by the *number of seeds*, so one seed per bank replaces two.
+
+    The opponent and configuration corpora are deliberately **not** trimmed:
+    the analysis writes a table per documented grouping, and a grouping with no
+    observations is not a smaller test, it is a different one that fails. The
+    committed research datasets are untouched; only what a test replays is
+    smaller.
+    """
+    monkeypatch.setattr(seeds, "DEVELOPMENT_SIZE", 1)
+    monkeypatch.setattr(seeds, "VALIDATION_SIZE", 1)
     monkeypatch.setattr(seeds, "STRESS_SIZE", 1)
 
 
 def test_a_sweep_plays_exactly_the_games_it_promised(tiny: None) -> None:
-    bank = seeds.bank("development", 2)
+    """`size_of` promises a count and the sweep delivers it; one seed shows that."""
+    bank = seeds.bank("development", 1)
     records = Sweep(baseline_identity(), bench_main.strategy(), bank).run()
 
     assert len(records) == size_of(bank)
@@ -53,8 +65,17 @@ def test_the_documented_command_produces_every_committed_artifact(
 
 
 def test_running_the_pipeline_twice_produces_the_same_tables(tiny: None, tmp_path: Path) -> None:
-    bench_main.main(["all", "--out", str(tmp_path / "first")])
-    bench_main.main(["all", "--out", str(tmp_path / "second")])
+    """Byte-determinism, proved on one bank rather than three.
+
+    Reproducibility is a property of the sweep and the writers, and it does not
+    become more true for being demonstrated on every bank; the other banks are
+    already swept by the tests above.
+    """
+    one = ["--sets", "development", "--out"]
+    bench_main.main(["bench", *one, str(tmp_path / "first")])
+    bench_main.main(["analyse", "--out", str(tmp_path / "first")])
+    bench_main.main(["bench", *one, str(tmp_path / "second")])
+    bench_main.main(["analyse", "--out", str(tmp_path / "second")])
 
     for name in ("tables/by_opponent_family.csv", "baseline/games_development.csv"):
         first = (tmp_path / "first" / name).read_bytes()

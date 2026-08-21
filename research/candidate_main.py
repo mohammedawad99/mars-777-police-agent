@@ -4,11 +4,14 @@
     uv run python -m research.candidate_main full --candidate C4 --out results
     uv run python -m research.candidate_main latency --out results
     uv run python -m research.candidate_main belief --out results
-    uv run python -m research.candidate_main figures --out results
+    uv run python -m research.candidate_main figures|evidence --out results
+    uv run python -m research.candidate_main validation|stress|freeze --out results
 
-**Development only.** Both actions read `games_development.csv` and replay its
-scenarios; nothing here can reach validation, stress or the sealed final
-holdout, and there is no option to ask for them.
+**Never the sealed set.** The screening and full actions read
+`games_development.csv`; the validation and stress actions read their own
+committed banks, added at Stage 9B-1B once C4 was frozen. No action, flag or
+fallback here reaches the sealed final holdout - the name does not appear in
+this module's code, and `research.validation.BANKS` does not contain it.
 """
 
 import argparse
@@ -19,12 +22,14 @@ from .candidate_tables import write_all
 from .candidates.registry import BUILDERS, CANDIDATES
 from .compare import by_group, compare, replay_all
 from .configs import corpus
-from .diagnostics import report
+from .diagnostics import write_belief
+from .evidence_figures import write_all as write_evidence
+from .freeze import write_freeze
 from .latency import measure
-from .opponents import FAMILIES
 from .records import GameRecord, read_csv, write_csv, write_json
 from .screening import SHARE_PER_MILLE, VERSION, digest_of, screened
 from .stats import paired_by_scenario
+from .validation import FROZEN_C4_SHA256, evaluate
 
 DEVELOPMENT = "games_development.csv"
 LABEL = "DEVELOPMENT RESEARCH - not final holdout, not a production promotion"
@@ -40,7 +45,20 @@ nothing."""
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Read the command line. Reaches no file and plays no game."""
     parser = argparse.ArgumentParser(prog="python -m research.candidate_main")
-    parser.add_argument("action", choices=("screen", "full", "latency", "belief", "figures"))
+    parser.add_argument(
+        "action",
+        choices=(
+            "screen",
+            "full",
+            "latency",
+            "belief",
+            "figures",
+            "validation",
+            "stress",
+            "freeze",
+            "evidence",
+        ),
+    )
     parser.add_argument("--out", type=Path, default=Path("results"))
     parser.add_argument("--candidate", default="C4")
     return parser.parse_args(argv)
@@ -128,18 +146,6 @@ def latency(root: Path) -> dict[str, object]:
     return found
 
 
-def belief(root: Path) -> Path:
-    """Measure what the shipped policy believed and what its gate did about it."""
-    from mars777_police.app.competitive_strategy import CompetitiveStrategy
-
-    return report(CompetitiveStrategy(), corpus()[1], FAMILIES, root / "candidates" / "belief.json")
-
-
-def figures(root: Path) -> tuple[Path, ...]:
-    """Redraw every candidate table and figure from the committed results."""
-    return write_all(root / "candidates" / "screening.json", root)
-
-
 def main(argv: list[str] | None = None) -> int:
     """Run the requested action. Returns the process status."""
     arguments = parse_args(argv)
@@ -148,9 +154,15 @@ def main(argv: list[str] | None = None) -> int:
     elif arguments.action == "latency":
         latency(arguments.out)
     elif arguments.action == "belief":
-        belief(arguments.out)
+        write_belief(arguments.out)
     elif arguments.action == "figures":
-        figures(arguments.out)
+        write_all(arguments.out / "candidates" / "screening.json", arguments.out)
+    elif arguments.action == "evidence":
+        write_evidence(arguments.out)
+    elif arguments.action in ("validation", "stress"):
+        evaluate(arguments.out, arguments.action, FROZEN_C4_SHA256)
+    elif arguments.action == "freeze":
+        write_freeze(arguments.out)
     else:
         full(arguments.out, arguments.candidate)
     return 0

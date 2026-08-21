@@ -1,0 +1,54 @@
+{
+  "assessment": {
+    "stress": {
+      "gates": {
+        "A_zero_legality_failures": true,
+        "C_positive_delta": true,
+        "D_lower_bound_above_zero": true,
+        "E_no_material_family_regression": true,
+        "F_no_material_config_regression": true,
+        "G_latency_within_ceiling": true,
+        "I_candidate_hash_unchanged": true
+      },
+      "material_regressions": [],
+      "passed": true
+    },
+    "validation": {
+      "gates": {
+        "A_zero_legality_failures": true,
+        "C_positive_delta": true,
+        "D_lower_bound_above_zero": true,
+        "E_no_material_family_regression": true,
+        "F_no_material_config_regression": true,
+        "G_latency_within_ceiling": true,
+        "I_candidate_hash_unchanged": true
+      },
+      "material_regressions": [],
+      "passed": true
+    }
+  },
+  "candidate": "C4-ablation",
+  "candidate_sha256": "1cc0a20d40680874a337dd3f7f2e552924763e42f291066990cb0dc8385c2884",
+  "development_manifest": "56717b3e2555bf44e959dfa61a333bd03962a7465cc8f6607932668afc25e1b6",
+  "development_result": "afb40ec65abe7604a24cb50754bfb501246ea7dda30cc02c1f51e5d16e24b449",
+  "final_holdout": {
+    "commitment_sha256": "99bd72e102d8a31e0b0937813166d87afd13034f5e191d834002df9e13358f47",
+    "count": 2226,
+    "file_sha256": "206ee57b3f2a7b0a86bacfad350ca1b6276129d240ffae511ae9df841b7ff654",
+    "results_present": false
+  },
+  "final_holdout_evaluated": false,
+  "formula": "value(target) = belief[target] + SUM belief[c] * TRAP_BONUS if placing traps c + SUM belief[c] if target adjoins c; place the best target when value >= threshold, else the shipped mover",
+  "latency_result": "b5ab922ed7ef012493e8e2dd2731b0cf68f2d7018347a70a4d4c3fd75c275dde",
+  "parameters": {
+    "threshold": "0.9",
+    "trap_bonus": "10"
+  },
+  "production_promotion": false,
+  "revision": "r1",
+  "stress_manifest": "304de01efc4b192d9d82501e97aa2b21547cbae2856c413d7e41ec967b485c3d",
+  "stress_result": "573129735eaee53eeabf5a359ea4456cf5f2dfcdf61d5a22dfb60d17d9930b2f",
+  "validated": true,
+  "validation_manifest": "b90267e535133cd35ad9e3618d2cffb85927ef9d643237bf9247e8e57f727042",
+  "validation_result": "33aa88f585d889eaa897a72ae3c740c097b350deab6f8d671d42e8193fab7cc4"
+}

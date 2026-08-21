@@ -38,6 +38,10 @@ class Delta:
     high: float | None
     n: int
     kept: bool
+    """Whether the bar is drawn as a survivor. Colour only."""
+    status: str = ""
+    """The verdict word, when the bar *is* a candidate. Opponent families and
+    configurations are not candidates, so they carry no verdict and get none."""
 
 
 def _span(deltas: tuple[Delta, ...]) -> float:
@@ -76,7 +80,8 @@ def diverging(title: str, unit: str, deltas: tuple[Delta, ...], caption: str) ->
 
 
 def _say(one: Delta) -> str:
-    return f"{one.value:+.4f}  n={one.n}  {'advanced' if one.kept else 'rejected'}"
+    said = f"{one.value:+.4f}  n={one.n}"
+    return f"{said}  {one.status.lower()}" if one.status else said
 
 
 def _label_at(one: Delta, middle: int, scale: float) -> int:

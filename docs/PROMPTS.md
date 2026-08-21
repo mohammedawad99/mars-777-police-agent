@@ -793,3 +793,24 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
     candidate figure shifted every delta by one to fit a zero-based bar chart,
     which drew a −4.9-point collapse and a +7.2-point gain as near-identical
     bars. The chart was wrong, not the data.
+30. **Freeze the candidate in code, not in prose.** `evaluate` refuses to run
+    unless the source hash still matches the one the development evidence was
+    produced with. A freeze that lives only in a document is a freeze that the
+    stage which watched the candidate fail can quietly renegotiate.
+31. **Predeclare the thing you are afraid of.** The `random_legal` regression was
+    written down with its number before validation ran, so the result could only
+    confirm or refute it - not be reinterpreted afterwards into whichever
+    reading was convenient.
+32. **Measure before blaming.** The 9B-1A report blamed its own new tests for the
+    slow Windows job. Profiling showed the pre-existing pipeline tests cost
+    ~146 s and the new candidate tests ~24 s. The fix landed where the time
+    actually was.
+33. **Cut the workload, never the assertion.** Halving a fixture's seeds is free;
+    dropping four of six configurations is not - it emptied documented grouping
+    cells and turned a smaller test into a different, failing one. The first
+    attempt was reverted for exactly that reason.
+34. **A substring is not a value.** `rows.count("ADVANCED")` also counts
+    `NOT_ADVANCED`. Parse the column.
+35. **Give a status to the thing that has one, and to nothing else.** Candidates
+    earn verdicts; opponent families do not, and a chart that captioned every
+    family bar "advanced" was saying something meaningless.

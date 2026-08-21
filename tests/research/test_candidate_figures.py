@@ -5,17 +5,20 @@ zero line for a signed quantity, every candidate present, and the rejected ones
 marked rather than dropped.
 """
 
+import csv
 import json
+from collections import Counter
 from pathlib import Path
 
 import pytest
 from research.curve import Point, progression
 from research.delta_chart import Delta, diverging
+from research.gates import ADVANCED, NOT_ADVANCED, REJECTED_GATE
 
 from research import candidate_tables
 
-KEPT = Delta("C4", 0.0722, 0.0446, 0.1019, 471, True)
-LOST = Delta("C1", -0.0488, -0.0679, -0.0318, 471, False)
+KEPT = Delta("C4", 0.0722, 0.0446, 0.1019, 471, True, ADVANCED)
+LOST = Delta("C1", -0.0488, -0.0679, -0.0318, 471, False, REJECTED_GATE)
 
 
 def test_a_loss_and_a_gain_of_equal_size_draw_equally_long() -> None:
@@ -55,7 +58,9 @@ def test_a_figure_refuses_to_draw_nothing() -> None:
 
 
 def test_the_progression_marks_rejected_points_differently_from_kept_ones() -> None:
-    frame = progression("t", "u", (Point("C1", -0.05, False), Point("C4", 0.07, True)), "c")
+    frame = progression(
+        "t", "u", (Point("C1", -0.05, REJECTED_GATE), Point("C4", 0.07, ADVANCED)), "c"
+    )
     colours = {one.fill for one in frame.rects}
 
     assert "#c2453c" in colours
@@ -64,7 +69,7 @@ def test_the_progression_marks_rejected_points_differently_from_kept_ones() -> N
 
 def test_the_progression_says_it_is_not_training() -> None:
     """The one caption this project may never get wrong."""
-    frame = progression("Police exploration", "delta", (Point("C1", 0.01, True),), "cap")
+    frame = progression("Police exploration", "delta", (Point("C1", 0.01, ADVANCED),), "cap")
     words = " ".join(one.value for one in frame.texts).lower()
 
     assert "not time or epochs" in words
@@ -74,7 +79,7 @@ def test_the_progression_says_it_is_not_training() -> None:
 
 def test_the_progression_puts_zero_where_zero_is() -> None:
     """A signed quantity on a shifted origin flattens the search; this forbids it."""
-    frame = progression("t", "u", (Point("a", 0.0, True), Point("b", 0.0, True)), "c")
+    frame = progression("t", "u", (Point("a", 0.0, ADVANCED), Point("b", 0.0, ADVANCED)), "c")
     marked = [one for one in frame.texts if "no change" in one.value]
     dots = [one for one in frame.rects if one.fill == "#4d7fff"]
 
@@ -106,17 +111,66 @@ def test_the_rows_carry_every_candidate_in_the_order_tried(tmp_path: Path) -> No
 
     written = candidate_tables.write_all(source, tmp_path)
 
-    rows = (tmp_path / "tables" / "candidates" / "screening.csv").read_text(encoding="utf-8")
+    body = (tmp_path / "tables" / "candidates" / "screening.csv").read_text(encoding="utf-8")
+    parsed = list(csv.DictReader(body.splitlines()))
+    verdicts = Counter(one["verdict"] for one in parsed)
     assert [one.name for one in written] == [
         "screening.csv",
         "candidate_delta.png",
         "exploration_progression.png",
     ]
-    for key in candidate_tables.ORDER:
-        assert key in rows
-    assert rows.count("rejected") == len(candidate_tables.ORDER) - len(candidate_tables.KEPT)
+    assert [one["candidate"] for one in parsed] == list(candidate_tables.ORDER)
+    assert verdicts[ADVANCED] == len(candidate_tables.SELECTED)
+    assert verdicts[NOT_ADVANCED] == 1, "C2 measured positive; it was not rejected"
+    assert verdicts[REJECTED_GATE] == 2, "C1 and C3 failed on their own evidence"
 
 
 def test_the_committed_figures_carry_the_development_only_label() -> None:
     assert "NOT FINAL HOLDOUT" in candidate_tables.LABEL
     assert "NOT PRODUCTION PROMOTION" in candidate_tables.LABEL
+
+
+def test_a_bar_that_is_not_a_candidate_carries_no_verdict_word() -> None:
+    """An opponent family is not a candidate, so it is not "advanced"."""
+    frame = diverging("t", "u", (Delta("evasive", 0.07, 0.04, 0.10, 317, True),), "c")
+    said = " ".join(one.value for one in frame.texts)
+
+    assert "advanced" not in said
+    assert "rejected" not in said
+    assert "+0.0700" in said
+
+
+def test_a_candidate_bar_keeps_the_status_it_earned() -> None:
+    frame = diverging("t", "u", (KEPT, LOST), "c")
+    said = " ".join(one.value for one in frame.texts)
+
+    assert ADVANCED.lower() in said
+    assert REJECTED_GATE.lower() in said
+
+
+def test_an_older_result_document_is_read_without_being_rewritten(tmp_path: Path) -> None:
+    """Stage 9B-1A wrote `win_delta` beside a separate `paired_ci`.
+
+    Rewriting a frozen measurement to match a newer layout would change its
+    digest for a cosmetic reason, so both shapes are read instead.
+    """
+    from research.evidence_figures import _read
+
+    path = tmp_path / "full_C4.json"
+    path.write_text(
+        json.dumps(
+            {
+                "overall": {"n": 2247, "win_delta": 0.06008},
+                "paired_ci": {"ci_low": 0.046729, "ci_high": 0.074766},
+                "family": {},
+                "config": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    found = _read(path)
+
+    assert found["overall"]["delta"] == 0.06008
+    assert found["overall"]["ci_low"] == 0.046729
+    assert found["overall"]["ci_high"] == 0.074766

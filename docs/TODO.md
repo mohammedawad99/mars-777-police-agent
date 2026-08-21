@@ -89,11 +89,6 @@ provider rate-limit enforcement, the SDK façade, the software version authority
 and the test-file split at Stages 9A-1B1…9A-1C.
 
 ## Pending
-- [ ] **Stage 9B-1B — candidate evaluation on VALIDATION.** C4 left 9B-1A on
-      development evidence only. Gates C, D, E and I in
-      `docs/research/COMPETITIVE_RESEARCH.md` §9 are unevaluated, and the one
-      family regression (`random_legal`, −0.0156, not material) must be
-      re-checked there specifically.
 - [ ] Branch protection / rulesets - **blocked**: unavailable on the current GitHub
       plan for private repos (Stage 0D). Needs Pro upgrade, org, or public-at-submission.
 - [x] Full 160-page source extraction - done (Stage 1A: `docs/spec/`).
@@ -319,6 +314,22 @@ repository and green in CI on the exact commit.
       2.32 ms (`grid9`) / 3.40 ms (`grid11`) against the 25 ms ceiling. One
       non-material family regression (`random_legal`, −0.0156). **No promotion,
       no validation run, no stress run, final holdout untouched.**
+
+- [x] **C4 validated on VALIDATION and STRESS, then frozen** (Stage 9B-1B).
+      Source hash frozen and checked in code **before** the first validation
+      game. VALIDATION N=2,219: **+0.0640, CI [+0.0500, +0.0771]**, 160 → 302
+      wins, **every** opponent family and configuration positive. STRESS N=567:
+      **+0.0935, CI [+0.0670, +0.1235]**, 32 → 85 wins. Development-vs-validation
+      classification **REPLICATED**. The predeclared `random_legal` risk
+      (development −0.0156) measured **+0.0063** on validation and −0.0123 on
+      stress, both intervals containing zero →
+      **NO_CONFIRMED_REGRESSION** under the unchanged frozen rule. All gates
+      pass on both banks; frozen in `results/candidates/freeze_C4.json` with
+      `final_holdout_evaluated: false` and `production_promotion: false`. C2
+      fallback **not** triggered. Evidence vocabulary corrected to
+      ADVANCED / NOT_ADVANCED / REJECTED_GATE. Research test workload cut
+      **~49%** locally with no gate weakened. **Local commit only — no push, no
+      Actions run.**
 
 ### Research (Stage 9B)
 

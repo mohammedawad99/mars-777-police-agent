@@ -534,3 +534,158 @@ HOLDOUT / NOT PRODUCTION PROMOTION**. The progression figure plots one point per
 candidate in the order tried, with the rejected points kept and marked. It is
 **not a learning curve**: nothing is trained, the x axis is exploration order,
 and the y axis is a paired win-rate difference against a frozen baseline.
+
+## 17. Stage 9B-1B — C4 on VALIDATION and STRESS, then frozen
+
+**Scope.** The candidate that left 9B-1A is evaluated here on two banks it was
+never tuned on. Its source was frozen **before the first validation game**, and
+the freeze is checked in code: `research.validation.evaluate` refuses to run
+unless C4's source hash still equals `1cc0a20d…`, the hash its development
+evidence was produced with. The sealed final holdout was not opened, parsed or
+played; nothing was promoted to production.
+
+### 17.1 The frozen candidate
+
+| | |
+|---|---|
+| candidate | `C4-ablation`, revision `r1` |
+| source | `research/candidates/denial.py`, SHA-256 `1cc0a20d40680874a337dd3f7f2e552924763e42f291066990cb0dc8385c2884` |
+| parameters | `threshold = 0.9` (the Appendix F Table 16 FIXED source strength), `TRAP_BONUS = 10` |
+| formula | `value(t) = belief[t] + Σ belief[c]·TRAP_BONUS if placing traps c + Σ belief[c] if t adjoins c`; place the best `t` when `value ≥ threshold`, else the **shipped** mover |
+
+### 17.2 Bank identities, pinned before C4 ran
+
+| bank | file | unique scenarios | manifest digest |
+|---|---|---|---|
+| DEVELOPMENT | `games_development.csv` | 2,247 | `56717b3e…` |
+| VALIDATION | `games_holdout.csv` | **2,219** | `b90267e5…` |
+| STRESS | `games_stress.csv` | **567** | `304de01e…` |
+
+Both working banks carry all 7 opponent families and all 6 configurations
+(validation 317 per family; stress 81 per family).
+
+### 17.3 Validation result — N = 2,219
+
+| metric | baseline | C4 |
+|---|---|---|
+| wins | 160 | **302** |
+| mean barriers | 3.378 | 3.186 |
+| paired delta | — | **+0.0640, 95% CI [+0.0500, +0.0771]** |
+| gains / losses | — | 191 / 49 |
+
+**Every opponent family improved.** No family and no configuration shows a
+negative point estimate at all, so the material-regression question does not
+even arise on this bank.
+
+| family | delta | 95% CI | | configuration | delta |
+|---|---|---|---|---|---|
+| `adversarial_corner` | **+0.1514** | [+0.0978, +0.2082] | | `grid9` | +0.0670 |
+| `evasive` | +0.0726 | [+0.0473, +0.1009] | | `grid9-horizon45` | +0.0670 |
+| `barrier_aware` | +0.0694 | [+0.0410, +0.1009] | | `grid11` | +0.0625 |
+| `pursuit` | +0.0694 | [+0.0347, +0.1041] | | `grid7` | +0.0599 |
+| `center_mobility` | +0.0631 | [+0.0252, +0.1009] | | `grid7-quota22` | +0.0599 |
+| `scent_aware` | +0.0158 | [−0.0063, +0.0379] | | `appendixF-example` | +0.2857 (N=7) |
+| `random_legal` | +0.0063 | [−0.0189, +0.0347] | | | |
+
+`appendixF-example` has **N = 7**, below the bootstrap minimum, so it carries no
+interval and is reported as an observation rather than a finding.
+
+### 17.4 The predeclared `random_legal` risk
+
+Development measured **−0.0156** against `random_legal` and this stage recorded
+that number *before* running validation. On validation the same family measures
+**+0.0063**, 95% CI [−0.0189, +0.0347], on N=317 with 12 gains against 10
+losses; on stress it measures **−0.0123**, CI [−0.0741, +0.0494], on N=81.
+
+Applying the **same** frozen rule (a drop of more than 5 points *and* an
+interval excluding zero) to all three banks: **NO_CONFIRMED_REGRESSION.** The
+development sign did not reproduce, both later intervals contain zero, and every
+point estimate is an order of magnitude inside the material threshold. No
+special `random_legal` rule was written, and the threshold was not redefined.
+
+### 17.5 Development versus validation
+
+| bank | N | delta | 95% CI |
+|---|---|---|---|
+| DEVELOPMENT | 2,247 | +0.0601 | [+0.0467, +0.0748] |
+| VALIDATION | 2,219 | **+0.0640** | [+0.0500, +0.0771] |
+| STRESS | 567 | **+0.0935** | [+0.0670, +0.1235] |
+
+Classification: **REPLICATED.** The intervals overlap heavily and validation did
+not shrink the estimate — which is worth stating plainly rather than
+celebrating, because the expected direction was a *smaller* number and the
+honest reading is that development was not optimistic here, not that C4 got
+better.
+
+### 17.6 Stress result — N = 567
+
+Wins 32 → **85**, gains/losses 64 / 11, delta **+0.0935**, CI [+0.0670,
++0.1235]. Six of seven families improve; `random_legal` is the only negative
+point estimate (−0.0123) and its interval contains zero. Barrier use is
+essentially unchanged (3.402 → 3.407). No deterministic failure mode appeared:
+zero illegal actions, and every game reached a natural terminal.
+
+### 17.7 Gate audit
+
+Applied by `research/gates.py`, which is the only place these rules exist as
+code. On **both** banks: A zero legality failures · C positive delta · D lower
+bound above zero · E no material family regression · F no material config
+regression · G latency inside the ceiling · I candidate hash unchanged — **all
+pass**, with an empty material-regression list.
+
+**Gate H (not concentrated in one sparse cell)** is assessed by reading rather
+than by a threshold: on validation, five of seven families improve with intervals
+excluding zero, and all six configurations improve, five of them with intervals
+excluding zero. The gain is broad, not one lucky cell. **Gate B** (source and
+privacy) holds by construction — a candidate sees only `Observation`, and the
+structural tests that forbid a candidate naming a hidden field are unchanged.
+
+Legality is not merely asserted: every research game is adjudicated by the same
+`Replay` engine the live audit uses, and an illegal action raises rather than
+scoring, so a completed run *is* the zero-failure evidence.
+
+### 17.8 Latency
+
+The frozen source hash is unchanged from the measurement committed at 9B-1A, so
+that measurement stands for this revision: p50/p95/max **2.19 / 2.32 / 3.64 ms**
+on `grid9` (N=213) and **3.28 / 3.40 / 4.51 ms** on `grid11` (N=210), against
+the frozen **25 ms** ceiling. Re-measuring an unchanged source would produce a
+new number for the same thing.
+
+### 17.9 Decision
+
+**C4 = VALIDATED.** It is frozen in `results/candidates/freeze_C4.json`, which
+pins the source hash, the three manifest digests, the three result digests, the
+latency digest and the seal metadata, and records
+`final_holdout_evaluated: false` and `production_promotion: false`. That is the
+exact candidate Stage 9B-2 may evaluate **once**.
+
+**C2 was not evaluated.** It is the only permitted fallback and it stays
+archived and untouched, because the fallback is defined to trigger only on a C4
+gate failure.
+
+### 17.10 Evidence vocabulary corrected
+
+Stage 9B-1A wrote a binary verdict, so C2 — which beat the baseline by +0.0510
+with an interval excluding zero, and lost the *selection* to a stronger
+candidate — was recorded with the same word as C1, which lost every game it had
+won. Those are different research outcomes. The vocabulary is now three-valued
+in `research/gates.py`: **ADVANCED**, **NOT_ADVANCED**, **REJECTED_GATE**, and
+`verdict_for` refuses the impossible combination (selected while failing a gate).
+Every historical number is unchanged; only the label is.
+
+### 17.11 Reproduction
+
+```bash
+uv run python -m research.candidate_main validation --out results
+uv run python -m research.candidate_main stress     --out results
+uv run python -m research.candidate_main freeze     --out results
+uv run python -m research.candidate_main figures    --out results
+uv run python -m research.candidate_main evidence   --out results
+```
+
+Figures: `c4_by_bank.png`, `c4_validation_family.png`, `c4_stress_family.png`
+and `strategy_research_progression.png`, all labelled **VALIDATION / STRESS
+RESEARCH EVIDENCE — NOT FINAL HOLDOUT — NOT YET PRODUCTION**. The progression
+keeps every rejected candidate visible and is **not** a learning curve: nothing
+is trained, and the x axis is the order things were evaluated.
