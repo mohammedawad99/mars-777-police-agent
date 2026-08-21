@@ -831,3 +831,13 @@ Every entry below is **`RECONSTRUCTED PROMPT INTENT`**, not verbatim prompt text
 40. **A tautological assertion is worse than no assertion.** `assert x or True`
     passed review by looking like a test. It was replaced by building the real
     composed agent and asking it to choose.
+41. **Check the exit status, not the summary line.** A local gate run was
+    reported green because a grep for "passed|failed" matched neither; two real
+    failures went unseen until CI. Assert on the process result.
+42. **Ask who is at fault before assuming the new code is.** The illegal action
+    was attributed to the *thief*, and the promoted police rule turned out to be
+    clean over 264 research games. The defect was a harness handing a police
+    policy to a thief role.
+43. **A frozen architectural guard outranks a convenient fix.** Selecting the
+    strategy by role inside composition would have worked and was reverted: the
+    repositories are role-symmetric by design, and the guard said so.

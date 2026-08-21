@@ -791,7 +791,37 @@ Measured at the `StrategyPort` surface: `grid9` p50/p95/max **2.17 / 2.28 /
 2.90 ms** (N=213); `grid11` **3.20 / 3.34 / 4.17 ms** (N=210). Ceiling 25 ms.
 Within noise of the frozen research C4 measurement, as equivalence implies.
 
-### 18.6 What this does and does not claim
+### 18.6 One defect the promotion exposed, found by CI
+
+The first push failed all three gating jobs with a semantic verdict of
+**`ILLEGAL_ACTION`** in the two-process and in-process series proofs. The fault
+was recorded against the **thief**, not the police, and the cause was a harness
+flaw the promotion made visible rather than created.
+
+Both integration harnesses gave *this* repository's composed policy to the
+**thief-role** side. This is the police agent, so that policy may place a
+barrier - and `BAR-004` gives placement to the police alone, so the semantic
+review correctly refused it. The rule this replaced almost never admitted a
+placement in those positions, so the flaw had never surfaced.
+
+**The promoted rule itself is not implicated**: 264 research games with it
+produced zero illegal actions, and the recorded fault is the thief's.
+
+A first attempt fixed this in `compose_agent` by selecting the strategy from the
+role. That was **wrong and was reverted**: `test_the_composition_carries_no_role_branch`
+freezes composition as role-symmetric, because each repository ships the policy
+for its own role and the two repositories' production code stays identical. The
+correct fix is in the harnesses, which now let the thief stand-in play
+`BaselineStrategy` - the sibling repository's frozen, never-placing thief policy,
+which is what a real counterparty runs. No assertion was relaxed: both proofs
+still require six `CONSISTENT` audits and the exact fourteen artifacts.
+
+**A process failure of mine is recorded with it.** The local gate run before
+that push was reported green on the strength of a grep for pytest's summary
+line rather than its exit status, and two failures went unseen. The gate command
+now checks `PYTEST_EXIT` explicitly.
+
+### 18.7 What this does and does not claim
 
 C4 is a **validated improvement across this project's frozen legal benchmark
 corpus**, confirmed by a single pre-committed holdout evaluation. It is not a

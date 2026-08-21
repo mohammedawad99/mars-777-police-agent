@@ -20,6 +20,7 @@ import r7_builders as r7
 from r16_builders import GROUP_A, GROUP_B
 
 from mars777_police.app.audit_runtime import AuditRuntime
+from mars777_police.app.baseline_strategy import BaselineStrategy
 from mars777_police.app.outbound_evidence_runtime import OutboundEvidenceRuntime
 from mars777_police.app.sealed_record_values import ActorRole
 from mars777_police.series_driver import SeriesDriver
@@ -51,11 +52,28 @@ def runtimes_for(role: ActorRole) -> object:
     return build_them
 
 
+def strategy_for(series: SeriesRuntime, role: ActorRole) -> object:
+    """The policy the harness gives each side, matching who really plays it.
+
+    This is the **police** repository, so `compose_agent` builds the police
+    policy - and the promoted barrier rule places often. Handing that to the
+    thief-role side would make the harness emit a police-only `BAR-004`
+    placement, which the semantic review rightly judges `ILLEGAL_ACTION`.
+
+    The real counterparty is the sibling thief repository, whose frozen policy
+    is `BaselineStrategy` and never places at all, so that is what stands in for
+    it here. The police side keeps exactly what production composes.
+    """
+    if role is ActorRole.POLICE:
+        return series.composition.strategy
+    return BaselineStrategy()
+
+
 def driver_for(series: SeriesRuntime, role: ActorRole) -> SeriesDriver:
     """The production series owner for one side. No action, no outcome."""
     return SeriesDriver(
         series=series,
-        strategy=series.composition.strategy,
+        strategy=strategy_for(series, role),  # type: ignore[arg-type]
         role=role,
         config=r7.CONFIG,
         runtimes=runtimes_for(role),  # type: ignore[arg-type]

@@ -42,6 +42,7 @@ def main(role_name: str, port: int, opponent: str, root: str, variant: str = "sa
     from r16_builders import GROUP_B
 
     from mars777_police.agent_runtime import AgentRuntime
+    from mars777_police.app.baseline_strategy import BaselineStrategy
     from mars777_police.app.sealed_record_values import ActorRole
     from mars777_police.autonomous_boot import AutonomousBoot
     from mars777_police.composition import compose_agent
@@ -60,6 +61,13 @@ def main(role_name: str, port: int, opponent: str, root: str, variant: str = "sa
         base.role, base.local, base.key_id, base.secret, base.opponent, Path(root)
     )
     composition = compose_agent(settings, compose.identity_for(GROUP_B, "group_b"), GROUP_B)
+    if role is not ActorRole.POLICE:
+        # This is the police repository, so `compose_agent` builds the police
+        # policy. A thief that placed a barrier would be committing a police-only
+        # BAR-004 action and would be judged ILLEGAL_ACTION. The real opponent is
+        # the sibling thief repo, whose frozen policy never places, so the
+        # stand-in uses that instead.
+        composition = dataclasses.replace(composition, strategy=BaselineStrategy())
     runtime = AgentRuntime(composition, settings.local.host, port)
 
     asyncio.run(AutonomousBoot(runtime, settings, config, role).run())
