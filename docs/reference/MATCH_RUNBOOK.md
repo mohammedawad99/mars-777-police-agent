@@ -64,3 +64,35 @@ available: see the two open items at the end.
    the exact non-secret contract is in `KIT_PAIRING_HANDOFF.md`.
 2. **Result-digest exchange** — the pinned four-tool wire has no operation that can
    carry it, so it needs an agreed extension.
+
+## Gmail readiness — before every counted series
+
+Reporting is **automatic** after a counted series (Appendix E rule 32), and a
+missing report scores **0 for both groups** (rule 35). So the credential is
+checked *before* play, never after.
+
+```bash
+export MARS777_GMAIL_TOKEN=~/.config/mars777/gmail/token.json
+uv run python -m mars777_police.gmail_preflight     # or: mars777-preflight
+```
+
+It performs one real OAuth refresh and **never contacts the lecturer**: no
+message is composed and the fixed address is only compared. It prints no secret.
+
+* `GMAIL_PREFLIGHT_READY = YES`, exit `0` - begin counted play.
+* `GMAIL_PREFLIGHT_READY = NO`, exit `2` - **do not begin counted play.** Fix the
+  credential first; re-authorise if the refresh token has expired.
+
+### Match-day flow
+
+| when | what happens |
+|---|---|
+| before the opponent arrives | preflight **PASS** |
+| immediately before the counted series | preflight **PASS** again |
+| during the series | no Gmail action at all |
+| six sub-games, audits `CONSISTENT`, result agreed and persisted | `REPORT_READY` |
+| immediately after | **the agent sends the report itself** - no command, no browser, no approval |
+
+If the provider returns `429`, the Gatekeeper honours `Retry-After`; delivery is
+recorded incomplete and the result is untouched. Zero-delay means dispatch
+starts as soon as it is legal, never that backoff is ignored.

@@ -1,7 +1,10 @@
 """The one software-version authority, and what it refuses.
 
 Guideline v3.00 §8.1 asks for explicit version tracking whose **initial value is
-`1.00`**, stored at `src/<pkg>/shared/version.py`. `1.00` is not a PEP-440
+`1.00`**, stored at `src/<pkg>/shared/version.py`. It is now `1.01`: the
+automatic-reporting defect corrected after `v1.0-submission` genuinely changed
+what a finished series does, so the published version moved with it. The
+zero-padded guideline form is not a PEP-440
 stable string - `packaging` normalises it to `1.0` - so storing that literal in
 `pyproject.toml` would publish distribution metadata that disagrees with the
 declaration. The authority therefore stores the *value* once and renders it two
@@ -20,18 +23,18 @@ from mars777_police.shared.version import (
 
 
 def test_the_authority_starts_at_the_guideline_initial_value() -> None:
-    assert SoftwareVersion(1, 0) == VERSION
+    assert SoftwareVersion(1, 1) == VERSION
 
 
 def test_the_guideline_rendering_is_the_literal_the_guideline_names() -> None:
-    assert VERSION.guideline == "1.00"
+    assert VERSION.guideline == "1.01"
 
 
 def test_the_packaging_rendering_is_pep_440_stable() -> None:
     from packaging.version import Version
 
     assert str(Version(VERSION.pep440)) == VERSION.pep440
-    assert VERSION.pep440 == "1.0"
+    assert VERSION.pep440 == "1.1"
 
 
 def test_a_version_is_two_non_negative_integers() -> None:

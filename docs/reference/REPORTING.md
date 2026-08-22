@@ -287,3 +287,43 @@ merely exists on a machine authorises nothing. CI sets none of them and can
 never send. When authorised, the smoke sends to the **operator's own** address
 with a payload labelled `live_smoke`, never to the lecturer and never a
 fabricated counted result.
+
+## Automatic dispatch — corrected at OPS-0F
+
+**The `v1.0-submission` release did not satisfy Appendix E rule 32.** Everything
+below was implemented, rate-limited and contract-exact, but nothing in the
+autonomous path invoked it: `SeriesDriver.play_series()` persisted the agreed
+result, reached `REPORT_READY` and returned. Only `report_main`, the SDK and
+tests called the sender, so a real series ended with a result on disk and no
+email — and rule 35 scores a missing report **0 for both groups**.
+
+**What changed.** `SeriesDriver` gained one optional port, `ReportDispatchPort`,
+called immediately after `persist_result()`. `AutonomousBoot` supplies the real
+reporter, which delegates to the same `send_game_report` the operator command
+uses — one gate, one recipient, one message contract, nobody typing. The series
+owner still knows nothing about Gmail, OAuth or attachments; a test asserts that
+by scanning the module.
+
+**Group ownership needs no arbitration.** Every profile set fixes
+`SeriesConvention.FIXED_ROLE` and a lock is refused unless the peer agreed the
+same convention, so exactly one MaRs-777 process plays a counted series and
+exactly one can reach the dispatch point.
+
+**Sent once, across restarts.** `ReportService` already refused a second send
+inside one process. `send_game_report` now also reads the durable
+`reporting/delivery_<game_id>.json` record and skips a send whose **identity**
+(the agreed result digest) was already accepted. A different agreed result under
+the same `game_id` is a different report and is still sent; a previous *failure*
+is not a delivery, so a retry still goes out.
+
+**The guarantee, stated honestly.** Deterministic single group sender + durable
+no-resend after a confirmed delivery + in-process idempotency. This is **not**
+strict exactly-once network delivery: if the process dies after Google accepts
+the request but before the receipt is written, a later run would send again.
+That window is real, it is small, and it is not papered over — Gmail exposes no
+idempotency key this project could use instead.
+
+**A provider failure never touches the game.** Dispatch failure is contained:
+the result artifact, the scores, the audits and the official fourteen files are
+already written and are not rewritten. Reporting stays incomplete and may be
+retried with the operator command.

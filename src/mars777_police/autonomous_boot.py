@@ -24,6 +24,7 @@ config or a result is a different question, decided by the owners that own it.
 
 import asyncio
 from dataclasses import dataclass
+from pathlib import Path
 
 from .agent_runtime import AgentRuntime
 from .app.artifact_store import StoredArtifact
@@ -34,6 +35,7 @@ from .app.protocol_errors import LocalDefectError
 from .app.sealed_record_values import ActorRole
 from .app.token_accounting import SeriesTokenLedger
 from .boot_runtimes import sub_game_runtimes
+from .compose_report import send_game_report
 from .domain.config_model import SeriesConfig
 from .domain.negotiated_config import NegotiatedConfig
 from .infra.artifacts import JsonArtifactStore
@@ -91,6 +93,20 @@ class AutonomousBoot:
             LocalOrchestrator.start(SeriesConfig()),
         )
 
+    @staticmethod
+    def reporter(result: Path) -> None:
+        """Report a finished series automatically, as Appendix E rule 32 requires.
+
+        The boot is where a real provider belongs: `SeriesDriver` owns the moment
+        a result becomes reportable and must not learn what Gmail is, while this
+        already owns process lifecycle and the outside world.
+
+        Delegates to the same `send_game_report` the operator command uses, so
+        there is one reporting path with one gate, one recipient and one message
+        contract - the only difference is that nobody has to type it.
+        """
+        send_game_report(result)
+
     def driver(self, series: SeriesRuntime, peer: str) -> SeriesDriver:
         """The one production series owner, built from state that already exists."""
         composition = series.composition
@@ -102,6 +118,7 @@ class AutonomousBoot:
             runtimes=sub_game_runtimes(composition, self.role, peer, self.config),
             deadline=self.deadline,
             viewer=self.viewer,
+            reporter=self.reporter,
         )
 
     async def await_peer_step0(self, pregame: PregameSessionRuntime) -> str:

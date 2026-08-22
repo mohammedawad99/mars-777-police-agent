@@ -37,11 +37,13 @@ repository is. Series orchestration is role-neutral; the strategy behind
 import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 from .app import artifact_store as artifacts
 from .app.audit_runtime import AuditRuntime
 from .app.live_view_sink import NO_VIEWER, LiveViewSink
 from .app.outbound_evidence_runtime import OutboundEvidenceRuntime
+from .app.report_dispatch import ReportDispatchPort, no_report
 from .app.round_opening import open_round_for
 from .app.sealed_record_values import ActorRole
 from .app.series_agreements import agree_config, agree_result
@@ -68,6 +70,8 @@ class SeriesDriver:
     deadline: float
     viewer: LiveViewSink = NO_VIEWER
     """A live window to publish to, or nobody. It is never read from."""
+    reporter: ReportDispatchPort = no_report
+    """Who reports the finished series, or nobody. See `app.report_dispatch`."""
 
     def open(self) -> None:
         """Open the config round for the sub-game about to be played, and adopt it.
@@ -101,7 +105,22 @@ class SeriesDriver:
         self.series.build_result()
         exchange = self.series.composition.runtime_context.current_result()
         await agree_result(exchange, self.series.composition.peer_runner, self._await)
-        return self.series.persist_result()
+        stored = self.series.persist_result()
+        self._report(stored)
+        return stored
+
+    def _report(self, stored: artifacts.StoredArtifact) -> None:
+        """Hand the persisted result to the reporter, and let nothing it says matter.
+
+        The game is over and written before this runs. A provider refusal is a
+        delivery problem - reporting stays incomplete and may be retried - and it
+        may never rewrite a result, a score or an audit, so the failure is
+        contained rather than propagated into the series.
+        """
+        try:
+            self.reporter(Path(stored.path))
+        except Exception:
+            return
 
     async def play_sub_game(self, sub_game: int) -> Outcome:
         """One whole sub-game: agree its config, play it, audit it, close it."""

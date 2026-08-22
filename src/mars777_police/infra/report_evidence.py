@@ -50,3 +50,30 @@ def write_evidence(root: Path, game_id: str, document: dict[str, object]) -> Pat
     target = directory / evidence_name(game_id)
     target.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return target
+
+
+def accepted_identity(root: Path, game_id: str) -> str | None:
+    """The report identity this machine already delivered for *game_id*, if any.
+
+    The durable half of "send once". `ReportService` refuses a second send inside
+    one process; this survives the process, because a restarted agent that
+    mailed the lecturer again would risk the contradictory-report penalty in
+    Appendix E rule 35.
+
+    Returns the **identity** rather than a boolean on purpose: a different agreed
+    result under the same `game_id` is a different report and must still be sent,
+    so the caller compares digests rather than trusting a file name.
+
+    An absent, unreadable or not-accepted record all mean *not delivered*. The
+    failure a corrupt file could cause is a missing report, which is the worse
+    of the two errors, so it is never inferred as a delivery.
+    """
+    target = root / EVIDENCE_DIRECTORY / evidence_name(game_id)
+    try:
+        document = json.loads(target.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if document.get("provider_accepted") is not True:
+        return None
+    identity = document.get("report_identity")
+    return identity if isinstance(identity, str) else None

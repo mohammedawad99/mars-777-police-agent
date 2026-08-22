@@ -62,8 +62,20 @@ class SoftwareVersion:
         return f"{self.major}.{self.minor}"
 
 
-VERSION: Final[SoftwareVersion] = SoftwareVersion(1, 0)
-"""This software's version. Starts at the guideline's initial value."""
+VERSION: Final[SoftwareVersion] = SoftwareVersion(1, 1)
+"""This software's version.
+
+Started at the guideline's initial `1.00`. Raised to `1.01` when the automatic
+Gmail reporting defect was corrected after the `v1.0-submission` release: that
+release satisfied Appendix E rule 32 only if an operator ran the report command,
+which is not "automatic", so the behaviour of a finished series genuinely
+changed and a published version had to change with it.
+
+**Minor, not patch**, because this authority is `MAJOR.MINOR` by construction -
+the guideline names that form and `SoftwareVersion` has no patch component.
+Inventing one during a freeze to make the number look smaller would be inventing
+policy retroactively.
+"""
 
 
 def verify_installation(*, lookup: Callable[[str], str] | None = None) -> None:

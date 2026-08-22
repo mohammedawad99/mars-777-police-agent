@@ -288,6 +288,24 @@ has passed. Neither window has a control that reaches a decision. Full guide:
 
 ### 6.6 Reporting a finished game
 
+**Reporting is automatic, and needs no command.** Appendix E rule 32 requires the
+result of every legal game to be reported automatically, and rule 35 makes each
+group's own report the condition for being credited at all - non-reporting
+scores **0 for both groups**. So when a counted series reaches its legal
+reporting boundary - six sub-games played, mutual audits `CONSISTENT`, result
+agreed with the opponent and persisted - the agent sends the report itself,
+immediately, with nobody typing anything.
+
+Exactly one MaRs-777 process ever does this: every profile set this project
+composes fixes `SeriesConvention.FIXED_ROLE`, and a config lock is refused unless
+the peer agreed the same convention, so one process plays a counted series and
+one report leaves the group. A restart cannot send it twice - the durable
+delivery record is consulted before any send.
+
+The command below remains as an **operator recovery tool** for the case where
+delivery failed and the provider must be retried. It is no longer the normal
+post-game path.
+
 At the end of every legal game each group sends its own completion report to the
 lecturer, as an attached JSON file (Appendix E rules 32-35 and 51):
 

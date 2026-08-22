@@ -27,6 +27,7 @@ CONSOLE = {
     "mars777-gui": "mars777_police.gui_main:main",
     "mars777-replay": "mars777_police.replay_main:main",
     "mars777-report": "mars777_police.report_main:main",
+    "mars777-preflight": "mars777_police.gmail_preflight:main",
 }
 
 

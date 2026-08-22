@@ -27,7 +27,12 @@ from .infra.gmail_credentials import credentials_path, load_credentials
 from .infra.gmail_sender import GmailSender
 from .infra.rate_limit_file import load_rate_limits
 from .infra.replay_files import read_document
-from .infra.report_evidence import evidence_document, write_evidence
+from .infra.report_evidence import (
+    EVIDENCE_DIRECTORY,
+    accepted_identity,
+    evidence_document,
+    write_evidence,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,8 +61,23 @@ def read_report(result: Path, root: Path | None = None) -> GameReport:
 
 
 def send_game_report(result: Path, root: Path | None = None) -> ReportOutcome:
-    """Send the report for *result* through the gate, and record the outcome."""
+    """Send the report for *result* through the gate, and record the outcome.
+
+    **Sent once, across restarts too.** `ReportService` already refuses a second
+    send inside one process; this also reads the durable delivery record, because
+    an agent restarted after a successful report would otherwise mail the
+    lecturer the same series again - and Appendix E rule 35 penalises a
+    contradictory report with 0 for *both* groups.
+
+    The comparison is on the report identity, the agreed result digest: a
+    different agreed result under the same `game_id` is a different report and is
+    still sent.
+    """
     report = read_report(result, root)
+    already = accepted_identity(result.parent, report.game_id)
+    if already == report.identity:
+        settled = ReportDelivery(report.identity, True)
+        return ReportOutcome(report, settled, result.parent / EVIDENCE_DIRECTORY)
     sender = GmailSender(load_credentials(credentials_path()))
     keeper = Gatekeeper(load_rate_limits())
     service = ReportService(sender, keeper.call)
