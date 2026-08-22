@@ -41,8 +41,22 @@ NOT_READY = "GMAIL_PREFLIGHT_READY = NO"
 Check = tuple[str, bool, str]
 
 
-def _permissions(path: Path) -> Check:
-    """Whether the token file is private to its owner."""
+def _permissions(path: Path, system: str | None = None) -> Check:
+    """Whether the token file is private to its owner. POSIX only.
+
+    **Windows cannot answer this question the POSIX way.** `os.chmod` there
+    toggles the read-only bit and nothing else, so NTFS reports `0666` for a
+    file that may be perfectly well protected by an ACL this code cannot read.
+    Treating that as "not private" would make the preflight answer
+    `GMAIL_PREFLIGHT_READY = NO` forever on a Windows operator machine and block
+    counted play over a credential that is fine.
+
+    So the check reports honestly that it does not apply, rather than failing.
+    Protecting the file is still the operator's job there - it is simply not a
+    thing this can verify, and claiming otherwise would be the worse error.
+    """
+    if (system if system is not None else os.name) == "nt":
+        return ("token file is private", True, "not checkable on Windows (NTFS ACLs)")
     mode = stat.S_IMODE(path.stat().st_mode)
     return ("token file is private", (mode & 0o077) == 0, f"mode {mode:04o}")
 

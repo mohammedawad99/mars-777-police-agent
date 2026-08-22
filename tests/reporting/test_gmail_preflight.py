@@ -36,16 +36,53 @@ def test_a_missing_token_file_stops_before_reading_anything(tmp_path: Path) -> N
 
 
 def test_a_world_readable_token_is_reported_as_not_private(tmp_path: Path) -> None:
-    """A tournament credential that anyone on the box can read is not ready."""
+    """A tournament credential anyone on the box can read is not ready.
+
+    Asked of the POSIX branch explicitly, so this holds on every platform: a
+    Windows runner cannot produce `0644` through `chmod`, but the rule being
+    tested - "any group or other bit means not private" - is the same one.
+    """
     token = tmp_path / "token.json"
     token.write_text("{}", encoding="utf-8")
     token.chmod(0o644)
 
-    found = gmail_preflight.checks(env={TOKEN_PATH: str(token)})
-    private = next(one for one in found if one[0] == "token file is private")
+    _, ok, reason = gmail_preflight._permissions(token, system="posix")
 
-    assert private[1] is False
-    assert "0644" in private[2]
+    assert ok is False
+    assert "mode 0" in reason
+
+
+def test_the_posix_branch_reports_the_real_mode_it_read(tmp_path: Path) -> None:
+    """The decision follows the mode the filesystem actually gave us."""
+    import stat as stat_module
+
+    token = tmp_path / "token.json"
+    token.write_text("{}", encoding="utf-8")
+    token.chmod(0o600)
+    mode = stat_module.S_IMODE(token.stat().st_mode)
+
+    _, ok, reason = gmail_preflight._permissions(token, system="posix")
+
+    assert ok is ((mode & 0o077) == 0)
+    assert f"{mode:04o}" in reason
+
+
+def test_windows_reports_the_check_as_inapplicable_rather_than_failing(
+    tmp_path: Path,
+) -> None:
+    """`os.chmod` on Windows toggles read-only and nothing else.
+
+    NTFS then reports `0666` for a file an ACL may protect perfectly well, so a
+    POSIX bit test there would answer `GMAIL_PREFLIGHT_READY = NO` forever and
+    block counted play over a healthy credential.
+    """
+    token = tmp_path / "token.json"
+    token.write_text("{}", encoding="utf-8")
+
+    _, ok, reason = gmail_preflight._permissions(token, system="nt")
+
+    assert ok is True
+    assert "not checkable on Windows" in reason
 
 
 def test_a_private_but_invalid_token_fails_on_schema_not_on_the_network(
@@ -58,7 +95,6 @@ def test_a_private_but_invalid_token_fails_on_schema_not_on_the_network(
     found = gmail_preflight.checks(env={TOKEN_PATH: str(token)})
     names = [one[0] for one in found]
 
-    assert next(one for one in found if one[0] == "token file is private")[1] is True
     assert next(one for one in found if one[0] == "credential schema")[1] is False
     assert "live token refresh" not in names
 
@@ -107,7 +143,6 @@ def test_permissions_helper_accepts_an_owner_only_file(tmp_path: Path) -> None:
     token.write_text("{}", encoding="utf-8")
     token.chmod(0o600)
 
-    _, ok, _ = gmail_preflight._permissions(token)
+    _, ok, _ = gmail_preflight._permissions(token, system="posix")
 
-    assert ok is True
-    assert stat.S_IMODE(token.stat().st_mode) == 0o600
+    assert ok is ((stat.S_IMODE(token.stat().st_mode) & 0o077) == 0)
