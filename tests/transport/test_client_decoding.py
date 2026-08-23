@@ -114,7 +114,7 @@ def test_the_client_owns_its_own_session_and_shares_no_global_one() -> None:
     assert not any(isinstance(value, Client) for value in vars(module).values())
     first = PeerClient("http://127.0.0.1:9/mcp", PeerDeadline(TimeoutPolicy(1.0)))
     second = PeerClient("http://127.0.0.1:8/mcp", PeerDeadline(TimeoutPolicy(1.0)))
-    assert first._session is None and second._session is None
+    assert not first._hold.held and not second._hold.held
     assert first.url != second.url
     assert isinstance(FastMCP, type)
 
@@ -122,10 +122,10 @@ def test_the_client_owns_its_own_session_and_shares_no_global_one() -> None:
 def test_a_call_outside_a_held_session_still_opens_its_own() -> None:
     """A caller that manages no lifecycle keeps the original per-call behaviour."""
     client = PeerClient("http://127.0.0.1:9/mcp", PeerDeadline(TimeoutPolicy(0.5)))
-    assert client._session is None
+    assert not client._hold.held
     with pytest.raises(TransportFailureError):
         asyncio.run(client.complete("negotiate", "step0", {"a": 1}))
-    assert client._session is None
+    assert not client._hold.held
 
 
 def test_entering_a_dead_endpoint_is_a_transport_failure_not_a_peer_error() -> None:

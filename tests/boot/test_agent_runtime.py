@@ -14,7 +14,7 @@ def assert_started_nothing(runtime: AgentRuntime) -> None:
     """A failed startup keeps nothing: not the state, the task, or the port."""
     assert runtime.state is RuntimeState.NEW
     assert runtime.server_task is None and runtime.listener is None
-    assert runtime.composition.peer_client._session is None
+    assert not runtime.composition.peer_client._hold.held
     freed = socket.socket()
     freed.bind((build.HOST, runtime.port))
     freed.close()
@@ -24,7 +24,7 @@ def test_a_new_runtime_has_started_nothing() -> None:
     runtime = build.runtime_for(build.agent())
     assert runtime.state is RuntimeState.NEW
     assert runtime.server_task is None and runtime.listener is None
-    assert runtime.composition.peer_client._session is None
+    assert not runtime.composition.peer_client._hold.held
 
 
 def test_serving_makes_the_ingress_reachable_immediately() -> None:
@@ -44,7 +44,7 @@ def test_serving_makes_the_ingress_reachable_immediately() -> None:
 
     asyncio.run(run())
     assert runtime.state is RuntimeState.CLOSED
-    assert composition.peer_client._session is None
+    assert not composition.peer_client._hold.held
     assert runtime.server_task is None and runtime.listener is None
 
 
@@ -78,7 +78,7 @@ def test_a_port_already_in_use_fails_before_anything_starts() -> None:
     finally:
         holder.close()
     assert runtime.state is RuntimeState.NEW
-    assert composition.peer_client._session is None
+    assert not composition.peer_client._hold.held
     assert runtime.server_task is None and runtime.listener is None
 
 

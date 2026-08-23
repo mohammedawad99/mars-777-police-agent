@@ -51,13 +51,13 @@ def test_the_async_context_starts_and_stops_the_whole_agent() -> None:
             async with runtime as live:
                 assert live is runtime
                 assert live.state is RuntimeState.RUNNING
-                assert composition.peer_client._session is not None
+                assert composition.peer_client._hold.held
         finally:
             await opponent.stop()
 
     asyncio.run(run())
     assert runtime.state is RuntimeState.CLOSED
-    assert composition.peer_client._session is None
+    assert not composition.peer_client._hold.held
 
 
 def test_releasing_nothing_is_safe() -> None:
@@ -126,7 +126,7 @@ def test_cancelling_the_waiter_still_releases_everything() -> None:
 
     asyncio.run(run())
     assert runtime.state is RuntimeState.CLOSED
-    assert composition.peer_client._session is None
+    assert not composition.peer_client._hold.held
     released = socket.socket()
     released.bind((build.HOST, runtime.port))
     released.close()

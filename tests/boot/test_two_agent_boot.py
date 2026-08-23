@@ -75,8 +75,8 @@ def test_both_agents_boot_and_hold_persistent_sessions(agents: tuple) -> None:
     async def run() -> None:
         async with booted(a, b):
             assert a.state is b.state is RuntimeState.RUNNING
-            assert a.composition.peer_client._session is not None
-            assert b.composition.peer_client._session is not None
+            assert a.composition.peer_client._hold.held
+            assert b.composition.peer_client._hold.held
             assert a.composition.pregame.peer is None and b.composition.pregame.peer is None
 
     asyncio.run(run())
@@ -133,8 +133,8 @@ def test_shutdown_after_real_traffic_releases_everything(agents: tuple) -> None:
 
     asyncio.run(run())
     assert a.state is b.state is RuntimeState.CLOSED
-    assert a.composition.peer_client._session is None
-    assert b.composition.peer_client._session is None
+    assert not a.composition.peer_client._hold.held
+    assert not b.composition.peer_client._hold.held
     for port in ports:
         released = socket.socket()
         released.bind((build.HOST, port))

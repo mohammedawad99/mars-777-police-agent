@@ -32,12 +32,12 @@ def test_forty_public_operations_succeed_inside_one_production_session(
 
     async def drive() -> object:
         async with PeerClient(endpoint.url, PeerDeadline(TimeoutPolicy(TIMEOUT))) as client:
-            held = client._session
+            held = client.session_id
             for _ in range(OPERATIONS):
                 await client.complete(
                     "receive_turn", "acknowledgement", encode_acknowledgement(acknowledgement())
                 )
-                assert client._session is held, "the session must not be reopened mid-run"
+                assert client.session_id == held, "the session must not be reopened mid-run"
             return held
 
     held = asyncio.run(drive())

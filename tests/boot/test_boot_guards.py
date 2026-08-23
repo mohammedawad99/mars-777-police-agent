@@ -87,7 +87,7 @@ def test_composition_still_starts_nothing() -> None:
         for forbidden in ("run_http_async", "create_task", "aenter", "listen", "bind"):
             assert forbidden not in tokens
     composed = compose.compose()
-    assert composed.peer_client._session is None
+    assert not composed.peer_client._hold.held
 
 
 def test_the_runtime_reaches_no_inward_layer_it_should_not() -> None:

@@ -59,15 +59,15 @@ def test_one_held_session_serves_many_operations() -> None:
     async def drive() -> list[object]:
         await settle(url)
         client = PeerClient(url, PeerDeadline(TimeoutPolicy(20.0)))
-        assert client._session is None
+        assert client._hold.session_id is None
         async with client:
-            held = client._session
+            held = client._hold.session_id
             assert held is not None
             for _ in range(OPERATIONS // 2):
                 await client.complete("negotiate", "step0", encode_step0(step0_exchange()))
                 await client.complete("receive_turn", "commitment", encode_commitment(commitment()))
-                assert client._session is held
-        assert client._session is None
+                assert client._hold.session_id == held
+        assert client._hold.session_id is None
         return operations.kinds()
 
     kinds = asyncio.run(drive())
@@ -97,13 +97,13 @@ def test_the_session_closes_once_even_when_the_body_raises() -> None:
         client = PeerClient(url, PeerDeadline(TimeoutPolicy(20.0)))
         with pytest.raises(RuntimeError):
             async with client:
-                assert client._session is not None
+                assert client._hold.held
                 raise RuntimeError("something inside the session failed")
         return client
 
     client = asyncio.run(drive())
-    assert client._session is None
-    assert client._stack is None
+    assert client._hold.session_id is None
+    assert not client._hold.held
 
 
 def test_a_second_context_on_the_same_client_opens_a_fresh_session() -> None:
@@ -114,10 +114,10 @@ def test_a_second_context_on_the_same_client_opens_a_fresh_session() -> None:
         await settle(url)
         client = PeerClient(url, PeerDeadline(TimeoutPolicy(20.0)))
         async with client:
-            first = client._session
+            first = client._hold.session_id
         async with client:
-            second = client._session
-        return first is not second
+            second = client._hold.session_id
+        return first != second
 
     assert asyncio.run(drive()) is True
 
@@ -125,6 +125,6 @@ def test_a_second_context_on_the_same_client_opens_a_fresh_session() -> None:
 def test_closing_a_client_that_was_never_entered_is_a_safe_no_op() -> None:
     """Cleanup must be idempotent: a failed entry leaves nothing to unwind."""
     client = PeerClient("http://127.0.0.1:9/mcp", PeerDeadline(TimeoutPolicy(1.0)))
-    assert client._stack is None
+    assert not client._hold.held
     asyncio.run(client.__aexit__(None, None, None))
-    assert client._session is None and client._stack is None
+    assert client._hold.session_id is None and not client._hold.held

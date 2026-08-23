@@ -150,6 +150,8 @@ def test_the_transport_package_is_where_the_framework_actually_lives() -> None:
         "kit_serving.py",
         "server.py",
         "session_deadline.py",
+        "session_hold.py",
         "session_state.py",
+        "step0_outbound.py",
         "wire_errors.py",
     ]

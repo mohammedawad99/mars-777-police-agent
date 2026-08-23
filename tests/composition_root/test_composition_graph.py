@@ -40,8 +40,8 @@ def test_the_composition_exposes_only_what_boot_needs() -> None:
 def test_construction_starts_nothing() -> None:
     """No session entered, no socket bound, no traffic - objects only."""
     composition = build.compose()
-    assert composition.peer_client._session is None
-    assert composition.peer_client._stack is None
+    assert composition.peer_client._hold.held is False
+    assert composition.peer_client.session_id is None
     assert sorted(PEER_TOOLS) == ["negotiate", "receive_control", "receive_turn", "submit_audit"]
 
 

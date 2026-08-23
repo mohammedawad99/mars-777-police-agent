@@ -13,19 +13,15 @@ was built still governs it.
 Every response is decoded **strictly**: a completing operation refuses a value,
 `reveal` requires an exact `TurnOutcome`, and a digest must be well formed.
 
-**One session per peer lifecycle, not one per operation.** Entering this client
-as an async context holds one FastMCP Streamable-HTTP session and runs every
-`call_tool` inside it. That is measured: over a real public tunnel, 30 operations
-each opening their own session failed from the twenty-first onward, while the
-same 30 in one held session all succeeded. Outside one, each call opens its own.
-
-**A dead session is not silently replaced.** It surfaces as `E-TRANSPORT` and is
-never replayed: whether a commitment reached the peer is unknowable here.
+**One session per peer lifecycle, not one per operation**, and a dead one is
+never silently replaced: `E-TRANSPORT` stays terminal because whether a
+commitment reached the peer is unknowable here. `session_hold` owns both rules
+and the one case - a peer that disowns our session id - where re-establishing is
+lifecycle rather than replay. Outside a held session each call opens its own.
 
 **The wire shape belongs to the transport profile**, not here: `call_arguments`.
 """
 
-from contextlib import AsyncExitStack
 from typing import Any
 
 from fastmcp import Client
@@ -41,6 +37,7 @@ from .call_arguments import strict_arguments as envelope
 from .call_arguments import wire_json as wire_json
 from .codec_turn import decode_outcome
 from .session_deadline import session_transport
+from .session_hold import HeldSession
 from .transport_profiles import TransportEnvelopeProfile as Envelopes
 from .wire_errors import TransportFailureError, inbound
 from .wire_turn import TurnOutcomeWire
@@ -55,8 +52,7 @@ class PeerClient:
         self._url = url
         self._deadline = deadline
         self._profile = profile
-        self._session: Client[StreamableHttpTransport] | None = None
-        self._stack: AsyncExitStack | None = None
+        self._hold = HeldSession(self._client)
 
     @property
     def profile(self) -> Envelopes:
@@ -78,6 +74,11 @@ class PeerClient:
         return self._deadline.seconds()
 
     @property
+    def session_id(self) -> str | None:
+        """The outbound MCP session id now in use, or None outside a session."""
+        return self._hold.session_id
+
+    @property
     def url(self) -> str:
         """The peer's stable group-level ingress."""
         return self._url
@@ -87,21 +88,16 @@ class PeerClient:
         return Client(session_transport(self._url, self._deadline), timeout=self.timeout)
 
     async def __aenter__(self) -> "PeerClient":
-        """Hold one session open for every call made inside this context."""
-        stack = AsyncExitStack()
+        """Hold one session for this context; eager, so it proves the peer is up."""
         try:
-            self._session = await stack.enter_async_context(self._client())
+            await self._hold.open()
         except Exception as failure:
-            await stack.aclose()
             raise TransportFailureError(TransportFailureError.error_id) from failure
-        self._stack = stack
         return self
 
     async def __aexit__(self, kind: object, value: object, traceback: object) -> None:
         """Close the held session exactly once, whatever happened inside."""
-        stack, self._stack, self._session = self._stack, None, None
-        if stack is not None:
-            await stack.aclose()
+        await self._hold.close()
 
     async def call(self, tool: str, kind: str, payload: BaseModel | dict[str, object]) -> Any:
         """Invoke *tool* with the frozen envelope and return its raw result."""
@@ -109,12 +105,16 @@ class PeerClient:
 
     async def invoke(self, tool: str, request: dict[str, object]) -> Any:
         """Send one already-built argument object, inside the held session."""
+
+        async def send(session: Client[StreamableHttpTransport]) -> Any:
+            return await session.call_tool(tool, request, timeout=self.timeout)
+
         try:
-            if self._session is not None:
-                result = await self._session.call_tool(tool, request, timeout=self.timeout)
+            if self._hold.held:
+                result = await self._hold.run(send)
             else:
                 async with self._client() as client:
-                    result = await client.call_tool(tool, request, timeout=self.timeout)
+                    result = await send(client)
         except ToolError as failure:
             raise inbound(str(failure)) from None
         except Exception as failure:
