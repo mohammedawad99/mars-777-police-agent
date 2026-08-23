@@ -12,6 +12,7 @@ role decision, which belongs to the schedule.
 
 import os
 from collections.abc import Callable
+from pathlib import Path
 
 from . import GROUP_CODE
 from .app.gatekeeper import Gatekeeper
@@ -20,6 +21,7 @@ from .app.kit_messages import KitRole
 from .app.public_endpoint_policy import SystemHostResolver
 from .app.public_network_workflow import PublicNetworkService
 from .app.step0_runtime import Step0Runtime
+from .composition import compose_agent
 from .composition_inputs import keyed_authenticator
 from .first_role_source import series_first_role
 from .identity import ROLE
@@ -27,12 +29,16 @@ from .infra.ngrok_ingress import NgrokPublicIngress, fetch
 from .infra.ngrok_process import NgrokProcess
 from .infra.ngrok_settings import NgrokSettings
 from .infra.rate_limit_file import load_rate_limits
-from .infra.settings import load_runtime_settings
+from .infra.settings import RuntimeSettings, load_runtime_settings
 from .kit_public_launcher import KitPublicLauncher
+from .launch_input import read_launch_document
 from .operator_requests import PublicGatewayRequest
 from .protocol.declaration import Step0Authenticator
+from .transport.codec_declaration import decode_step0
 from .transport.kit_backend_routes import KitBackendRoutes
 from .transport.kit_gateway import KitGroupGateway
+from .transport.negotiate_arguments import Step0Handler
+from .transport.wire_declaration import Step0ExchangeWire
 
 ROUTE_DEADLINE = 1800.0
 """How long one forwarded call may take, bounded well above a turn budget."""
@@ -85,4 +91,25 @@ def compose_public_gateway(request: PublicGatewayRequest) -> KitPublicLauncher:
         backend_endpoints=tuple(endpoints.values()),
         evidence_root=str(request.evidence_root),
         routes=routes,
+        step0=None if request.launch is None else _step0_receiver(settings, request.launch),
     )
+
+
+def _step0_receiver(settings: RuntimeSettings, launch: Path) -> Step0Handler:
+    """The counted Step-0 receiver, verified against **our own** declaration.
+
+    Composed here rather than routed to a backend because Step-0 is a
+    once-per-series, group-level fact: the backends own the six sub-games, and a
+    declaration that arrived at one of them would bind an identity the other
+    never saw. `PregameSessionRuntime.accept_step0` is the same receiver the
+    internal wire uses - nothing about verification is re-implemented for the
+    public route, only reached from it.
+    """
+    document = read_launch_document(launch)
+    composition = compose_agent(settings, document.identity, GROUP_CODE)
+
+    async def receive(payload: dict[str, object]) -> None:
+        wire = Step0ExchangeWire.model_validate(payload)
+        composition.pregame.accept_step0(decode_step0(wire))
+
+    return receive

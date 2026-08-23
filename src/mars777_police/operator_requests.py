@@ -55,6 +55,14 @@ class PublicGatewayRequest:
     police_endpoint: str
     thief_endpoint: str
     ngrok: Path
+    launch: Path | None = None
+    """The series launch document, when this route must also receive Step-0.
+
+    Optional because a route that carries only per-sub-game greetings needs no
+    declaration; a counted or authenticated-rehearsal route does, because Step-0
+    is verified against **our own** declaration and there is nowhere else in this
+    process to read it from."""
+
     first_role: str | None = None
     """The operator's stated sub-game-1 role, or `None` when they stated none.
 

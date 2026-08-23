@@ -53,6 +53,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="sub-game-1 role, for a pairing the shared contract does not name",
     )
     parser.add_argument("--ngrok", required=True, type=Path, help="the operator's ngrok agent")
+    parser.add_argument(
+        "--launch",
+        default=None,
+        type=Path,
+        help="series launch document; required for a route that also receives Step-0",
+    )
     parser.add_argument("--evidence-root", default="runtime/friendly", type=Path)
     return parser.parse_args(argv)
 
@@ -64,6 +70,7 @@ def build(arguments: argparse.Namespace) -> KitPublicLauncher:
             police_endpoint=arguments.police_endpoint,
             thief_endpoint=arguments.thief_endpoint,
             ngrok=arguments.ngrok,
+            launch=arguments.launch,
             first_role=arguments.first_role,
             evidence_root=arguments.evidence_root,
         )

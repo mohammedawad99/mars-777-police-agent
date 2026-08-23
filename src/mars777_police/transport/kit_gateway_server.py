@@ -17,8 +17,10 @@ opponent sees one stable group URL for the whole series.
 
 from fastmcp import FastMCP
 
+from ..app.protocol_errors import LocalDefectError, MalformedMessageError
 from .kit_envelopes import KIT_OK, KitJson
 from .kit_gateway import KitGroupGateway
+from .negotiate_arguments import Step0Handler, step0_arguments
 from .wire_errors import outbound
 
 GATEWAY_TOOLS = ("negotiate", "receive_turn", "submit_audit", "receive_control")
@@ -28,14 +30,58 @@ ADMIN_TOOLS = ("sub_game_settled", "contribute_row", "series_rows")
 """The private surface, loopback only, and never part of the KIT contract."""
 
 
-def build_gateway_tools(gateway: KitGroupGateway, name: str = "mars777-group") -> FastMCP:
-    """The group's one opponent-facing ingress for a whole alternating series."""
+def build_gateway_tools(
+    gateway: KitGroupGateway,
+    name: str = "mars777-group",
+    step0: Step0Handler | None = None,
+) -> FastMCP:
+    """The group's one opponent-facing ingress for a whole alternating series.
+
+    **`negotiate` carries two different conversations**, and the pairing agreed
+    all three spellings they arrive in:
+
+    * `message={...}` - the per-sub-game reference-v3 handshake, six times;
+    * `kind="step0", payload={...}` - the **agreed cross-team** Step-0, once;
+    * `request={"kind":"step0","payload":{...}}` - the same Step-0 in this
+      project's own native envelope, retained so our own client is unchanged.
+
+    The third exists because the frozen contract recorded
+    `{"tool":"negotiate","kind":"step0"}` without ever saying whether `kind` and
+    `payload` were top-level arguments or nested under `request`. Both teams
+    implemented to the letter and to different shapes: a rehearsal Step-0 was
+    rejected at input validation before authentication. The rule was never
+    stated, so neither reading was wrong, and accepting both costs nothing.
+
+    **Dispatch is on shape, never on a caller-supplied selector**, and Step-0 is
+    routed to the counted receiver rather than to a backend: it is a
+    once-per-series group-level fact, and the six sub-games are what the
+    backends own.
+    """
     server: FastMCP = FastMCP(name, strict_input_validation=True)
 
     @server.tool
-    async def negotiate(message: KitJson) -> dict[str, bool]:
-        """Assign the sub-game to its backend, then acknowledge that assignment."""
+    async def negotiate(
+        message: KitJson | None = None,
+        request: KitJson | None = None,
+        kind: str | None = None,
+        payload: KitJson | None = None,
+    ) -> dict[str, bool]:
+        """Accept a sub-game greeting or the one authenticated Step-0."""
         try:
+            exchange = step0_arguments(message, request, kind, payload)
+            if exchange is not None:
+                if step0 is None:
+                    raise LocalDefectError(
+                        "this gateway was given no Step-0 receiver, so an authenticated"
+                        " Step-0 has nowhere to go; a counted series must not proceed",
+                    )
+                await step0(exchange)
+                return KIT_OK
+            if message is None:
+                raise MalformedMessageError(
+                    "negotiate needs message={...} for a sub-game greeting, or"
+                    ' kind="step0" with payload={...} for the series Step-0',
+                )
             return await gateway.negotiate(message)
         except BaseException as failure:
             raise outbound(failure) from None

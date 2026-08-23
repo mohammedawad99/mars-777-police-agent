@@ -28,6 +28,7 @@ from .transport.kit_backend_routes import KitBackendRoutes
 from .transport.kit_gateway import KitGroupGateway
 from .transport.kit_gateway_server import build_gateway_admin, build_gateway_tools
 from .transport.kit_serving import ServedHttp, serve_http
+from .transport.negotiate_arguments import Step0Handler
 
 LOOPBACK = "127.0.0.1"
 """The admin surface is loopback-only; it is never part of the public route."""
@@ -45,6 +46,12 @@ class KitPublicLauncher:
     host: str = field(default=LOOPBACK)
     admin_port: int = field(default=0)
     public_port: int = field(default=0)
+    step0: "Step0Handler | None" = field(default=None)
+    """Where an authenticated Step-0 goes, or `None` for a route that carries none.
+
+    Once per series and group-level, so it is received here rather than routed to
+    a backend: the six sub-games are what the backends own."""
+
     endpoint: OwnPublicPeerEndpoint | None = field(default=None)
     routes: KitBackendRoutes | None = field(default=None)
     _served: list[ServedHttp] = field(default_factory=list)
@@ -57,7 +64,8 @@ class KitPublicLauncher:
     async def open(self) -> OwnPublicPeerEndpoint:
         """Serve both surfaces, then expose the public one. Release on any failure."""
         try:
-            self.public_port = await self._serve(build_gateway_tools(self.gateway), 0)
+            tools = build_gateway_tools(self.gateway, step0=self.step0)
+            self.public_port = await self._serve(tools, 0)
             self.admin_port = await self._serve(build_gateway_admin(self.gateway), self.admin_port)
             self.endpoint = self.network.establish(LocalPeerEndpoint(self.host, self.public_port))
         except BaseException:
