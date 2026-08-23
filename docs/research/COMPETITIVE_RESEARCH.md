@@ -864,3 +864,89 @@ corpus**, confirmed by a single pre-committed holdout evaluation. It is not a
 guarantee of winning any particular match. The external opponent is unknown, the
 corpus is our own construction, and the seven opponent families are models
 rather than the field.
+
+## 19. Stage E — a second cycle, and what the corrected instrument changed
+
+**Written before any v2 candidate was run.** Everything in this section that is a
+*number* is either from Stage 9B or from the corrected diagnostic; no v2 outcome
+exists at the time of writing, the v2 holdout is sealed and unopened, and
+`composition.py` still builds the promoted Stage 9B-2 policy.
+
+### 19.1 Why a second cycle exists at all
+
+The Stage 9B-2 holdout is **spent**. A frozen candidate was evaluated against it
+exactly once and the one-shot result is committed, so it can decide nothing
+further — §9 already froze the rule that a consumed holdout does not become blind
+again by being reused. A second cycle therefore gets a second sealed set:
+
+| | |
+|---|---|
+| namespace | `mars777-research/final-holdout-v2/` |
+| bank | `final_holdout_v2` |
+| seeds | `34bddb9b9c24e387d73e40439ca0ba7a946957654860384f630f5d0a2a826ae1` |
+| commitment | `5bf90845113384c6364d24f9216a0e74f01986ab74b9b4c7f5dd2b0ffe72a787` |
+| scenarios | 2181 |
+| sealed at | stage-E-0, before any v2 candidate existed |
+
+A fresh namespace does **not** by itself produce a blind set, and this nearly
+went unnoticed. `scenario_id` covers the family, the configuration and both
+opening cells, so a configuration whose legal opening space is finite yields the
+same scenarios however the seeds are drawn — `appendixF-example` has exactly one
+opening. Enumerating v2 reproduced **66** scenarios the spent v1 evaluation had
+already played. They are excluded before any candidate exists and the count is
+recorded in the manifest, because a holdout is not "mostly blind".
+
+### 19.2 The evidence this cycle rests on is *new*, not a re-reading
+
+§16.1's mechanism table described the pre-9B-2 gate. That gate no longer exists,
+and the instrument that measured it was never updated — see the correction boxed
+in §16.1. Against the **shipped** absolute floor the finding inverts: the gate
+refuses **82–97%** of belief-carrying decisions in *every* family, and
+`adversarial_corner` — the family the entire 9B-1 search was built around — is
+now the **least** blocked rather than the most, with `starved` ≈ 0 throughout.
+
+That is the new fact. `CONSERVATIVE = 0.9` was chosen when it was a *comparison*
+baseline — "act when the expected evidence is worth a full emission at its
+source". Stage 9B-2 changed the gate's **structure** to an absolute floor and
+carried the same number across. **The level has never been measured under the
+structure it now serves.** That is a specific, evidence-driven question, not a
+parameter search.
+
+### 19.3 Candidates — frozen here, before any of them ran
+
+Three, and no more. Two are threshold levels behind the **shipped** mover; one is
+the §15 hypothesis that was never implemented.
+
+| # | Candidate | Change | Why this value, and not a fitted one |
+|---|---|---|---|
+| V1 | `V1-floor-decay` | shipped rule, floor **0.81** | `0.9 × (1 − 0.10)` — one decay step from a source emission. The book's own recurrence, and exactly the value `DECAY_EXAMPLE` carries. |
+| V2 | `V2-floor-adjacent` | shipped rule, floor **0.62** | The Figure-4 kernel weight at an orthogonally adjacent cell — the evidence a cell one step from an emission actually carries. |
+| V3 | `V3-mobility` | §15 hypothesis 2 | Prefer placements that cut the evader's reachable region, not only those the evidence directly supports. Never implemented; the only structural candidate here. |
+
+Both thresholds are **anchored to numbers the source already fixes**, in the same
+way §16 anchored 0.9 and 0.3, and both are declared here before any of them ran.
+`0.3` is deliberately not retried behind the shipped mover: C3 measured it and
+its interval included zero, and re-rolling an inconclusive number until it
+separates is the failure this methodology exists to prevent.
+
+**What is deliberately not attempted.** §15 hypothesis 4 (board-size-aware
+weighting) remains untried, for the reason it was ranked last: three grid sizes
+and one clear separation is the highest overfitting risk on the list, and the
+9B-0F correction already **weakened** the trend it rested on.
+
+### 19.4 The rules, unchanged
+
+Every gate is §9's, applied from `research/gates.py` as before: the material
+regression rule (>5 points **and** an interval excluding zero), the three-valued
+verdict vocabulary, scenario-level units, paired comparison keyed by
+`scenario_id`, screening membership frozen by digest. Nothing in this section
+redefines a threshold, and no gate is relaxed for a v2 candidate.
+
+**The predeclared risk, written down before the numbers.** Lowering an admission
+floor spends more of the quota, and §16 already measured that spending *more* is
+not by itself a gain. If a lower floor helps, the mechanism must be visible as
+better-valued placements rather than merely more of them, so barrier counts are
+reported for every arm. A candidate that wins only by placing more is the
+signature of a policy fitted to modelled opponents, and it is named here in
+advance as the thing validation must re-check.
+

@@ -12,13 +12,14 @@ worked.
 
 import hashlib
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 
 from mars777_police.app.baseline_strategy import BaselineStrategy
 from mars777_police.app.competitive_strategy import CompetitiveStrategy
 
 from ..strategy_port import Policy
-from . import denial, pursuit
+from . import denial, mobility, pursuit
 
 HERE = Path(__file__).resolve().parent
 
@@ -73,6 +74,30 @@ def c4() -> Policy:
     return denial.DenialStrategy(threshold=denial.CONSERVATIVE, mover=BaselineStrategy())
 
 
+DECAY_FLOOR = Decimal("0.81")
+"""`0.9 x (1 - 0.10)` - one decay step from a source emission, the book's own
+recurrence and exactly the value `DECAY_EXAMPLE` carries."""
+
+ADJACENT_FLOOR = Decimal("0.62")
+"""The Figure-4 kernel weight at an orthogonally adjacent cell: the evidence a
+cell one step from an emission actually carries."""
+
+
+def v1() -> Policy:
+    """The shipped rule at the decay floor, behind the shipped mover."""
+    return denial.DenialStrategy(threshold=DECAY_FLOOR, mover=BaselineStrategy())
+
+
+def v2() -> Policy:
+    """The shipped rule at the adjacent-cell floor, behind the shipped mover."""
+    return denial.DenialStrategy(threshold=ADJACENT_FLOOR, mover=BaselineStrategy())
+
+
+def v3() -> Policy:
+    """Section 15 hypothesis 2, implemented for the first time: deny region."""
+    return mobility.MobilityDenialStrategy()
+
+
 CANDIDATES: dict[str, Candidate] = {
     "C1": Candidate("C1-pursuit", pursuit.REVISION, "pursuit.py", "belief-directed mover"),
     "C2": Candidate(
@@ -87,7 +112,25 @@ CANDIDATES: dict[str, Candidate] = {
         "denial.py",
         "shipped mover + belief-valued barriers (0.9): which half carries C2?",
     ),
+    "V1": Candidate(
+        "V1-floor-decay", denial.REVISION, "denial.py", "shipped rule at the 0.81 decay floor"
+    ),
+    "V2": Candidate(
+        "V2-floor-adjacent",
+        denial.REVISION,
+        "denial.py",
+        "shipped rule at the 0.62 adjacent-cell floor",
+    ),
+    "V3": Candidate(
+        "V3-mobility",
+        mobility.REVISION,
+        "mobility.py",
+        "shipped rule plus the region a placement denies the evader",
+    ),
 }
 
-BUILDERS = {"C1": c1, "C2": c2, "C3": c3, "C4": c4}
-"""Frozen before any candidate outcome was known."""
+BUILDERS = {"C1": c1, "C2": c2, "C3": c3, "C4": c4, "V1": v1, "V2": v2, "V3": v3}
+"""Frozen before any candidate outcome was known - the v2 cycle's three included."""
+
+STAGE_E = ("V1", "V2", "V3")
+"""The second cycle's candidates. Declared in §19.3 before any of them ran."""
