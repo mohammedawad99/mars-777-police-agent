@@ -18,6 +18,7 @@ from . import GROUP_CODE
 from .app.gatekeeper import Gatekeeper
 from .app.kit_handoff import SeriesHandoff
 from .app.kit_messages import KitRole
+from .app.protocol_errors import LocalDefectError
 from .app.public_endpoint_policy import SystemHostResolver
 from .app.public_network_workflow import PublicNetworkService
 from .app.step0_runtime import Step0Runtime
@@ -38,6 +39,7 @@ from .transport.codec_declaration import decode_step0
 from .transport.kit_backend_routes import KitBackendRoutes
 from .transport.kit_gateway import KitGroupGateway
 from .transport.negotiate_arguments import Step0Handler
+from .transport.step0_outbound import send_step0
 from .transport.wire_declaration import Step0ExchangeWire
 
 ROUTE_DEADLINE = 1800.0
@@ -107,9 +109,17 @@ def _step0_receiver(settings: RuntimeSettings, launch: Path) -> Step0Handler:
     """
     document = read_launch_document(launch)
     composition = compose_agent(settings, document.identity, GROUP_CODE)
+    ours = document.identity.declaration
+    if settings.opponent is None:
+        raise LocalDefectError(
+            "a Step-0 receiver needs the opponent endpoint to send our own half back;"
+            " Step-0 is a mutual exchange and a one-sided one leaves the peer waiting",
+        )
+    opponent = settings.opponent.url
 
     async def receive(payload: dict[str, object]) -> None:
         wire = Step0ExchangeWire.model_validate(payload)
         composition.pregame.accept_step0(decode_step0(wire))
+        await send_step0(opponent, composition.pregame.step0.outbound(ours))
 
     return receive
