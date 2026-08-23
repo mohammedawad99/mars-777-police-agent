@@ -19,21 +19,17 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
 from .app.commitment_codecs import CommitmentCodec
-from .app.config_rules import limits_of
 from .app.friendly_backend_evidence import BackendWitness
-from .app.kit_backend_maker import half_turn_maker
+from .app.kit_backend_artifacts import BackendArtifacts
+from .app.kit_backend_maker import half_turn_maker, sub_game_for
 from .app.kit_backend_settlement import BackendSettlement, row_of
-from .app.kit_friendly import KitFriendlySession
-from .app.kit_greeting import KitPairing
-from .app.kit_half_turn import KitHalfTurnMaker
-from .app.kit_messages import KitResultClaim, KitRole
+from .app.kit_friendly import KitFriendlySession, pairing_of
+from .app.kit_messages import KitRole
 from .app.kit_peer_audit import peer_chain_verified
-from .app.kit_play import KitPlayState
 from .app.kit_records import KitRecordChain
-from .app.kit_schedule import require_ours, schedule_for
+from .app.kit_schedule import owned_by, require_ours
 from .app.kit_session import KitSessionContext
 from .app.kit_settlement import plays_final_sub_game
-from .app.kit_sub_game import KitSubGame
 from .app.nonce_source import NonceSourcePort
 from .app.ports import TimestampPort
 from .app.protocol_errors import LocalDefectError
@@ -43,11 +39,11 @@ from .app.strategy_api import StrategyPort
 from .domain.negotiated_config import NegotiatedConfig
 from .domain.scent_model import ScentModelAgreement
 from .domain.terminal import Outcome
+from .kit_backend_recording import CLAIM
 from .transport.peer_transport import FastMcpPeerTransport
 
 Settled = Callable[[int], Awaitable[None]]
 """Report to the group gateway that this sub-game owes nothing more."""
-_CLAIM = {one: KitResultClaim(one.value.lower()) for one in Outcome}
 """Our end event in the kit's own spelling; the vocabularies coincide exactly."""
 
 
@@ -75,6 +71,9 @@ class KitRoleBackend:
     settlement: BackendSettlement = field(default_factory=BackendSettlement)
     """Where finished rows go, where the series comes back, and the agreed window."""
 
+    artifacts: BackendArtifacts = field(default_factory=BackendArtifacts)
+    """Where this sub-game's official config and log documents go, if any do."""
+
     def __post_init__(self) -> None:
         if self.friendly.classification.run_class is not RunClass.KIT_FRIENDLY_ONLY:
             raise LocalDefectError("this backend plays development friendlies and nothing else")
@@ -89,11 +88,7 @@ class KitRoleBackend:
     @property
     def ours(self) -> tuple[int, ...]:
         """The sub-game numbers the frozen schedule gives this role backend."""
-        return tuple(
-            number
-            for number, role in enumerate(schedule_for(self.first_role), start=1)
-            if role is self.kit_role
-        )
+        return owned_by(self.first_role, self.kit_role)
 
     async def run(self) -> dict[int, Outcome]:
         """Play every sub-game this backend owns, then stay for the settlement.
@@ -108,7 +103,7 @@ class KitRoleBackend:
             self.outcomes[number] = await self.play_sub_game(number)
         if plays_final_sub_game(self.ours):
             await self.settlement.settle(
-                self._pairing(),
+                pairing_of(self.friendly),
                 self.kit_role,
                 self._send_settlement,
                 self.friendly.take_settlement,
@@ -124,45 +119,50 @@ class KitRoleBackend:
         await self.transport.send_kit(self.context.our_greeting(self.nonces.fresh().value, number))
         chain = KitRecordChain(self.codec, self.nonces)
         self.chains[number] = chain
-        game = KitSubGame(
-            maker=self._maker(number, chain),
+        game = sub_game_for(
+            maker=half_turn_maker(
+                role=self.kit_role,
+                actor=self.role,
+                sub_game=number,
+                strategy=self.strategy,
+                model=self.model,
+                chain=chain,
+                clock=self.clock,
+                config=self.config,
+            ),
             inbox=inbox,
             send=self.transport.send_kit,
             role=self.kit_role,
-            limits=limits_of(self.config),
+            config=self.config,
             deadline=self.deadline,
-            state=KitPlayState.opening(self.config, self.role),
+            actor=self.role,
         )
         outcome = await game.play()
         self.witnessed.steps[number] = game.state.step
-        await self.transport.send_kit(chain.reveal(self.kit_role, _CLAIM[outcome]))
+        await self.transport.send_kit(chain.reveal(self.kit_role, CLAIM[outcome]))
         reveal = await self.friendly.await_audit(self.deadline)
         self.verified[number] = peer_chain_verified(reveal, number, self.codec)
         self.witnessed.record(number, reveal)
-        await self.settlement.contribute(row_of(self._pairing(), number, self.kit_role, outcome))
+        await self.settlement.contribute(
+            row_of(pairing_of(self.friendly), number, self.kit_role, outcome)
+        )
+        await self.artifacts.record(
+            pairing=pairing_of(self.friendly),
+            sub_game=number,
+            greeting=self.friendly.agreement,
+            ours=chain.records,
+            disclosure=reveal,
+            peer_verified=self.verified[number],
+            result=CLAIM[outcome].value,
+        )
         await self.settled(number)
         return outcome
 
-    def _pairing(self) -> KitPairing:
-        """The pairing a greeting established, or a refusal saying none did."""
-        pairing = self.friendly.pairing
-        if pairing is None:  # pragma: no cover - a played sub-game always has one
-            raise LocalDefectError("a settled series needs the pairing a greeting established")
-        return pairing
-
-    def _maker(self, number: int, chain: KitRecordChain) -> KitHalfTurnMaker:
-        """This sub-game's half-turn maker, from the locked configuration."""
-        return half_turn_maker(
-            role=self.kit_role,
-            actor=self.role,
-            sub_game=number,
-            strategy=self.strategy,
-            model=self.model,
-            chain=chain,
-            clock=self.clock,
-            config=self.config,
-        )
-
     async def _send_settlement(self, envelope: dict[str, object]) -> bool:
-        """Reach for the transport only when there is a settlement to send."""
+        """Reach for the transport only when there is a settlement to send.
+
+        Deferred deliberately: a series this side could not assemble waits out
+        its window receive-only and never sends, so dereferencing the transport
+        at the argument site would demand one a settlement will never use.
+        """
         return await self.transport.send_settlement(envelope)

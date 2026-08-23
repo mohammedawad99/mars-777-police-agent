@@ -18,7 +18,7 @@ delivered here - to an inbox and an audit slot - and not into the production
 import asyncio
 from dataclasses import dataclass, field
 
-from .kit_greeting import KitPairing
+from .kit_greeting import KitGreeting, KitPairing
 from .kit_inbox import KitTurnInbox
 from .kit_messages import KitAuditReveal, KitTurn
 from .protocol_errors import LocalDefectError
@@ -44,6 +44,14 @@ class KitFriendlySession:
 
     settled_arrived: asyncio.Event = field(default_factory=asyncio.Event)
     pairing: KitPairing | None = field(default=None)
+    agreement: KitGreeting | None = field(default=None)
+    """The greeting that established the pairing, kept for the config artifact.
+
+    The pairing records *that* the terms were agreed; the config artifact has to
+    record *what* was agreed and under which nonce, because that is the evidence
+    a reader recomputes. Deriving it later is impossible - the nonce is fresh per
+    sub-game and nothing else retains it."""
+
     greetings: int = field(default=0)
     greeted: asyncio.Event = field(default_factory=asyncio.Event)
 
@@ -102,6 +110,10 @@ class KitFriendlySession:
             raise LocalDefectError("a settlement event fired with no settlement behind it")
         return settlement
 
+    def record_agreement(self, greeting: KitGreeting) -> None:
+        """Keep the terms and nonce this sub-game's greeting actually carried."""
+        self.agreement = greeting
+
     def record_pairing(self, pairing: KitPairing) -> None:
         """Keep the pairing one accepted greeting established. Binds no identity.
 
@@ -124,3 +136,11 @@ class KitFriendlySession:
         await asyncio.wait_for(self.audit_arrived.wait(), timeout)
         assert self.audit is not None
         return self.audit
+
+
+def pairing_of(friendly: "KitFriendlySession") -> KitPairing:
+    """The pairing a greeting established, or a refusal saying none did."""
+    pairing = friendly.pairing
+    if pairing is None:  # pragma: no cover - a played sub-game always has one
+        raise LocalDefectError("a settled series needs the pairing a greeting established")
+    return pairing

@@ -53,3 +53,15 @@ def require_ours(sub_game: int, ours: tuple[int, ...], role: KitRole) -> None:
             f"sub-game {sub_game} is not this {role.value} backend's;"
             f" this repository plays {ours} and never the other",
         )
+
+
+def owned_by(first_role: "KitRole", ours: "KitRole") -> tuple[int, ...]:
+    """The sub-game numbers *ours* plays, given the series' first role.
+
+    Derived from the frozen schedule rather than from the running process: the
+    repository a backend lives in says which side it plays, never which
+    sub-games belong to it.
+    """
+    return tuple(
+        number for number, role in enumerate(schedule_for(first_role), start=1) if role is ours
+    )

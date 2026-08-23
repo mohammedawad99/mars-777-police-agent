@@ -14,19 +14,24 @@ import os
 from pathlib import Path
 
 from . import GROUP_CODE
+from .app.auth_values import KeyId
 from .app.commitment_codecs import CommitmentCodec
 from .app.competitive_strategy import CompetitiveStrategy
 from .app.friendly_backend_evidence import backend_rows
 from .app.friendly_evidence import DevelopmentEvidenceStore
 from .app.friendly_merge import contribution_document, friendly_contribution_name
+from .app.kit_backend_artifacts import BackendArtifacts
 from .app.kit_backend_settlement import BackendSettlement
 from .app.kit_friendly import KitFriendlySession
 from .app.kit_messages import KitRole
 from .app.kit_payload import PeerPayload
+from .app.kit_preset import ExternalMode, external_profiles
 from .app.kit_session import KitSessionContext
 from .app.protocol_errors import LocalDefectError
 from .app.run_class import RunClassification
 from .app.scent_registration import registered_model
+from .artifact_documents import terms_config_document
+from .domain.negotiated_config import NegotiatedConfig
 from .domain.scent_model_default import default_scent_model
 from .first_role_source import series_first_role
 from .identity import ROLE
@@ -44,9 +49,24 @@ BACKEND_DEADLINE = 1800.0
 """How long this role waits to be handed a sub-game, bounded well above a turn."""
 
 
+def _artifacts(config: NegotiatedConfig, key_id: KeyId) -> BackendArtifacts:
+    """What this backend records each finished sub-game under.
+
+    The profile set is the frozen one this wire selects, read from the same
+    authority the lock context would use, so a document and a lock can never
+    disagree about which constructions the series agreed.
+    """
+    return BackendArtifacts(
+        profiles=external_profiles(ExternalMode.KIT_CORE_V1, key_id),
+        config=config,
+        model=default_scent_model(),
+        write_config=terms_config_document,
+    )
+
+
 def compose_role_backend(request: RoleBackendRequest) -> KitBackendBoot:
     """Assemble this role's backend. Nothing is served and nothing is dialled."""
-    load_runtime_settings(dict(os.environ), expected_role=ROLE)
+    settings = load_runtime_settings(dict(os.environ), expected_role=ROLE)
     document = read_launch_document(request.launch)
     if document.kit_terms is None:
         raise LaunchInputError("a KIT friendly needs the agreed flat terms in the launch document")
@@ -75,6 +95,7 @@ def compose_role_backend(request: RoleBackendRequest) -> KitBackendBoot:
         codec=CommitmentCodec.KIT_CORE_COMMITMENT_V1,
         deadline=BACKEND_DEADLINE,
         first_role=series_first_role(GROUP_CODE, request.first_role),
+        artifacts=_artifacts(document.config, settings.key_id),
     )
     return KitBackendBoot(backend, context, client, request.gateway_admin, request.port)
 

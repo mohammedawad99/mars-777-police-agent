@@ -66,16 +66,19 @@ class KitBackendBoot:
                 await release(self.served.task, self.served.listener)
 
     def _wire(self, admin: KitAdminClient) -> None:
-        """Give the backend the three loopback calls it cannot construct itself.
+        """Give the backend the four loopback calls it cannot construct itself.
 
-        All three, together: the settlement report the gateway routes on, and the
-        two that let a two-process group put its six rows back into one series.
-        Wiring one and leaving the others at their refusal defaults is what a
-        rehearsal caught - every unit test injected its own and passed.
+        All four, together: the settlement report the gateway routes on, the two
+        that let a two-process group put its six rows back into one series, and
+        the one that carries this sub-game's official documents to where the
+        group's fourteen files are assembled. Wiring one and leaving the others
+        at their refusal defaults is what a rehearsal caught - every unit test
+        injected its own and passed.
         """
         self.backend.settled = admin.settled
         self.backend.settlement.contribute = admin.contribute
         self.backend.settlement.series_rows = self._series_rows(admin)
+        self.backend.artifacts.contribute = admin.contribute_artifact
 
     @staticmethod
     def _series_rows(

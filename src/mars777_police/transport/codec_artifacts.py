@@ -18,13 +18,15 @@ from pydantic import ValidationError
 from ..app.config_artifact_values import ConfigArtifactContent, TermsConfigArtifactContent
 from ..app.protocol_errors import MalformedMessageError
 from ..app.protocol_values import Sha256Digest
-from .codec_auth import encode_profiles
 from .codec_config import decode_config, encode_config
 from .codec_pregame import decode_lock, encode_lock
 from .codec_scent_model import decode_scent_model, encode_scent_model
 from .wire_artifacts import ConfigArtifactWire, ScentModelEvidenceWire
-from .wire_config import ConfigLockContextWire
-from .wire_terms_artifact import TermsAgreementWire, TermsConfigArtifactWire
+from .wire_terms_artifact import (
+    TermsAgreementWire,
+    TermsConfigArtifactWire,
+    TermsContextWire,
+)
 
 
 def read_config_artifact(document: Mapping[str, object]) -> ConfigArtifactWire:
@@ -67,12 +69,11 @@ def encode_terms_config_artifact(
     return TermsConfigArtifactWire(
         config=encode_config(content.config),
         terms_agreement=TermsAgreementWire(
-            context=ConfigLockContextWire(
+            context=TermsContextWire(
                 game_id=context.game_id,
                 game_uid=context.game_uid,
                 sub_game=context.sub_game,
                 config_sha256=context.config_sha256.value,
-                profiles=encode_profiles(context.profiles),
                 scent_model_sha256=context.scent_model_sha256.value,
             ),
             nonce=evidence.nonce,

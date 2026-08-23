@@ -19,6 +19,7 @@ from fastmcp import Client
 SETTLED_TOOL = "sub_game_settled"
 CONTRIBUTE_TOOL = "contribute_row"
 ROWS_TOOL = "series_rows"
+ARTIFACT_TOOL = "contribute_artifact"
 """The three private operations. None of them is a KIT message or reaches a peer."""
 
 
@@ -55,6 +56,16 @@ class KitAdminClient:
         both processes are still alive.
         """
         await self._open().call_tool(CONTRIBUTE_TOOL, {"row": row})
+
+    async def contribute_artifact(self, kind: str, sub_game: int, document: dict[str, Any]) -> None:
+        """Hand the group one official per-sub-game document it must write out.
+
+        Same reason the rows travel this way: a two-process group owes one set
+        of fourteen files and neither process holds all twelve halves.
+        """
+        await self._open().call_tool(
+            ARTIFACT_TOOL, {"kind": kind, "sub_game": sub_game, "document": document}
+        )
 
     async def series_rows(self) -> list[dict[str, Any]]:
         """The group's six finished rows, for whichever backend settles the series."""

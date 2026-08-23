@@ -35,6 +35,7 @@ def route_kit_negotiate(context: KitSessionContext, greeting: KitGreeting) -> Ki
     pairing = context.accept(greeting)
     friendly = _friendly(context)
     if friendly is not None:
+        friendly.record_agreement(greeting)
         friendly.record_pairing(pairing)
     return pairing
 
