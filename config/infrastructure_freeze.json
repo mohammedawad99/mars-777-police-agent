@@ -52,7 +52,7 @@
   "src/mars777_police/app/kit_adjudicate.py": "f5293b665c011f5159858b9beb393f8311f2814118544b6b6065c2a2307708ee",
   "src/mars777_police/app/kit_audit.py": "057dcaf37a3f7c286e171ba4dd1c0c335897e9b2006581c81c308fc952a23368",
   "src/mars777_police/app/kit_backend_maker.py": "7fcb589125d43313004c80218f7c36c1cc29db25c412252ed699a3a1569706f7",
-  "src/mars777_police/app/kit_backend_settlement.py": "f1c3a9688de3abf53a15d7264121155a62c466be68b293258b6946de2fcf8d0e",
+  "src/mars777_police/app/kit_backend_settlement.py": "14dc5a120d967ed00b1150dc771ca340ee3274c2333c58b4a89ce7854df5c02d",
   "src/mars777_police/app/kit_delivery.py": "6a24005d063f75d48829708683a295d46e4c0fa1587bebfc7d631c4bbf08fb77",
   "src/mars777_police/app/kit_friendly.py": "2918391640c627abb9174805cb3278c202f3ced73fefca2e6846587423e1faa9",
   "src/mars777_police/app/kit_friendly_result.py": "62019b26fd95adc64e16647ffc7bd154c846495c995ab118dee8d8a4da6633a5",

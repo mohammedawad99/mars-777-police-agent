@@ -6,6 +6,7 @@ of a two-process group contributes to it. Neither has anything to say about
 playing a sub-game.
 """
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -98,9 +99,20 @@ class BackendSettlement:
         That is not a swallowed error: six played sub-games are evidence worth
         keeping, and losing them because the settlement could not be *computed*
         would be a worse answer than recording honestly that none was reached.
+
+        **But it still waits.** Returning early here is what broke a live g06:
+        this side could not assemble six rows yet, returned instantly, `run()`
+        finished, the held client closed and our inbound surface disappeared -
+        while the peer was still sending g06's audit. It saw
+        `PeerUnreachable: Session terminated`.
+
+        Being unable to compute *our* digest is not permission to stop being
+        reachable. The side that owns the final sub-game stays up for the whole
+        agreed window either way; it simply has nothing of its own to send.
         """
         if len(await self.series_rows()) != SUB_GAMES:
             self.agreed = None
+            await self._wait_out(received)
             return None
         settler = SeriesSettler(
             send=send,
@@ -113,3 +125,14 @@ class BackendSettlement:
             pairing.game_id, pairing.our_group, pairing.peer_group, our_role.value
         )
         return self.agreed
+
+    async def _wait_out(self, received: "Callable[[], KitAuditReveal | None]") -> None:
+        """Stay reachable for the agreed window without sending a settlement.
+
+        Receive-only: with no assembled series there is no digest of ours to
+        offer, but the peer's audit and settlement still have to land somewhere.
+        """
+        remaining = self.window
+        while remaining > 0 and received() is None:
+            await asyncio.sleep(min(self.retry, remaining))
+            remaining -= self.retry
