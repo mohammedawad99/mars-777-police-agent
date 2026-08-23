@@ -387,6 +387,42 @@ over `grid9`, twelve games per family:
 | `scent_aware` | 377 | 4 | 0.011 | 0.072 |
 | `barrier_aware` | 375 | 0 | 0.000 | 0.011 |
 
+> **Corrected at Stage E-0. The table above is what the instrument reported, and
+> it stopped being true at Stage 9B-2.** `research/diagnostics.py` kept its own
+> copy of the gate - "no target's support strictly exceeds the landing cell" -
+> and its docstring called that "the shipped gate's own test". Stage 9B-2
+> replaced that rule with an absolute floor and the diagnostic was never
+> updated, so from that commit onward it measured a gate this repository does
+> not ship. The numbers above remain correct **for Stage 9B-1A**, which is why
+> they are kept: they are what the candidates were actually built from.
+>
+> The instrument now asks the policy what it decided instead of restating the
+> rule beside it, and separates a *gate refusal* from a decision where the board
+> offered no lawful target at all - "did not place" has three causes and only
+> one of them is the gate. Re-measured against the **shipped** absolute floor,
+> same configuration, same sampling:
+>
+> | family | belief steps | starved | gate refused | share |
+> |---|---|---|---|---|
+> | `evasive` | 408 | 0 | 394 | 0.966 |
+> | `pursuit` | 408 | 0 | 394 | 0.966 |
+> | `barrier_aware` | 375 | 0 | 356 | 0.949 |
+> | `scent_aware` | 408 | 0 | 378 | 0.926 |
+> | `random_legal` | 343 | 0 | 302 | 0.880 |
+> | `center_mobility` | 317 | 0 | 277 | 0.874 |
+> | `adversarial_corner` | 285 | 1 | 232 | 0.817 |
+>
+> The shape of the finding **inverts**. Under the old rule one family was
+> blocked and six were not; under the shipped floor the gate refuses 82-97% of
+> belief-carrying decisions in *every* family, and `adversarial_corner` is now
+> the *least* blocked rather than the most. `starved` is ~0 throughout, so this
+> is the gate refusing and not the board running out of targets.
+>
+> This does not retract any Stage 9B-1A or 9B-2 result. Those measured game
+> outcomes, not this counter, and the promotion rested on paired deltas across
+> development, validation, stress and a sealed holdout. What it retracts is the
+> *explanation* that survived into the shipped code's own documentation.
+
 This **partly refuted the assumption behind hypothesis 3**. The quota is not
 unspent because the policy is timid in general; against six of seven families the
 gate almost never blocks. It is blocked almost always in exactly the one family

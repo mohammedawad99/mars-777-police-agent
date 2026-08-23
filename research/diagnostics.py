@@ -16,6 +16,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from mars777_police.app.sealed_record_values import ActorRole
+from mars777_police.domain.actions import BarrierAction
 from mars777_police.domain.barriers import is_placeable
 from mars777_police.domain.board import Position
 from mars777_police.domain.observation import Observation
@@ -46,6 +47,12 @@ class Belief:
     mean_landing_scent: float
     mean_mass: float
     lawful_targets: int
+    starved_steps: int
+    """Decisions carrying belief where no lawful placement existed at all.
+
+    Reported separately because it is not a gate decision: the policy could not
+    have placed whatever its threshold said, and folding it into `blocked` would
+    credit the gate with a refusal the board made."""
 
     def as_record(self) -> dict[str, object]:
         """Flat output for a table or a manifest."""
@@ -54,7 +61,10 @@ class Belief:
             "steps": self.steps,
             "belief_steps": self.belief_steps,
             "blocked_steps": self.blocked_steps,
-            "blocked_share": round(self.blocked_steps / max(self.belief_steps, 1), 4),
+            "blocked_share": round(
+                self.blocked_steps / max(self.belief_steps - self.starved_steps, 1), 4
+            ),
+            "starved_steps": self.starved_steps,
             "mean_landing_scent": round(self.mean_landing_scent, 4),
             "mean_mass": round(self.mean_mass, 4),
             "lawful_targets": self.lawful_targets,
@@ -85,7 +95,7 @@ def _position(row: int, col: int):  # type: ignore[no-untyped-def]
 
 def observe(strategy: Policy, config: BenchConfig, family: str, seeds: range) -> Belief:
     """Play sampled games and count what the belief and the gate did."""
-    steps = belief_steps = blocked = targets = 0
+    steps = belief_steps = blocked = targets = starved = 0
     scent_total = mass_total = ZERO
     for seed in seeds:
         police, thief = start_cells(config, seed)
@@ -99,8 +109,10 @@ def observe(strategy: Policy, config: BenchConfig, family: str, seeds: range) ->
                 landing = _landing_scent(view, mass)
                 scent_total += landing
                 mass_total += sum(weight for _, weight in mass)
-                targets += _lawful(view)
-                blocked += int(_would_block(mass, landing))
+                lawful = _lawful(view)
+                targets += lawful
+                starved += int(lawful == 0)
+                blocked += int(_gate_refused(strategy, view, lawful))
             game.play_round()
     return Belief(
         family,
@@ -110,12 +122,31 @@ def observe(strategy: Policy, config: BenchConfig, family: str, seeds: range) ->
         float(scent_total / max(belief_steps, 1)),
         float(mass_total / max(belief_steps, 1)),
         targets,
+        starved,
     )
 
 
-def _would_block(mass: tuple[tuple[Position, Decimal], ...], landing: Decimal) -> bool:
-    """The shipped gate's own test: no target's support strictly exceeds the landing."""
-    return not any(weight > landing for _, weight in mass)
+def _gate_refused(strategy: Policy, view: Observation, targets: int) -> bool:
+    """Whether the shipped gate refused a placement it actually had room to make.
+
+    Asked of the policy itself rather than reimplemented here. This function used
+    to carry the pre-9B-2 rule - "no target's support strictly exceeds the cell
+    the mover is stepping onto" - and its docstring called that "the shipped
+    gate's own test". Stage 9B-2 replaced that rule with an absolute floor and
+    this diagnostic was never updated, so it went on reporting a gate that no
+    longer existed. A measurement of a rule nobody ships is worse than none: it
+    reads as evidence. Restating a gate beside the gate is the mistake, so the
+    fix is not to restate a newer one but to stop restating it at all.
+
+    *targets* is required because "did not place" has three causes and only one
+    of them is the gate: belief may be absent, there may be no lawful target at
+    all, or every lawful target may have fallen short of the floor. The caller
+    has already established belief; this excludes the second, so what remains is
+    the gate.
+    """
+    if targets == 0:
+        return False
+    return not isinstance(strategy.choose_action(view), BarrierAction)
 
 
 def report(strategy: Policy, config: BenchConfig, families: tuple[str, ...], out: Path) -> Path:
