@@ -153,8 +153,9 @@ def test_a_complete_series_is_settled_through_the_backend_wiring() -> None:
     async def series() -> tuple[dict[str, Any], ...]:
         return tuple(rows())
 
-    async def send(envelope: dict[str, Any]) -> None:
+    async def send(envelope: dict[str, Any]) -> bool:
         sent.append(envelope)
+        return True
 
     settlement = BackendSettlement(series_rows=series, window=1.0, retry=0.05)
     theirs = KitAuditReveal(KitRole.POLICE, (), KitResultClaim.SERIES_CONSENSUS, digest)

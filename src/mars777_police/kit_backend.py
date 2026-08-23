@@ -163,6 +163,6 @@ class KitRoleBackend:
             config=self.config,
         )
 
-    async def _send_settlement(self, envelope: dict[str, object]) -> None:
+    async def _send_settlement(self, envelope: dict[str, object]) -> bool:
         """Reach for the transport only when there is a settlement to send."""
-        await self.transport.send_settlement(envelope)
+        return await self.transport.send_settlement(envelope)

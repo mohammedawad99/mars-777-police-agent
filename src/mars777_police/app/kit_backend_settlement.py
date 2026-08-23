@@ -9,7 +9,7 @@ playing a sub-game.
 import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Final
 
 from ..domain.terminal import Outcome
 from ..infra.game_contract import consensus_retry, consensus_window
@@ -20,6 +20,9 @@ from .kit_settled_row import settled_row
 from .kit_settlement import SettlementExchange
 from .protocol_errors import LocalDefectError
 from .series_consensus import consensus_scope, consensus_sha256
+
+QUIET_RETRIES: Final[int] = 3
+"""Consecutive silent cadences that mean the peer has stopped resending."""
 
 
 async def uncollected(row: dict[str, Any]) -> None:  # pragma: no cover - replaced before play
@@ -54,7 +57,7 @@ class SeriesSettler:
     legality, scent and a chain; this one owns six finished rows and a digest.
     """
 
-    send: "Callable[[dict[str, Any]], Awaitable[None]]"
+    send: "Callable[[dict[str, Any]], Awaitable[bool]]"
     received: "Callable[[], KitAuditReveal | None]"
     series_rows: "Callable[[], Awaitable[tuple[dict[str, Any], ...]]]"
     window: float
@@ -90,7 +93,7 @@ class BackendSettlement:
         self,
         pairing: KitPairing,
         our_role: KitRole,
-        send: "Callable[[dict[str, Any]], Awaitable[None]]",
+        send: "Callable[[dict[str, Any]], Awaitable[bool]]",
         received: "Callable[[], KitAuditReveal | None]",
     ) -> str | None:
         """Agree the whole series with the peer, or record that it was not agreed.
@@ -109,10 +112,21 @@ class BackendSettlement:
         Being unable to compute *our* digest is not permission to stop being
         reachable. The side that owns the final sub-game stays up for the whole
         agreed window either way; it simply has nothing of its own to send.
+
+        **And it does not leave the moment the exchange succeeds.** rerun-9
+        settled correctly and this process still refused two `submit_audit`
+        calls that arrived one and three seconds after it had gone. Nothing was
+        lost there, because both sides had already agreed the same digest - but
+        rule 35 scores a series with no agreed result 0 for both groups, so
+        being reachable when the peer is still talking is not something to leave
+        to timing. The exchange and the wait that follows it share **one**
+        deadline, so staying longer never costs more than the window both sides
+        agreed.
         """
+        deadline = asyncio.get_running_loop().time() + self.window
         if len(await self.series_rows()) != SUB_GAMES:
             self.agreed = None
-            await self._wait_out(received)
+            await self._wait_out(received, deadline)
             return None
         settler = SeriesSettler(
             send=send,
@@ -124,15 +138,35 @@ class BackendSettlement:
         self.agreed = await settler.settle(
             pairing.game_id, pairing.our_group, pairing.peer_group, our_role.value
         )
+        await self._linger(received, deadline)
         return self.agreed
 
-    async def _wait_out(self, received: "Callable[[], KitAuditReveal | None]") -> None:
+    def _remaining(self, deadline: float) -> float:
+        """What is left of the one agreed window, never negative."""
+        return max(0.0, deadline - asyncio.get_running_loop().time())
+
+    async def _wait_out(
+        self, received: "Callable[[], KitAuditReveal | None]", deadline: float
+    ) -> None:
         """Stay reachable for the agreed window without sending a settlement.
 
         Receive-only: with no assembled series there is no digest of ours to
         offer, but the peer's audit and settlement still have to land somewhere.
         """
-        remaining = self.window
-        while remaining > 0 and received() is None:
-            await asyncio.sleep(min(self.retry, remaining))
-            remaining -= self.retry
+        while self._remaining(deadline) > 0 and received() is None:
+            await asyncio.sleep(min(self.retry, self._remaining(deadline)))
+
+    async def _linger(
+        self, received: "Callable[[], KitAuditReveal | None]", deadline: float
+    ) -> None:
+        """Stay reachable after the exchange until the peer has gone quiet.
+
+        Bounded twice, and the second bound is why a settled series still ends
+        promptly: this stops as soon as the peer has sent nothing for
+        `QUIET_RETRIES` of its own resend cadence, rather than always paying out
+        the remainder of the window.
+        """
+        quiet = 0.0
+        while self._remaining(deadline) > 0 and quiet < self.retry * QUIET_RETRIES:
+            await asyncio.sleep(min(self.retry, self._remaining(deadline)))
+            quiet = 0.0 if received() is not None else quiet + self.retry

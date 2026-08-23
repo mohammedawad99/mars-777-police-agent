@@ -73,7 +73,7 @@ class SettlementExchange:
     not a peer that answers wrongly, and the cap is the one both sides agreed.
     """
 
-    send: "Callable[[dict[str, Any]], Awaitable[None]]"
+    send: "Callable[[dict[str, Any]], Awaitable[bool]]"
     received: "Callable[[], KitAuditReveal | None]"
     window: float
     retry: float
@@ -81,17 +81,31 @@ class SettlementExchange:
     async def settle(self, ours: str, digest: str) -> str | None:
         """Exchange settlements, returning the agreed digest or `None`.
 
-        `None` means the window closed with no matching envelope. It is returned
-        rather than raised because an unsettled series is a fact to record, not
-        an error in this side's play.
+        **Both directions must be proven, not one.** Concluding on the peer's
+        envelope alone says "settled" while our own may never have arrived, and
+        a settlement the peer never received is not a settlement - rule 35
+        scores it 0 for both groups. So this returns only once our envelope has
+        been positively acknowledged *and* a matching one has come back. The
+        opponent found the same weakness in their own runner and fixed it; this
+        is the symmetric half.
+
+        An arrived envelope is held rather than re-read, because taking it is
+        what consumes it: a peer that answered before our delivery succeeded
+        must not have its answer dropped while we keep resending.
+
+        `None` means the window closed without both facts. It is returned rather
+        than raised because an unsettled series is a fact to record, not an
+        error in this side's play.
         """
         envelope = settlement_envelope(ours, digest)
         theirs = "police" if ours == "thief" else "thief"
         remaining = self.window
+        delivered = False
+        arrived: KitAuditReveal | None = None
         while remaining > 0:
-            await self.send(envelope)
-            arrived = self.received()
-            if arrived is not None:
+            delivered = await self.send(envelope) or delivered
+            arrived = arrived or self.received()
+            if delivered and arrived is not None:
                 return digest if _matches(arrived, theirs, digest) else None
             await asyncio.sleep(min(self.retry, remaining))
             remaining -= self.retry

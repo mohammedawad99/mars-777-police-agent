@@ -56,20 +56,26 @@ class FastMcpPeerTransport:
         tool, request = kit_call(message, self._client.profile)
         await self._client.invoke(tool, request)
 
-    async def send_settlement(self, envelope: dict[str, object]) -> None:
-        """Send one series settlement envelope, as raw arguments.
+    async def send_settlement(self, envelope: dict[str, object]) -> bool:
+        """Send one series settlement envelope, and report whether it landed.
 
         Deliberately not built by the typed KIT encoder: this is a settlement,
         not a sub-game disclosure, and it carries a digest instead of a chain.
         Routing it through the disclosure encoder would mean teaching that
         encoder to omit the very thing it exists to render.
 
-        A send failure is swallowed on purpose - the exchange resends on its own
-        cadence until the agreed window closes, and one refused attempt against
-        a peer that has not finished its last sub-game is expected, not a fault.
+        A failure is still not raised - the exchange resends on its own cadence
+        until the agreed window closes, and one refused attempt against a peer
+        that has not finished its last sub-game is expected, not a fault. But it
+        is no longer *silent*: swallowing the answer meant the exchange could
+        conclude on the peer's envelope alone while our own had never arrived,
+        which is a settlement in one direction and rule 35 scores that as none.
+        The caller needs the fact, so it is returned rather than discarded.
         """
         with suppress(Exception):
             await self._client.invoke("submit_audit", {"payload": envelope})
+            return True
+        return False
 
     async def send_step0(self, exchange: Step0DeclarationExchange) -> None:
         """Send our Step-0 declaration and its keyed proof."""

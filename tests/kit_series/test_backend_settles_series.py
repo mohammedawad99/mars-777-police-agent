@@ -49,12 +49,13 @@ def test_only_the_backend_that_owns_the_last_sub_game_settles(first: KitRole) ->
     async def series() -> tuple[dict[str, object], ...]:
         return rows
 
-    async def send(envelope: dict[str, object]) -> None:
+    async def send(envelope: dict[str, object]) -> bool:
         sent.append(envelope)
+        return True
 
     class Transport:
-        async def send_settlement(self, envelope: dict[str, object]) -> None:
-            await send(envelope)
+        async def send_settlement(self, envelope: dict[str, object]) -> bool:
+            return await send(envelope)
 
     held.transport = Transport()  # type: ignore[assignment]
     held.settlement.series_rows = series

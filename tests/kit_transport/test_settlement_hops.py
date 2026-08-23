@@ -52,7 +52,7 @@ def test_the_settlement_goes_out_as_raw_arguments() -> None:
             sent.append((tool, request))
 
     transport = FastMcpPeerTransport(Client())  # type: ignore[arg-type]
-    asyncio.run(transport.send_settlement(ENVELOPE))
+    assert asyncio.run(transport.send_settlement(ENVELOPE)) is True
     assert sent == [("submit_audit", {"payload": ENVELOPE})]
 
 
@@ -66,7 +66,10 @@ def test_a_refused_settlement_send_does_not_end_the_exchange() -> None:
             raise RuntimeError("the peer is not ready for a settlement yet")
 
     transport = FastMcpPeerTransport(Refusing())  # type: ignore[arg-type]
-    asyncio.run(transport.send_settlement(ENVELOPE))
+    assert asyncio.run(transport.send_settlement(ENVELOPE)) is False, (
+        "a refusal must be reported, not hidden: the exchange needs to know"
+        " our own envelope has not landed yet"
+    )
 
 
 def test_a_group_that_answers_with_something_other_than_rows_is_refused() -> None:

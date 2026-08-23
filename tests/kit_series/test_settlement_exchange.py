@@ -23,8 +23,9 @@ def reveal(
 
 
 def exchange(answers: list[KitAuditReveal | None], sent: list[Any]) -> SettlementExchange:
-    async def send(envelope: dict[str, Any]) -> None:
+    async def send(envelope: dict[str, Any]) -> bool:
         sent.append(envelope)
+        return True
 
     def received() -> KitAuditReveal | None:
         return answers.pop(0) if answers else None
@@ -94,3 +95,40 @@ def test_the_expected_sender_follows_our_own_side() -> None:
         exchange([reveal(KitRole.THIEF, DIGEST)], sent).settle("police", DIGEST)
     ) == (DIGEST)
     assert sent[0]["sender"] == "police"
+
+
+def test_the_peer_envelope_alone_does_not_settle_the_series() -> None:
+    """The symmetric half of the weakness the opponent fixed on their own side.
+
+    Concluding on what arrived says "settled" while our own envelope may never
+    have landed. A settlement the peer never received is not a settlement, and
+    rule 35 scores a series with no agreed result 0 for both groups.
+    """
+    attempts: list[dict[str, Any]] = []
+
+    async def refused(envelope: dict[str, Any]) -> bool:
+        attempts.append(envelope)
+        return False
+
+    def answered() -> KitAuditReveal | None:
+        return reveal(KitRole.POLICE, DIGEST)
+
+    live = SettlementExchange(send=refused, received=answered, window=0.2, retry=0.05)
+    assert asyncio.run(live.settle("thief", DIGEST)) is None
+    assert len(attempts) > 1, "an undelivered envelope must keep being retried"
+
+
+def test_an_answer_that_arrived_before_our_delivery_is_not_dropped() -> None:
+    """Taking the peer's envelope is what consumes it, so it is held, not re-read."""
+    attempts: list[dict[str, Any]] = []
+    answers: list[KitAuditReveal | None] = [reveal(KitRole.POLICE, DIGEST)]
+
+    async def late(envelope: dict[str, Any]) -> bool:
+        attempts.append(envelope)
+        return len(attempts) >= 2
+
+    def once() -> KitAuditReveal | None:
+        return answers.pop(0) if answers else None
+
+    live = SettlementExchange(send=late, received=once, window=0.3, retry=0.05)
+    assert asyncio.run(live.settle("thief", DIGEST)) == DIGEST
