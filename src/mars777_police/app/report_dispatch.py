@@ -10,11 +10,13 @@ So the dependency runs one way only: the series owner calls this port, the
 composition root supplies something that satisfies it, and the reporting service
 behind it is the same one the operator command uses.
 
-**Group ownership needs no arbitration.** Every profile set this project
-composes fixes `SeriesConvention.FIXED_ROLE`, and a config lock is refused
-unless the peer agreed the same convention - so exactly one MaRs-777 process
-plays a counted series and exactly one can ever reach the dispatch point. The
-process that finished the series *is* the group's single reporter.
+**Group ownership is decided, not inherited.** This module once argued that
+`SeriesConvention.FIXED_ROLE` made exactly one MaRs-777 process reachable here.
+Under the agreed counted convention - `REFERENCE_ODD_EVEN_ALTERNATION` - that is
+no longer true: both role backends run, both play three sub-games, and both
+reach the end of the series. Rule 35 scores a *contradictory* report 0 for both
+groups, so which process sends is now settled explicitly by `app.report_owner`,
+from the schedule rather than by naming a repository.
 """
 
 from collections.abc import Callable

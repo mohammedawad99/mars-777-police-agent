@@ -13,8 +13,9 @@ Nothing here decides a rule: the schedule says which sub-games are ours, the
 backend plays them, and this owns only the lifecycle around that.
 """
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import cast
+from typing import Any, cast
 
 from .app.kit_session import KitSessionContext
 from .app.peer_supervision import PeerDeadline, TimeoutPolicy
@@ -58,11 +59,34 @@ class KitBackendBoot:
         await self._serve()
         try:
             async with KitAdminClient(self.admin_url) as admin, self.client:
-                self.backend.settled = admin.settled
+                self._wire(admin)
                 return dict(await self.backend.run())
         finally:
             if self.served is not None:
                 await release(self.served.task, self.served.listener)
+
+    def _wire(self, admin: KitAdminClient) -> None:
+        """Give the backend the three loopback calls it cannot construct itself.
+
+        All three, together: the settlement report the gateway routes on, and the
+        two that let a two-process group put its six rows back into one series.
+        Wiring one and leaving the others at their refusal defaults is what a
+        rehearsal caught - every unit test injected its own and passed.
+        """
+        self.backend.settled = admin.settled
+        self.backend.settlement.contribute = admin.contribute
+        self.backend.settlement.series_rows = self._series_rows(admin)
+
+    @staticmethod
+    def _series_rows(
+        admin: KitAdminClient,
+    ) -> "Callable[[], Awaitable[tuple[dict[str, Any], ...]]]":
+        """The group's assembled series, as the settler expects to receive it."""
+
+        async def read() -> tuple[dict[str, Any], ...]:
+            return tuple(await admin.series_rows())
+
+        return read
 
     async def _serve(self) -> None:
         """Serve the private surface the gateway forwards to, and keep it for release."""

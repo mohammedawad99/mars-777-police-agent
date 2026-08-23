@@ -28,7 +28,9 @@ from .app.kit_payload import PeerPayload
 from .app.kit_preset import ExternalMode, external_profiles
 from .app.kit_session import KitSessionContext
 from .app.protocol_errors import LocalDefectError
+from .app.scent_registration import registered_model
 from .composition_values import SeriesIdentity
+from .domain.scent_model_default import default_scent_model
 from .infra.settings import RuntimeSettings
 from .protocol.keyed_auth import HmacSha256Provider, KeyedAuthenticator
 from .transport.transport_profiles import TransportEnvelopeProfile, transport_profile
@@ -72,6 +74,7 @@ def select_wire(
         KitRole(settings.role.value),
         PeerPayload(terms),
         identity.first_sub_game,
+        scent=registered_model(default_scent_model()),
     )
     return WireSelection(profile, context)
 

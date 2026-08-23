@@ -43,10 +43,21 @@ def test_the_launcher_reads_both_backends_and_the_starting_role() -> None:
     assert arguments.first_role == "thief"
 
 
-def test_the_launcher_defaults_to_the_police_first_schedule() -> None:
+def test_the_launcher_defaults_to_no_stated_first_role() -> None:
+    """Silence, not `police` - the flag no longer decides a schedule on its own.
+
+    A default here meant a forgotten argument inverted an entire six-sub-game
+    series while every process still reported itself healthy. The flag now says
+    only what the operator actually typed; `series_first_role` reads the frozen
+    agreement and refuses a stated role that contradicts it.
+    """
+    from mars777_police.app.kit_messages import KitRole
+    from mars777_police.first_role_source import series_first_role
     from mars777_police.kit_gateway_main import parse_args
 
-    assert parse_args(gateway_argv()).first_role == "police"
+    stated = parse_args(gateway_argv()).first_role
+    assert stated is None
+    assert series_first_role("MaRs-777", stated) is KitRole.POLICE
 
 
 def test_the_launcher_refuses_a_starting_role_outside_the_two_sides() -> None:

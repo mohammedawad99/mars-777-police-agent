@@ -86,3 +86,65 @@ def is_frozen(path: Path | None = None) -> bool:
     and saying so out loud is what keeps the override from being an escape hatch.
     """
     return raw_digest(path) == RAW_SHA256 and canonical_digest(path) == CANONICAL_SHA256
+
+
+def scent_registration() -> tuple[str, str]:
+    """The agreed scent model's **external** identity: its name and registration digest.
+
+    Returned as the pairing wrote it and never recomputed here. The digest covers
+    the opponent's own registration document, in the opponent's own canonical
+    form, and that document records IEEE-754 accumulation our exact `Decimal`
+    physics cannot reproduce - so a locally derived digest would be a different
+    number for the same agreement. What both sides can check is that they are
+    naming the same registration, which is what this value is for.
+
+    Our own internal model keeps its own separate identity
+    (`protocol.scent_model.scent_model_sha256`); the two are different domains
+    and neither substitutes for the other.
+    """
+    document = json.loads(contract_bytes())
+    pheromones = document["pheromones"]
+    model_id, digest = pheromones.get("model_id"), pheromones.get("registration_sha256")
+    if not isinstance(model_id, str) or not model_id:
+        raise KeyError("the shared contract names no scent model")
+    if not isinstance(digest, str) or len(digest) != 64:
+        raise KeyError(f"the shared contract carries no registration digest for {model_id!r}")
+    return model_id, digest
+
+
+def scent_parameters() -> tuple[str, str, int]:
+    """The three FIXED pheromone values the contract froze, as text and an int.
+
+    Text rather than `float`, because these are the numbers a digest is taken
+    over: `0.1` read as a binary float and re-rendered is not necessarily the
+    same characters, and the comparison this feeds is exact.
+    """
+    pheromones = json.loads(contract_bytes())["pheromones"]
+    try:
+        centre = pheromones["pheromone_center_intensity"]
+        decay = pheromones["pheromone_decay"]
+        size = pheromones["pheromone_grid_size"]
+    except KeyError as missing:
+        raise KeyError(f"the shared contract omits a FIXED pheromone value: {missing}") from None
+    return repr(centre), repr(decay), int(size)
+
+
+def consensus_window() -> float:
+    """How long the pairing agreed to keep listening for the series settlement.
+
+    Read from the agreement rather than chosen locally: the two sides finish
+    their last sub-game at different moments, and a window one side shortened on
+    its own would close before the other had sent.
+    """
+    seconds = json.loads(contract_bytes())["series_protocol"]["consensus_timeout_sec"]
+    if not isinstance(seconds, int) or seconds <= 0:
+        raise KeyError(f"the shared contract carries no usable consensus window: {seconds!r}")
+    return float(seconds)
+
+
+def consensus_retry() -> float:
+    """How often the pairing agreed to resend a settlement while waiting."""
+    seconds = json.loads(contract_bytes())["series_protocol"]["consensus_retry_sec"]
+    if not isinstance(seconds, int | float) or seconds <= 0:
+        raise KeyError(f"the shared contract carries no usable consensus retry: {seconds!r}")
+    return float(seconds)

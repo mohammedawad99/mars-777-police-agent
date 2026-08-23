@@ -30,6 +30,9 @@ jobs:
       - name: File size (<= 150 code lines, src and tests)
         run: uv run python tools/check_python_loc.py
 
+      - name: Infrastructure freeze (only the strategy surface may move)
+        run: uv run python tools/check_infrastructure_freeze.py
+
       - name: Ruff lint
         run: uv run ruff check .
 

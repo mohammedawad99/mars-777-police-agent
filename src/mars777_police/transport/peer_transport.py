@@ -14,6 +14,8 @@ Conformance is **structural**: `app.peer_transport.PeerTransportPort` is a
 check proves the match with no `cast` and no `type: ignore`.
 """
 
+from contextlib import suppress
+
 from ..app.capture_values import TurnOutcome
 from ..app.peer_final_messages import FinalNonceReveal, ResultAgreement
 from ..app.peer_pregame_messages import (
@@ -53,6 +55,21 @@ class FastMcpPeerTransport:
         """
         tool, request = kit_call(message, self._client.profile)
         await self._client.invoke(tool, request)
+
+    async def send_settlement(self, envelope: dict[str, object]) -> None:
+        """Send one series settlement envelope, as raw arguments.
+
+        Deliberately not built by the typed KIT encoder: this is a settlement,
+        not a sub-game disclosure, and it carries a digest instead of a chain.
+        Routing it through the disclosure encoder would mean teaching that
+        encoder to omit the very thing it exists to render.
+
+        A send failure is swallowed on purpose - the exchange resends on its own
+        cadence until the agreed window closes, and one refused attempt against
+        a peer that has not finished its last sub-game is expected, not a fault.
+        """
+        with suppress(Exception):
+            await self._client.invoke("submit_audit", {"payload": envelope})
 
     async def send_step0(self, exchange: Step0DeclarationExchange) -> None:
         """Send our Step-0 declaration and its keyed proof."""

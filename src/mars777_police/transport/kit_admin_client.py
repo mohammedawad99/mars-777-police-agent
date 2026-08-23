@@ -12,11 +12,14 @@ them is how a sub-game gets skipped.
 
 from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
+from typing import Any
 
 from fastmcp import Client
 
 SETTLED_TOOL = "sub_game_settled"
-"""The one operation this client makes. There is no second admin call."""
+CONTRIBUTE_TOOL = "contribute_row"
+ROWS_TOOL = "series_rows"
+"""The three private operations. None of them is a KIT message or reaches a peer."""
 
 
 @dataclass(slots=True)
@@ -25,7 +28,7 @@ class KitAdminClient:
 
     url: str
     _stack: AsyncExitStack | None = field(default=None)
-    _client: Client | None = field(default=None)  # type: ignore[type-arg]
+    _client: "Client[Any] | None" = field(default=None)
 
     async def __aenter__(self) -> "KitAdminClient":
         """Open the session the whole series reports over."""
@@ -42,6 +45,27 @@ class KitAdminClient:
 
     async def settled(self, sub_game: int) -> None:
         """Report that *sub_game* owes nothing more, so routing may move on."""
+        await self._open().call_tool(SETTLED_TOOL, {"sub_game": sub_game})
+
+    async def contribute(self, row: dict[str, Any]) -> None:
+        """Hand the group one finished row, so the series can settle as a whole.
+
+        Each backend plays three of the six sub-games, so neither holds the
+        series a settlement digest covers; this is how the two halves meet while
+        both processes are still alive.
+        """
+        await self._open().call_tool(CONTRIBUTE_TOOL, {"row": row})
+
+    async def series_rows(self) -> list[dict[str, Any]]:
+        """The group's six finished rows, for whichever backend settles the series."""
+        result = await self._open().call_tool(ROWS_TOOL, {})
+        rows = result.data
+        if not isinstance(rows, list):
+            raise RuntimeError(f"the group returned {type(rows).__name__}, not a list of rows")
+        return [dict(row) for row in rows]
+
+    def _open(self) -> "Client[Any]":
+        """The held session, or a refusal that names the real mistake."""
         if self._client is None:
             raise RuntimeError("the admin session is not open")
-        await self._client.call_tool(SETTLED_TOOL, {"sub_game": sub_game})
+        return self._client

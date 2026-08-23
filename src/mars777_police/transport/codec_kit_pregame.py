@@ -100,12 +100,17 @@ def decode_kit_audit(wire: KitAuditPayload) -> KitAuditReveal:
             for one in wire.records
         ),
         KitResultClaim(wire.result_claim),
+        wire.consensus_sha,
     )
 
 
 def encode_kit_audit(value: KitAuditReveal) -> KitJson:
-    """Render the reveal in the pinned three-key shape."""
-    return {
+    """Render the reveal, adding the settlement digest only when one exists.
+
+    Omission rather than `null`, the same way every other optional member on
+    this wire is absent when it has nothing to say.
+    """
+    message: KitJson = {
         "sender": value.sender.value,
         "records": [
             {"payload": dict(one.payload.value), "nonce": one.nonce, "commit": one.commit.value}
@@ -113,6 +118,9 @@ def encode_kit_audit(value: KitAuditReveal) -> KitJson:
         ],
         "result_claim": value.result_claim.value,
     }
+    if value.consensus_sha is not None:
+        message["consensus_sha"] = value.consensus_sha
+    return message
 
 
 def decode_kit_control(wire: KitControlMessage) -> KitControl:

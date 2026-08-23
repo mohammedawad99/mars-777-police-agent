@@ -26,18 +26,22 @@ import asyncio
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import GROUP_CODE
 from .agent_runtime import AgentRuntime
 from .app.artifact_store import StoredArtifact
+from .app.kit_messages import KitRole
 from .app.live_view_sink import NO_VIEWER, LiveViewSink
 from .app.orchestrator import LocalOrchestrator
 from .app.pregame_session_runtime import PregameSessionRuntime
 from .app.protocol_errors import LocalDefectError
+from .app.report_owner import reports_for_group
 from .app.sealed_record_values import ActorRole
 from .app.token_accounting import SeriesTokenLedger
 from .boot_runtimes import sub_game_runtimes
 from .compose_report import send_game_report
 from .domain.config_model import SeriesConfig
 from .domain.negotiated_config import NegotiatedConfig
+from .first_role_source import series_first_role
 from .infra.artifacts import JsonArtifactStore
 from .infra.settings import RuntimeSettings
 from .series_driver import SeriesDriver
@@ -93,9 +97,8 @@ class AutonomousBoot:
             LocalOrchestrator.start(SeriesConfig()),
         )
 
-    @staticmethod
-    def reporter(result: Path) -> None:
-        """Report a finished series automatically, as Appendix E rule 32 requires.
+    def reporter(self, result: Path) -> None:
+        """Report a finished series automatically, if this process is the reporter.
 
         The boot is where a real provider belongs: `SeriesDriver` owns the moment
         a result becomes reportable and must not learn what Gmail is, while this
@@ -104,8 +107,24 @@ class AutonomousBoot:
         Delegates to the same `send_game_report` the operator command uses, so
         there is one reporting path with one gate, one recipient and one message
         contract - the only difference is that nobody has to type it.
+
+        **Only the owning process sends.** A group's report is singular under
+        rule 35, and an alternating series ends with both role backends alive and
+        both able to reach this point; the one that owns the final sub-game
+        reports, and the other returns having done nothing. Silence here is a
+        decision, not a failure.
         """
+        if not self.reports:
+            return
         send_game_report(result)
+
+    @property
+    def reports(self) -> bool:
+        """Whether this process owns the group's single completion report."""
+        return reports_for_group(
+            series_first_role(GROUP_CODE, None),
+            KitRole(self.role.value),
+        )
 
     def driver(self, series: SeriesRuntime, peer: str) -> SeriesDriver:
         """The one production series owner, built from state that already exists."""

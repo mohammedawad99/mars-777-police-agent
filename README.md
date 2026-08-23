@@ -452,6 +452,7 @@ so there is no second configuration schema.
 
 ```bash
 uv run python tools/check_python_loc.py   # every file <= 150 code lines
+uv run python tools/check_infrastructure_freeze.py   # only the strategy surface may move
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy --strict

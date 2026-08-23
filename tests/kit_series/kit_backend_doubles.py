@@ -13,6 +13,7 @@ from r16_builders import config
 
 from mars777_police.__main__ import ROLE
 from mars777_police.app.commitment_codecs import CommitmentCodec
+from mars777_police.app.kit_backend_settlement import BackendSettlement
 from mars777_police.app.kit_friendly import KitFriendlySession
 from mars777_police.app.kit_messages import (
     KitAuditReveal,
@@ -59,6 +60,12 @@ def backend_pair() -> tuple[KitRoleBackend, list[object], KitFriendlySession]:
     async def settled(number: int) -> None:
         sent.append(("settled", number))
 
+    async def contribute(row: dict[str, object]) -> None:
+        sent.append(("row", row))
+
+    async def series_rows() -> tuple[dict[str, object], ...]:
+        return ()
+
     first = KitRole.POLICE if OURS is KitRole.POLICE else KitRole.THIEF
     backend = KitRoleBackend(
         context=context,
@@ -74,6 +81,7 @@ def backend_pair() -> tuple[KitRoleBackend, list[object], KitFriendlySession]:
         codec=CommitmentCodec.KIT_CORE_COMMITMENT_V1,
         deadline=5.0,
         first_role=first,
+        settlement=BackendSettlement(contribute=contribute, series_rows=series_rows),
     )
     return backend, sent, friendly
 

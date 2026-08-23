@@ -24,7 +24,7 @@ from .wire_errors import outbound
 GATEWAY_TOOLS = ("negotiate", "receive_turn", "submit_audit", "receive_control")
 """The public surface, identical to a backend's. The router is invisible."""
 
-ADMIN_TOOLS = ("sub_game_settled",)
+ADMIN_TOOLS = ("sub_game_settled", "contribute_row", "series_rows")
 """The private surface, loopback only, and never part of the KIT contract."""
 
 
@@ -79,5 +79,22 @@ def build_gateway_admin(gateway: KitGroupGateway, name: str = "mars777-group-adm
         except BaseException as failure:
             raise outbound(failure) from None
         return KIT_OK
+
+    @server.tool
+    async def contribute_row(row: KitJson) -> dict[str, bool]:
+        """Hand the group one finished row, so the series can be settled as a whole."""
+        try:
+            gateway.contribute(row)
+        except BaseException as failure:
+            raise outbound(failure) from None
+        return KIT_OK
+
+    @server.tool
+    async def series_rows() -> list[KitJson]:
+        """The group's six finished rows, for whichever backend settles the series."""
+        try:
+            return list(gateway.series_rows())
+        except BaseException as failure:
+            raise outbound(failure) from None
 
     return server

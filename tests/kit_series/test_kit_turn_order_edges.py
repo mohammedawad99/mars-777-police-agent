@@ -8,6 +8,7 @@ and a schedule that gives this role three rows gets three rows played.
 import asyncio
 
 from kit_backend_builders import backend
+from kit_backend_doubles import _pairing
 from kit_wire_vectors import COMMIT
 from r16_builders import config
 
@@ -18,6 +19,7 @@ from mars777_police.app.config_rules import limits_of
 from mars777_police.app.kit_messages import KitRole
 from mars777_police.app.kit_play import KitPlayState
 from mars777_police.app.kit_records import KitRecordChain
+from mars777_police.app.kit_schedule import require_ours
 from mars777_police.domain.terminal import Outcome
 from mars777_police.protocol.secure_nonce import SecretsNonceSource
 
@@ -84,11 +86,12 @@ def test_a_backend_runs_every_row_the_schedule_gave_it() -> None:
 
     class Counting(type(backend(KitRole.POLICE))):  # type: ignore[misc]
         async def play_sub_game(self, number: int) -> Outcome:
-            self.require_ours(number)
+            require_ours(number, self.ours, self.kit_role)
             played.append(number)
             return Outcome.SURVIVAL
 
     template = backend(KitRole.POLICE)
+    template.friendly.record_pairing(_pairing())
     held = Counting(
         **{
             field.name: getattr(template, field.name)

@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from .kit_greeting import KitPairing
 from .kit_inbox import KitTurnInbox
 from .kit_messages import KitAuditReveal, KitTurn
+from .protocol_errors import LocalDefectError
 from .run_class import RunClassification
 
 
@@ -33,6 +34,15 @@ class KitFriendlySession:
     inbox: KitTurnInbox = field(default_factory=KitTurnInbox)
     audit: KitAuditReveal | None = field(default=None)
     audit_arrived: asyncio.Event = field(default_factory=asyncio.Event)
+    settlement: KitAuditReveal | None = field(default=None)
+    """The peer's series settlement. It belongs to the series, not to a sub-game.
+
+    Deliberately **not** cleared by `open_sub_game`: it can legitimately arrive
+    while the last sub-game is still draining, and a per-sub-game reset would
+    discard the one message the whole series has to end on.
+    """
+
+    settled_arrived: asyncio.Event = field(default_factory=asyncio.Event)
     pairing: KitPairing | None = field(default=None)
     greetings: int = field(default=0)
     greeted: asyncio.Event = field(default_factory=asyncio.Event)
@@ -55,9 +65,42 @@ class KitFriendlySession:
         self.inbox.offer(turn)
 
     def deliver_audit(self, reveal: KitAuditReveal) -> None:
-        """Record the opponent's disclosed chain and wake whoever waits for it."""
+        """Record a disclosure, keeping the series settlement out of the sub-game slot.
+
+        The peer sends both a sub-game chain and the final series settlement
+        through `submit_audit`, so one delivery point receives two different
+        kinds of message. A settlement placed in the sub-game slot would be
+        re-hashed as a chain, fail for carrying no records, and be reported as
+        the opponent's tamper - which is the opposite of what it says.
+        """
+        if reveal.settles_the_series:
+            self.settlement = reveal
+            self.settled_arrived.set()
+            return
         self.audit = reveal
         self.audit_arrived.set()
+
+    def take_settlement(self) -> KitAuditReveal | None:
+        """The peer's settlement if one has arrived, without waiting for it.
+
+        The exchange polls rather than blocks: it has to keep resending our own
+        envelope on the agreed cadence, and a blocking wait would stop it doing
+        the half the peer is waiting for.
+        """
+        return self.settlement
+
+    async def await_settlement(self, timeout: float) -> KitAuditReveal:
+        """Wait for the peer's series settlement, bounded by the agreed window.
+
+        Bounded by the pairing's own `consensus_timeout_sec` rather than by a
+        turn budget: this arrives after the last sub-game is already disclosed,
+        and the two sides reach it at different moments.
+        """
+        await asyncio.wait_for(self.settled_arrived.wait(), timeout)
+        settlement = self.settlement
+        if settlement is None:  # pragma: no cover - the event is only set with one
+            raise LocalDefectError("a settlement event fired with no settlement behind it")
+        return settlement
 
     def record_pairing(self, pairing: KitPairing) -> None:
         """Keep the pairing one accepted greeting established. Binds no identity.

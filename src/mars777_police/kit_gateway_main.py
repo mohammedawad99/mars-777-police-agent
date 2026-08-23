@@ -46,7 +46,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(prog=f"python -m {__package__}.kit_gateway_main")
     parser.add_argument("--police-endpoint", required=True, help="private police backend MCP url")
     parser.add_argument("--thief-endpoint", required=True, help="private thief backend MCP url")
-    parser.add_argument("--first-role", default="police", choices=[one.value for one in KitRole])
+    parser.add_argument(
+        "--first-role",
+        default=None,
+        choices=[one.value for one in KitRole],
+        help="sub-game-1 role, for a pairing the shared contract does not name",
+    )
     parser.add_argument("--ngrok", required=True, type=Path, help="the operator's ngrok agent")
     parser.add_argument("--evidence-root", default="runtime/friendly", type=Path)
     return parser.parse_args(argv)
@@ -59,7 +64,7 @@ def build(arguments: argparse.Namespace) -> KitPublicLauncher:
             police_endpoint=arguments.police_endpoint,
             thief_endpoint=arguments.thief_endpoint,
             ngrok=arguments.ngrok,
-            first_role=KitRole(arguments.first_role),
+            first_role=arguments.first_role,
             evidence_root=arguments.evidence_root,
         )
     )

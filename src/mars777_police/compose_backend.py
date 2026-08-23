@@ -19,13 +19,16 @@ from .app.competitive_strategy import CompetitiveStrategy
 from .app.friendly_backend_evidence import backend_rows
 from .app.friendly_evidence import DevelopmentEvidenceStore
 from .app.friendly_merge import contribution_document, friendly_contribution_name
+from .app.kit_backend_settlement import BackendSettlement
 from .app.kit_friendly import KitFriendlySession
 from .app.kit_messages import KitRole
 from .app.kit_payload import PeerPayload
 from .app.kit_session import KitSessionContext
 from .app.protocol_errors import LocalDefectError
 from .app.run_class import RunClassification
+from .app.scent_registration import registered_model
 from .domain.scent_model_default import default_scent_model
+from .first_role_source import series_first_role
 from .identity import ROLE
 from .infra.artifacts import JsonArtifactStore
 from .infra.clock import SystemClock
@@ -53,6 +56,7 @@ def compose_role_backend(request: RoleBackendRequest) -> KitBackendBoot:
         KitRole(ROLE.value),
         PeerPayload(document.kit_terms),
         1,
+        scent=registered_model(default_scent_model()),
         friendly=friendly,
     )
     client = backend_client(request.opponent, BACKEND_DEADLINE)
@@ -61,6 +65,7 @@ def compose_role_backend(request: RoleBackendRequest) -> KitBackendBoot:
         friendly=friendly,
         transport=FastMcpPeerTransport(client),
         settled=_unwired,
+        settlement=BackendSettlement(contribute=_uncontributed, series_rows=_unassembled),
         config=document.config,
         role=ROLE,
         strategy=CompetitiveStrategy(),
@@ -69,13 +74,21 @@ def compose_role_backend(request: RoleBackendRequest) -> KitBackendBoot:
         clock=SystemClock(),
         codec=CommitmentCodec.KIT_CORE_COMMITMENT_V1,
         deadline=BACKEND_DEADLINE,
-        first_role=request.first_role,
+        first_role=series_first_role(GROUP_CODE, request.first_role),
     )
     return KitBackendBoot(backend, context, client, request.gateway_admin, request.port)
 
 
 async def _unwired(sub_game: int) -> None:  # pragma: no cover - replaced before play
     raise LocalDefectError("this backend was never given a gateway to report settlement to")
+
+
+async def _uncontributed(row: dict[str, object]) -> None:  # pragma: no cover - replaced
+    raise LocalDefectError("this backend was never given a group to contribute its rows to")
+
+
+async def _unassembled() -> tuple[dict[str, object], ...]:  # pragma: no cover - replaced
+    raise LocalDefectError("this backend was never given a way to read the group's series")
 
 
 def write_contribution(backend: KitRoleBackend, root: Path) -> str:
@@ -96,6 +109,7 @@ def write_contribution(backend: KitRoleBackend, root: Path) -> str:
             verified=backend.verified,
             witnessed=backend.witnessed,
         ),
+        series_consensus_sha256=backend.settlement.agreed,
     )
     store = DevelopmentEvidenceStore(JsonArtifactStore(root))
     stored = store.store(friendly_contribution_name(pairing.game_id, backend.kit_role), document)

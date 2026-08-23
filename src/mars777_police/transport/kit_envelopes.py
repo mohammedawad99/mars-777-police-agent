@@ -73,13 +73,28 @@ class KitAuditRecord(BaseModel):
 
 
 class KitAuditPayload(BaseModel):
-    """`submit_audit(payload)` - the full chain plus nonces, for us to re-hash."""
+    """`submit_audit(payload)` - a sub-game chain, or the series settlement.
+
+    `series_consensus` is the sixth claim and the only one that carries no
+    records: it settles the **series**, not a sub-game, and what it asserts is
+    `consensus_sha` rather than an outcome. It was observed on the wire from a
+    real peer at the end of a six-sub-game series, arriving after the last
+    sub-game had already been disclosed and verified.
+    """
 
     model_config = KIT_WIRE
 
     sender: Literal["police", "thief"]
     records: list[KitAuditRecord]
-    result_claim: Literal["capture", "survival", "timeout", "technical_loss", "tamper_forfeit"]
+    result_claim: Literal[
+        "capture",
+        "survival",
+        "timeout",
+        "technical_loss",
+        "tamper_forfeit",
+        "series_consensus",
+    ]
+    consensus_sha: DigestText | None = None
 
 
 class KitControlMessage(BaseModel):

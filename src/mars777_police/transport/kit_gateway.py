@@ -20,10 +20,11 @@ broadcast to both backends.
 """
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ..app.kit_handoff import SeriesHandoff
 from ..app.kit_messages import KitRole
+from ..app.kit_series_rows import SeriesRowCollector
 from ..app.protocol_errors import StaleMessageError
 from .kit_envelopes import KIT_ARGUMENT_NAMES, KIT_OK, KitJson, KitNegotiateMessage, parse_kit
 
@@ -38,6 +39,12 @@ class KitGroupGateway:
     handoff: SeriesHandoff
     routes: dict[KitRole, Forward]
     deadline: float
+    collected: SeriesRowCollector = field(default_factory=SeriesRowCollector)
+    """The group's finished rows, contributed by both backends while both are alive.
+
+    Kept here for the same reason the routing cursor is: this is the only part of
+    the group both backends can reach. It stores rows and judges none of them.
+    """
 
     async def negotiate(self, message: KitJson) -> dict[str, bool]:
         """Assign a sub-game to the backend that will play it, then acknowledge.
@@ -74,6 +81,14 @@ class KitGroupGateway:
         """Route a status signal. It settles nothing and moves no cursor."""
         await self._forward("receive_control", message)
         return KIT_OK
+
+    def contribute(self, row: KitJson) -> None:
+        """Take one finished row from the backend that played it."""
+        self.collected.record(row)
+
+    def series_rows(self) -> tuple[KitJson, ...]:
+        """The group's six finished rows, for the backend that settles the series."""
+        return self.collected.series()
 
     def settle(self, sub_game: int) -> None:
         """The backend playing *sub_game* reports it owes nothing more for it.

@@ -4,6 +4,7 @@ from r16_builders import config
 
 from mars777_police.__main__ import ROLE
 from mars777_police.app.commitment_codecs import CommitmentCodec
+from mars777_police.app.kit_backend_settlement import BackendSettlement
 from mars777_police.app.kit_friendly import KitFriendlySession
 from mars777_police.app.kit_messages import KitRole
 from mars777_police.app.kit_payload import PeerPayload
@@ -35,7 +36,22 @@ def backend(first: KitRole) -> KitRoleBackend:
         codec=CommitmentCodec.KIT_CORE_COMMITMENT_V1,
         deadline=5.0,
         first_role=first,
+        settlement=BackendSettlement(contribute=collect, series_rows=nothing),
     )
+
+
+ROWS: list[dict[str, object]] = []
+"""Every finished row the builder's backends contributed, in the order they did."""
+
+
+async def collect(row: dict[str, object]) -> None:
+    """Take a finished row, so a test can see what a played sub-game settled as."""
+    ROWS.append(row)
+
+
+async def nothing() -> tuple[dict[str, object], ...]:
+    """No assembled series: these fixtures play rows, they do not settle them."""
+    return ()
 
 
 async def drop(message: object) -> None:

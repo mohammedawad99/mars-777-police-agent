@@ -21,6 +21,7 @@ from .app.public_endpoint_policy import SystemHostResolver
 from .app.public_network_workflow import PublicNetworkService
 from .app.step0_runtime import Step0Runtime
 from .composition_inputs import keyed_authenticator
+from .first_role_source import series_first_role
 from .identity import ROLE
 from .infra.ngrok_ingress import NgrokPublicIngress, fetch
 from .infra.ngrok_process import NgrokProcess
@@ -65,7 +66,7 @@ def compose_public_gateway(request: PublicGatewayRequest) -> KitPublicLauncher:
     }
     routes = KitBackendRoutes(endpoints, ROUTE_DEADLINE)
     gateway = KitGroupGateway(
-        handoff=SeriesHandoff(request.first_role),
+        handoff=SeriesHandoff(series_first_role(GROUP_CODE, request.first_role)),
         routes=routes.forwarders(),
         deadline=ROUTE_DEADLINE,
     )

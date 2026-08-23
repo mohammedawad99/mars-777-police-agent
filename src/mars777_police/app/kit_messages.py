@@ -67,6 +67,16 @@ class KitResultClaim(StrEnum):
     TECHNICAL_LOSS = "technical_loss"
     TAMPER_FORFEIT = "tamper_forfeit"
 
+    SERIES_CONSENSUS = "series_consensus"
+    """Not a sub-game outcome at all: the peer's digest of the settled series.
+
+    It arrives once, after the last sub-game is disclosed, carries no records and
+    settles nothing about any single game. Refusing it as malformed - which is
+    what an outcome-only enum does - leaves the final exchange of a counted
+    series unanswered, and a series with no mutual settlement is scored 0 for
+    both groups.
+    """
+
 
 @dataclass(frozen=True, slots=True)
 class KitClaimResponse:
@@ -112,11 +122,23 @@ class KitRecord:
 
 @dataclass(frozen=True, slots=True)
 class KitAuditReveal:
-    """A whole sub-game's chain with its nonces, for the opponent to re-hash."""
+    """A sub-game's chain with its nonces, or the series settlement digest.
+
+    One shape for both because the peer sends both through `submit_audit`. The
+    two are told apart by the claim and never by the record count: an empty
+    chain is a legitimate sub-game disclosure to *refuse*, while a series
+    settlement is a different kind of message that happens to carry none.
+    """
 
     sender: KitRole
     records: tuple[KitRecord, ...]
     result_claim: KitResultClaim
+    consensus_sha: str | None = None
+
+    @property
+    def settles_the_series(self) -> bool:
+        """Whether this disclosure ends the series rather than one sub-game."""
+        return self.result_claim is KitResultClaim.SERIES_CONSENSUS
 
 
 @dataclass(frozen=True, slots=True)

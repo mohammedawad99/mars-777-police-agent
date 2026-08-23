@@ -16,7 +16,7 @@ as a mismatch instead of being played out.
 
 from .interop_profiles import SeriesConvention
 from .kit_messages import KitRole
-from .protocol_errors import StaleMessageError
+from .protocol_errors import LocalDefectError, StaleMessageError
 
 SUB_GAMES = 6
 """App F Table 18 #1: a series is six sub-games, and the schedule has six rows."""
@@ -39,3 +39,17 @@ def role_for(first: KitRole, sub_game: int) -> KitRole:
 def schedule_for(first: KitRole) -> tuple[KitRole, ...]:
     """All six rows, in order, so a mismatch is caught before it is played."""
     return tuple(role_for(first, number) for number in range(1, SUB_GAMES + 1))
+
+
+def require_ours(sub_game: int, ours: tuple[int, ...], role: KitRole) -> None:
+    """Refuse a sub-game the schedule did not give this backend, structurally.
+
+    Not a courtesy check: a role repository that played someone else's row would
+    be playing a side it does not implement, and the refusal names both what was
+    asked and what this backend actually owns.
+    """
+    if sub_game not in ours:
+        raise LocalDefectError(
+            f"sub-game {sub_game} is not this {role.value} backend's;"
+            f" this repository plays {ours} and never the other",
+        )

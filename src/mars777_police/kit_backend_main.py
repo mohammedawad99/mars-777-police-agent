@@ -47,7 +47,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--port", required=True, type=int, help="private local port to serve")
     parser.add_argument("--opponent", required=True, help="the opponent's public MCP url")
     parser.add_argument("--gateway-admin", required=True, help="the gateway's loopback admin url")
-    parser.add_argument("--first-role", default="police", choices=[one.value for one in KitRole])
+    parser.add_argument(
+        "--first-role",
+        default=None,
+        choices=[one.value for one in KitRole],
+        help="sub-game-1 role, for a pairing the shared contract does not name",
+    )
     parser.add_argument("--evidence-root", default="runtime/friendly", type=Path)
     return parser.parse_args(argv)
 
@@ -60,7 +65,7 @@ def build(arguments: argparse.Namespace) -> KitBackendBoot:
             port=arguments.port,
             opponent=arguments.opponent,
             gateway_admin=arguments.gateway_admin,
-            first_role=KitRole(arguments.first_role),
+            first_role=arguments.first_role,
             evidence_root=arguments.evidence_root,
         )
     )

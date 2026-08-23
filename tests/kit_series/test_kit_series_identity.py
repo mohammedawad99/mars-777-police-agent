@@ -15,7 +15,7 @@ from r16_builders import config  # noqa: F401 - repo-normalized fixture import
 
 from mars777_police.app.kit_messages import KitRole
 from mars777_police.app.kit_payload import PeerPayload
-from mars777_police.app.kit_schedule import SUB_GAMES, schedule_for
+from mars777_police.app.kit_schedule import SUB_GAMES, require_ours, schedule_for
 from mars777_police.app.kit_session import KitSessionContext
 from mars777_police.app.protocol_errors import LocalDefectError
 from mars777_police.protocol.kit_identity import kit_game_id, kit_game_uid
@@ -86,6 +86,6 @@ def test_a_backend_refuses_a_sub_game_the_schedule_did_not_give_it() -> None:
     theirs = (2, 4, 6) if ROLE.value == "police" else (1, 3, 5)
 
     assert held.ours == mine
-    held.require_ours(mine[1])
+    require_ours(mine[1], held.ours, held.kit_role)
     with pytest.raises(LocalDefectError):
-        held.require_ours(theirs[0])
+        require_ours(theirs[0], held.ours, held.kit_role)

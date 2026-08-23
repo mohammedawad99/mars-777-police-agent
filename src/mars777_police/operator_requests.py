@@ -13,7 +13,6 @@ operator intent - which document, which port, whom to dial, where to write.
 from dataclasses import dataclass
 from pathlib import Path
 
-from .app.kit_messages import KitRole
 from .app.kit_preset import ExternalMode
 from .app.live_view_sink import NO_VIEWER, LiveViewSink
 
@@ -39,7 +38,13 @@ class RoleBackendRequest:
     port: int
     opponent: str
     gateway_admin: str
-    first_role: KitRole = KitRole.POLICE
+    first_role: str | None = None
+    """The operator's stated sub-game-1 role, or `None` when they stated none.
+
+    Text rather than a `KitRole`, and unresolved on purpose: this is what someone
+    typed, not what the series agreed. The composition resolves it against the
+    frozen contract, which is the only place that may decide between them.
+    """
     evidence_root: Path = FRIENDLY_EVIDENCE_ROOT
 
 
@@ -50,5 +55,11 @@ class PublicGatewayRequest:
     police_endpoint: str
     thief_endpoint: str
     ngrok: Path
-    first_role: KitRole = KitRole.POLICE
+    first_role: str | None = None
+    """The operator's stated sub-game-1 role, or `None` when they stated none.
+
+    Text rather than a `KitRole`, and unresolved on purpose: this is what someone
+    typed, not what the series agreed. The composition resolves it against the
+    frozen contract, which is the only place that may decide between them.
+    """
     evidence_root: Path = FRIENDLY_EVIDENCE_ROOT

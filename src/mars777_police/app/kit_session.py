@@ -26,6 +26,7 @@ from .kit_greeting import KitGreeting, KitPairing
 from .kit_messages import KitControlKind, KitRole
 from .kit_payload import PeerPayload
 from .protocol_errors import ConfigMismatchError, StaleMessageError
+from .scent_registration import FAMILY, ScentRegistration
 from .turn_cursor import TurnCursor
 
 
@@ -41,6 +42,14 @@ class KitSessionContext:
     pairing: KitPairing | None = field(default=None)
     last_control: KitControlKind | None = field(default=None)
     """The last status signal received. It settles nothing and scores nothing."""
+
+    scent: ScentRegistration | None = field(default=None)
+    """The scent registration this series agreed, declared and checked when present.
+
+    Optional because the pinned wire makes omission meaningful: the unmodified
+    reference peer declares no locked model, and refusing its silence would
+    forfeit the game to ourselves. A counted series supplies one.
+    """
 
     friendly: object | None = field(default=None)
     """The development friendly session, present exactly when the run is one.
@@ -76,12 +85,14 @@ class KitSessionContext:
             sub_game,
             None,
             kit_game_uid(self.terms.value, self.our_group, peer) if peer else None,
+            () if self.scent is None else ((FAMILY, self.scent.registration_sha256),),
         )
 
     def accept(self, greeting: KitGreeting) -> KitPairing:
         """Check an inbound greeting against what we already hold, or refuse it."""
         self._require_terms(greeting)
         self._require_pairing(greeting)
+        self._require_scent(greeting)
         peer = greeting.group_id
         derived = kit_game_uid(self.terms.value, self.our_group, peer)
         if greeting.game_uid is not None and greeting.game_uid != derived:
@@ -101,6 +112,24 @@ class KitSessionContext:
         )
         self.peer_group, self.pairing = peer, pairing
         return pairing
+
+    def _require_scent(self, greeting: KitGreeting) -> None:
+        """Refuse a peer that declares a *different* scent registration than ours.
+
+        Silence is not disagreement, in either direction: the pinned peer
+        declares nothing and a greeting that omits the family says only that it
+        did not speak. A declared digest that contradicts the one the pairing
+        agreed is a different physics, and playing on would produce two honest
+        chains that can never reconcile.
+        """
+        if self.scent is None:
+            return
+        theirs = greeting.lock(FAMILY)
+        if theirs is not None and theirs != self.scent.registration_sha256:
+            raise ConfigMismatchError(
+                f"the peer declared scent registration {theirs} and this series agreed"
+                f" {self.scent.registration_sha256}; one game cannot carry two physics",
+            )
 
     def _require_terms(self, greeting: KitGreeting) -> None:
         """Value equality first, then the signature over those exact bytes."""

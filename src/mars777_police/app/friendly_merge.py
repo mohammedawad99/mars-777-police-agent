@@ -43,6 +43,7 @@ def contribution_document(
     our_group: str,
     peer_group: str,
     rows: tuple[FriendlySubGameEvidence, ...],
+    series_consensus_sha256: str | None = None,
 ) -> ArtifactDocument:
     """One role backend's own rows, in a role-neutral shape the collector merges.
 
@@ -50,8 +51,13 @@ def contribution_document(
     cannot carry a board, a position, a barrier set or a nonce: those are live
     game state, they belong to the process that owned them, and a merge is not
     a place to resurrect them.
+
+    `series_consensus_sha256` is the peer's settlement digest, recorded by the
+    one backend that waits for it. It is written **only when one arrived**, so a
+    series that ended without a mutual settlement is legible as such rather than
+    indistinguishable from one that never expected a settlement at all.
     """
-    return {
+    document: dict[str, object] = {
         "evidence_class": EVIDENCE_CLASS,
         "role": role.value,
         "game_id": game_id,
@@ -60,6 +66,9 @@ def contribution_document(
         "opponent_group_id": peer_group,
         "sub_games": [sub_game_document(one) for one in rows],
     }
+    if series_consensus_sha256 is not None:
+        document["series_consensus_sha256"] = series_consensus_sha256
+    return document
 
 
 def merge_contributions(
