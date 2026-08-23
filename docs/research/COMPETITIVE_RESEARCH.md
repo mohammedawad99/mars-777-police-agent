@@ -950,3 +950,49 @@ reported for every arm. A candidate that wins only by placing more is the
 signature of a policy fitted to modelled opponents, and it is named here in
 advance as the thing validation must re-check.
 
+### 19.5 Stage E result — every candidate rejected, the shipped policy kept
+
+**Paired against the policy this repository actually ships**, not against the
+historical pre-9B-2 baseline. That distinction decided the stage: measured
+against the *old* baseline, V1 reproduces C4's `+0.0722` exactly - which looks
+like a gain and is in fact the statement that V1 and the shipped policy are the
+same thing. The comparison that answers "should production change" is
+candidate-vs-production, and it is the one recorded here.
+
+Screening subset `screen-v1`, n = 471, digest `6a22fc7d17d0355a…`:
+
+| arm | delta | 95% CI | gains | losses | barriers/game | verdict |
+|---|---|---|---|---|---|---|
+| P0 shipped | 0.0000 | — | — | — | 3.17 | **kept** |
+| V1 floor 0.81 | 0.0000 | [0.0000, 0.0000] | 0 | 0 | 3.27 | `REJECTED_GATE` |
+| V2 floor 0.62 | −0.0234 | [−0.0361, −0.0106] | 0 | 11 | 3.47 | `REJECTED_GATE` |
+| V3 mobility | −0.0658 | [−0.0870, −0.0446] | 0 | 31 | 3.80 | `REJECTED_GATE`, material |
+
+**Not one candidate won a single scenario the shipped policy lost.** Three
+different changes, 471 paired scenarios each, zero gains between them.
+
+**V1 is inert, and that is itself the answer to §19.2's question.** Lowering the
+floor from 0.90 to 0.81 changes which placements are made - barriers per game
+move 3.17 → 3.27 - and changes **no outcome at all**. The level was never the
+binding constraint in the band the source anchors reach.
+
+**The predeclared risk fired exactly as written.** Both losing candidates place
+*more* barriers than the shipped policy (3.47 and 3.80 against 3.17) and both
+lose. §16 measured that spending more of the quota is not by itself a gain
+behind the *pursuit* mover; this measures it behind the **shipped** mover, which
+had never been tested, and reaches the same answer more strongly.
+
+**The sealed v2 holdout was not opened.** Nothing advanced, so there was nothing
+to evaluate against it; `results/final_holdout_v2.json` still reports
+`results_present: false` and no v2 outcome exists. The set stays sealed for a
+future cycle that has a candidate worth spending it on.
+
+**Thief: unchanged, and no candidate was written.** That repository ships
+`BaselineStrategy`; its Stage 9B verdict was `NO_CHANGE` and no already-supported
+improvement was identified, so nothing was tried. A candidate written under time
+pressure and validated on nothing is worse than the baseline it replaces.
+
+**Production is byte-identical.** `tools/check_infrastructure_freeze.py` reports
+310 frozen files intact and `src/` carries no diff, so the code that plays a
+counted series is exactly the code the six-sub-game rehearsal settled with.
+
