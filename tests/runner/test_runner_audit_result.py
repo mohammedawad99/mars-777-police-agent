@@ -21,8 +21,8 @@ from mars777_police.transport.peer_transport import FastMcpPeerTransport
 
 @pytest.fixture
 def pair() -> Iterator[tuple[object, object]]:
-    a = build.side(GROUP_A, "group_a", ActorRole.POLICE)
-    b = build.side(GROUP_B, "group_b", ActorRole.THIEF)
+    a = build.side(GROUP_A, ActorRole.POLICE)
+    b = build.side(GROUP_B, ActorRole.THIEF)
     with build.server_for(a) as server_a, build.server_for(b) as server_b:
         a.url, b.url = server_a.url, server_b.url
         yield a, b

@@ -17,6 +17,7 @@ from ..app.peer_pregame_messages import Step0DeclarationExchange
 from ..app.team_declaration_values import (
     HardwareDeclaration,
     RepositoryLinks,
+    RoleCommits,
     TeamDeclaration,
 )
 from .codec_auth import decode_auth, encode_auth
@@ -26,6 +27,7 @@ from .wire_declaration import (
     DeclarationWire,
     HardwareWire,
     RepositoryLinksWire,
+    RoleCommitsWire,
     Step0ExchangeWire,
     TeamDeclarationWire,
 )
@@ -68,7 +70,10 @@ def _decode_team(wire: TeamDeclarationWire) -> TeamDeclaration:
         _decode_hardware(wire.hardware),
         wire.llm_model,
         wire.code_version,
-        GitCommitSha(wire.github_commit),
+        RoleCommits(
+            GitCommitSha(wire.github_commits.police),
+            GitCommitSha(wire.github_commits.thief),
+        ),
     )
 
 
@@ -82,7 +87,10 @@ def _encode_team(team: TeamDeclaration) -> TeamDeclarationWire:
         hardware=_encode_hardware(team.hardware),
         llm_model=team.llm_model,
         code_version=team.code_version,
-        github_commit=team.github_commit.value,
+        github_commits=RoleCommitsWire(
+            police=team.github_commits.police.value,
+            thief=team.github_commits.thief.value,
+        ),
     )
 
 

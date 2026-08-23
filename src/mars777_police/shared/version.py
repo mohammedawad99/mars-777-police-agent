@@ -62,7 +62,7 @@ class SoftwareVersion:
         return f"{self.major}.{self.minor}"
 
 
-VERSION: Final[SoftwareVersion] = SoftwareVersion(1, 1)
+VERSION: Final[SoftwareVersion] = SoftwareVersion(1, 2)
 """This software's version.
 
 Started at the guideline's initial `1.00`. Raised to `1.01` when the automatic
@@ -75,6 +75,13 @@ changed and a published version had to change with it.
 the guideline names that form and `SoftwareVersion` has no patch component.
 Inventing one during a freeze to make the number look smaller would be inventing
 policy retroactively.
+Raised to `1.02` for the counted interoperability release: the Step-0 declaration
+now carries a **role-specific commit per repository** (`github_commits.police`
+and `github_commits.thief`) instead of one scalar, because a counted series
+alternates roles and a single commit could only ever describe half of its
+sub-games. That changes the authenticated Step-0 core - and therefore the exact
+bytes both peers hash - so it is a version-visible protocol change, not an
+internal refactor.
 """
 
 

@@ -12,19 +12,22 @@ make a lawful CPU-only declaration impossible to authenticate at all.
 """
 
 import pytest
-from r16_builders import COMMIT_A, GROUP_A, partial
+from r16_builders import COMMIT_A, GROUP_A, GROUP_B, partial
 
+from mars777_police.app.participant_slots import slot_of
 from mars777_police.protocol.canonical import canonical_json_bytes
 from mars777_police.protocol.declaration import STEP0_CORE_MEMBERS, step0_core
 
 HARDWARE_KEYS = ("os", "cpu_cores", "cpu_freq_ghz", "ram_gb", "gpu")
+SLOT = slot_of(GROUP_A, GROUP_B, GROUP_A)
+"""Where the producing group sits - derived, because a slot is not a fixture choice."""
 
 
 def hardware_of(vram: int | None) -> dict[str, object]:
-    core = step0_core(partial(GROUP_A, COMMIT_A, "group_a", vram=vram), GROUP_A)
+    core = step0_core(partial(GROUP_A, COMMIT_A, vram=vram), GROUP_A)
     teams = core["teams"]
     assert isinstance(teams, dict)
-    hardware = teams["group_a"]["hardware"]
+    hardware = teams[SLOT]["hardware"]
     assert isinstance(hardware, dict)
     return hardware
 
@@ -40,7 +43,7 @@ def leaves(node: object, prefix: str = "") -> list[str]:
 
 
 def core_of(vram: int | None) -> dict[str, object]:
-    return step0_core(partial(GROUP_A, COMMIT_A, "group_a", vram=vram), GROUP_A)
+    return step0_core(partial(GROUP_A, COMMIT_A, vram=vram), GROUP_A)
 
 
 def test_a_cpu_only_participant_omits_the_vram_key_entirely() -> None:
@@ -58,17 +61,17 @@ def test_a_gpu_participant_carries_vram_exactly_once() -> None:
 
 
 def test_the_cpu_only_core_has_eighteen_present_leaves() -> None:
-    assert len(leaves(core_of(None))) == 18 == STEP0_CORE_MEMBERS - 1
+    assert len(leaves(core_of(None))) == 19 == STEP0_CORE_MEMBERS - 1
 
 
-def test_the_gpu_core_has_nineteen_present_leaves() -> None:
-    assert len(leaves(core_of(24))) == 19 == STEP0_CORE_MEMBERS
+def test_the_gpu_core_has_twenty_present_leaves() -> None:
+    assert len(leaves(core_of(24))) == 20 == STEP0_CORE_MEMBERS
 
 
 def test_vram_is_the_only_structural_difference_between_the_two_branches() -> None:
     """Nothing else becomes optional because one member is conditional."""
     absent, present = set(leaves(core_of(None))), set(leaves(core_of(24)))
-    assert present - absent == {"teams.group_a.hardware.vram_gb"}
+    assert present - absent == {f"teams.{SLOT}.hardware.vram_gb"}
     assert absent - present == set()
 
 

@@ -44,11 +44,14 @@ def test_the_envelope_is_the_one_frozen_argument_shape() -> None:
 
 def test_wire_json_omits_absent_members_rather_than_emitting_null() -> None:
     from peer_ops import step0_exchange
+    from r16_builders import GROUP_A, GROUP_B
 
+    from mars777_police.app.participant_slots import slot_of
     from mars777_police.transport.codec_declaration import encode_step0
 
     body = wire_json(encode_step0(step0_exchange(None)))
-    hardware = body["declaration"]["teams"]["group_b"]["hardware"]
+    seated = body["declaration"]["teams"][slot_of(GROUP_A, GROUP_B, GROUP_B)]
+    hardware = seated["hardware"]
     assert "vram_gb" not in hardware
     assert body["declaration"]["times"].get("game_end") is None
     assert "game_end" not in body["declaration"]["times"]

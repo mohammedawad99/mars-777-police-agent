@@ -36,6 +36,7 @@ from .result_identity_values import GithubLinks
 from .result_values import ResultContribution
 from .series_audit_gate import SeriesAuditGate
 from .series_milestones import ResultMilestones
+from .series_roles import SeriesRoleAssignment
 
 
 @dataclass(slots=True)
@@ -50,6 +51,7 @@ class ResultExchange:
     links: GithubLinks
     cumulative: CumulativeResult
     own: ResultContribution
+    roles: SeriesRoleAssignment
     local_digest: Sha256Digest | None = field(default=None)
     peer_digest: Sha256Digest | None = field(default=None)
     own_request_sent: bool = field(default=False)
@@ -80,6 +82,7 @@ class ResultExchange:
             self.links,
             self.cumulative,
             timestamp,
+            self.roles,
         )
 
     def _digest_with(self, peer: ResultContribution, timestamp: UtcTimestamp) -> Sha256Digest:

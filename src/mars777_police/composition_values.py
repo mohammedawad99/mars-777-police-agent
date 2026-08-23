@@ -29,6 +29,7 @@ from .app.result_exchange import ResultExchange
 from .app.result_identity_values import GithubLinks
 from .app.result_values import ResultContribution
 from .app.series_audit_gate import SeriesAuditGate
+from .app.series_roles import SeriesRoleAssignment
 from .app.strategy_api import StrategyPort
 from .transport.client import PeerClient
 from .transport.peer_operations import InboundPeerOperations
@@ -107,6 +108,7 @@ class AgentComposition:
         links: GithubLinks,
         cumulative: CumulativeResult,
         own: ResultContribution,
+        roles: SeriesRoleAssignment,
     ) -> ResultExchange:
         """Build the series-final result owner, once its inputs actually exist.
 
@@ -134,6 +136,7 @@ class AgentComposition:
             links,
             cumulative,
             own,
+            roles,
         )
         self.runtime_context.bind_result(exchange)
         return exchange

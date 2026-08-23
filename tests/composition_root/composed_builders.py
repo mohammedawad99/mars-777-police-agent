@@ -47,7 +47,7 @@ KIT_TERMS: dict[str, object] = {"board_size": 7, "max_steps": 35, "setting": "Ha
 
 
 def identity_for(
-    group_id: str, slot: str, mode: ExternalMode = ExternalMode.STRICT_INTERNAL
+    group_id: str, slot: str | None = None, mode: ExternalMode = ExternalMode.STRICT_INTERNAL
 ) -> SeriesIdentity:
     """The series facts settings deliberately cannot hold."""
     profiles = PROFILES if mode is ExternalMode.STRICT_INTERNAL else external_profiles(mode, KEY_ID)
@@ -63,7 +63,6 @@ def identity_for(
 
 def compose(
     group_id: str = GROUP_A,
-    slot: str = "group_a",
     role: ActorRole = ActorRole.POLICE,
     opponent: str = "https://opponent.example/mcp",
     port: int = 8080,
@@ -73,7 +72,7 @@ def compose(
     terms = None if mode is ExternalMode.STRICT_INTERNAL else KIT_TERMS
     return compose_agent(
         settings_for(role, opponent, port),
-        identity_for(group_id, slot, mode),
+        identity_for(group_id, mode=mode),
         group_id,
         mode,
         terms,
@@ -82,8 +81,8 @@ def compose(
 
 def both(url_a: str, url_b: str) -> tuple[AgentComposition, AgentComposition]:
     """Two compositions pointed at each other's ingress."""
-    a = compose(GROUP_A, "group_a", ActorRole.POLICE, url_b)
-    b = compose(GROUP_B, "group_b", ActorRole.THIEF, url_a)
+    a = compose(GROUP_A, ActorRole.POLICE, url_b)
+    b = compose(GROUP_B, ActorRole.THIEF, url_a)
     return a, b
 
 
@@ -109,7 +108,7 @@ def final_result_inputs() -> dict[str, object]:
     }
 
 
-def step0_from(group_id: str, slot: str) -> object:
+def step0_from(group_id: str, slot: str | None = None) -> object:
     """A real Step-0 exchange authored by *group_id*, keyed with the shared key."""
     from peer_ops import authenticator
 
@@ -121,7 +120,7 @@ def step0_from(group_id: str, slot: str) -> object:
 
 
 def after_step0(
-    composition: AgentComposition, peer_group: str = GROUP_B, slot: str = "group_b"
+    composition: AgentComposition, peer_group: str = GROUP_B, slot: str | None = None
 ) -> AgentComposition:
     """Drive the real Step-0 acceptance so the merged declaration exists."""
     assert composition.pregame.accept_step0(step0_from(peer_group, slot)) == peer_group

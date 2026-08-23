@@ -90,12 +90,11 @@ class Peer:
 def peer(
     role: ActorRole,
     group_id: str,
-    slot: str,
     strategy: object,
     start: Position | None = None,
 ) -> Peer:
     """Build one side around *strategy*, with its own context and evidence."""
-    side = build.side(group_id, slot, role)
+    side = build.side(group_id, role)
     context = ActiveRuntimeContext()
     loopback = Loopback()
     runner = PeerRunner(
@@ -130,8 +129,8 @@ def facing(
     thief_start: Position | None = None,
 ) -> tuple[Peer, Peer]:
     """Two sides pointed at each other through the loopback."""
-    a = peer(ActorRole.POLICE, GROUP_A, "group_a", police_strategy, police_start)
-    b = peer(ActorRole.THIEF, GROUP_B, "group_b", thief_strategy, thief_start)
+    a = peer(ActorRole.POLICE, GROUP_A, police_strategy, police_start)
+    b = peer(ActorRole.THIEF, GROUP_B, thief_strategy, thief_start)
     a.loopback.peer, b.loopback.peer = b, a
     a.driver.open()
     b.driver.open()

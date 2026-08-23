@@ -33,7 +33,7 @@ MODEL_DIGEST = scent_model_sha256(default_scent_model())
 
 
 def step0_bytes() -> bytes:
-    return auth_input(STEP0_CONTEXT, step0_core(partial(GROUP_A, COMMIT_A, "group_a"), GROUP_A))
+    return auth_input(STEP0_CONTEXT, step0_core(partial(GROUP_A, COMMIT_A), GROUP_A))
 
 
 def config_bytes() -> bytes:
@@ -74,7 +74,7 @@ def test_the_remainder_is_exactly_the_canonical_bytes(label: bytes, producer: ob
     """No separator, no padding, no length prefix, no trailing byte."""
     raw = producer()  # type: ignore[operator]
     core = (
-        step0_core(partial(GROUP_A, COMMIT_A, "group_a"), GROUP_A)
+        step0_core(partial(GROUP_A, COMMIT_A), GROUP_A)
         if label == b"step0"
         else lock_context_core(
             ConfigLockContext(GAME_ID, GAME_UID, 1, config_sha256(config()), PROFILES, MODEL_DIGEST)

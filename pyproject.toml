@@ -1,6 +1,6 @@
 [project]
 name = "mars-777-police-agent"
-version = "1.1"
+version = "1.2"
 description = "Police agent (group MaRs-777) for the 2026 Distributed Police-Thief P2P final project."
 readme = "README.md"
 requires-python = "==3.12.*"

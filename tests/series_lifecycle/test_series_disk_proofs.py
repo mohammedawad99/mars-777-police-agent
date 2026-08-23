@@ -131,7 +131,10 @@ def test_the_result_joins_the_declaration_and_the_recorded_lines(played: Path) -
     for slot in ("group_a", "group_b"):
         declared = own_team(declaration, str(participants_of(declaration).__getattribute__(slot)))
         commits = {entry["github_commit"][slot] for entry in sub_games}
-        assert commits == {declared.github_commit.value}
+        assert commits <= {
+            declared.github_commits.police.value,
+            declared.github_commits.thief.value,
+        }
         totals = sum(int(entry["tokens"][slot]) for entry in sub_games)
         assert totals == result["total_tokens"][slot]  # type: ignore[index]
     assert result["mutual_agreement"] is True

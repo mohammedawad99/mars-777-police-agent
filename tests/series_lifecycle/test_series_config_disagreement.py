@@ -105,8 +105,8 @@ def test_the_lock_is_what_refuses_it_not_the_proposal() -> None:
     import runner_builders as build
     from r16_builders import GROUP_A, GROUP_B
 
-    opener = build.side(GROUP_B, "group_b", ActorRole.THIEF)
-    receiver = build.side(GROUP_A, "group_a", ActorRole.POLICE)
+    opener = build.side(GROUP_B, ActorRole.THIEF)
+    receiver = build.side(GROUP_A, ActorRole.POLICE)
     proposal = opener.pregame.negotiation.propose(OTHER, opening=True)
     assert receiver.pregame.negotiation.accept(proposal, GROUP_B, opening=True) is True
 

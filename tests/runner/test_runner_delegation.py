@@ -19,13 +19,13 @@ CURSOR = TurnCursor(build.SUB_GAME, 1)
 
 def side_and_spy() -> tuple[object, SpyTransport]:
     """One production side wired to a recording transport."""
-    peer = build.side(GROUP_A, "group_a", ActorRole.POLICE)
+    peer = build.side(GROUP_A, ActorRole.POLICE)
     return peer, SpyTransport()
 
 
 def opener_and_spy() -> tuple[object, SpyTransport]:
     """The side the initial-proposer rule actually lets open the exchange."""
-    peer = build.side(GROUP_B, "group_b", ActorRole.THIEF)
+    peer = build.side(GROUP_B, ActorRole.THIEF)
     return peer, SpyTransport()
 
 

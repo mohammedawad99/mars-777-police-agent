@@ -43,8 +43,8 @@ def peers() -> tuple[Step0Runtime, Step0Runtime]:
     return Step0Runtime(GROUP_A, shared), Step0Runtime(GROUP_B, shared)
 
 
-LOCAL = partial(GROUP_A, COMMIT_A, "group_a")
-PEER = partial(GROUP_B, COMMIT_B, "group_b")
+LOCAL = partial(GROUP_A, COMMIT_A)
+PEER = partial(GROUP_B, COMMIT_B)
 
 
 def test_our_outbound_carries_our_own_snapshot_and_a_verifying_proof() -> None:
@@ -78,8 +78,8 @@ def test_neither_input_snapshot_is_mutated_by_the_merge() -> None:
     ours, theirs = peers()
     before_local, before_peer = LOCAL, PEER
     ours.accept(LOCAL, theirs.outbound(PEER))
-    assert LOCAL is before_local and LOCAL.teams.group_b is None
-    assert PEER is before_peer and PEER.teams.group_a is None
+    assert LOCAL is before_local and LOCAL.teams.group_a is None
+    assert PEER is before_peer and PEER.teams.group_b is None
 
 
 def test_a_peer_may_not_author_our_own_subtree() -> None:
@@ -90,8 +90,15 @@ def test_a_peer_may_not_author_our_own_subtree() -> None:
 
 
 def test_two_snapshots_claiming_the_same_slot_are_refused() -> None:
+    """The slot is passed explicitly here because the wrong layout *is* the case.
+
+    Left to derive, the peer would seat itself correctly and there would be no
+    collision to refuse; forcing it into the slot we already occupy is what a
+    mis-implemented peer would actually send.
+    """
+    ours = sole_subtree(LOCAL)[0]
     with pytest.raises(StaleMessageError):
-        merge(LOCAL, partial(GROUP_B, COMMIT_B, "group_a"))
+        merge(LOCAL, partial(GROUP_B, COMMIT_B, ours))
 
 
 @pytest.mark.parametrize("field", ["game_id", "game_uid"])
@@ -135,5 +142,5 @@ def test_an_unverifiable_proof_fails_closed() -> None:
 
 
 def test_sole_subtree_reports_the_populated_slot() -> None:
-    assert sole_subtree(LOCAL)[0] == "group_a"
-    assert sole_subtree(PEER)[0] == "group_b"
+    assert sole_subtree(LOCAL)[0] == "group_b"
+    assert sole_subtree(PEER)[0] == "group_a"

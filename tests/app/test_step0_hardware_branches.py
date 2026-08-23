@@ -30,8 +30,8 @@ def port() -> Step0Authenticator:
 def test_step0_completes_across_every_hardware_combination(
     ours: int | None, theirs: int | None
 ) -> None:
-    local = partial(GROUP_A, COMMIT_A, "group_a", vram=ours)
-    peer = partial(GROUP_B, COMMIT_B, "group_b", vram=theirs)
+    local = partial(GROUP_A, COMMIT_A, vram=ours)
+    peer = partial(GROUP_B, COMMIT_B, vram=theirs)
     us, them = Step0Runtime(GROUP_A, port()), Step0Runtime(GROUP_B, port())
     our_merge = us.accept(local, them.outbound(peer))
     their_merge = them.accept(peer, us.outbound(local))
@@ -40,12 +40,12 @@ def test_step0_completes_across_every_hardware_combination(
 
 
 def test_a_cpu_only_participant_keeps_its_declared_hardware_through_the_merge() -> None:
-    local = partial(GROUP_A, COMMIT_A, "group_a", vram=None)
-    peer = partial(GROUP_B, COMMIT_B, "group_b", vram=24)
+    local = partial(GROUP_A, COMMIT_A, vram=None)
+    peer = partial(GROUP_B, COMMIT_B, vram=24)
     merged = Step0Runtime(GROUP_A, port()).accept(
         local, Step0Runtime(GROUP_B, port()).outbound(peer)
     )
     assert merged.teams.group_a is not None and merged.teams.group_b is not None
-    assert merged.teams.group_a.hardware.gpu is False
-    assert merged.teams.group_a.hardware.vram_gb is None
-    assert merged.teams.group_b.hardware.vram_gb == 24
+    assert merged.teams.group_b.hardware.gpu is False
+    assert merged.teams.group_b.hardware.vram_gb is None
+    assert merged.teams.group_a.hardware.vram_gb == 24

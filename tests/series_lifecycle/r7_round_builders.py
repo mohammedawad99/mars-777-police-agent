@@ -16,8 +16,10 @@ from mars777_police.agent_runtime import AgentRuntime
 from mars777_police.app.artifact_store import ArtifactStorePort
 from mars777_police.app.config_lock_runtime import ConfigLockRuntime
 from mars777_police.app.config_negotiation_runtime import ConfigNegotiationRuntime
+from mars777_police.app.kit_messages import KitRole
 from mars777_police.app.orchestrator import LocalOrchestrator
 from mars777_police.app.sealed_record_values import ActorRole
+from mars777_police.app.series_roles import alternating
 from mars777_police.app.token_accounting import SeriesTokenLedger
 from mars777_police.domain.board import Position
 from mars777_police.domain.config_model import SeriesConfig
@@ -49,7 +51,13 @@ def store_for(root: object) -> JsonArtifactStore:
 
 def series_for(agent: AgentRuntime, store: ArtifactStorePort) -> SeriesRuntime:
     """One series owner over a real composed, running agent."""
-    return SeriesRuntime(agent, store, SeriesTokenLedger(), LocalOrchestrator.start(SeriesConfig()))
+    return SeriesRuntime(
+        agent,
+        store,
+        SeriesTokenLedger(),
+        LocalOrchestrator.start(SeriesConfig()),
+        roles=alternating(GROUP_A, KitRole.POLICE, GROUP_B),
+    )
 
 
 def _round(group_id: str, sub_game: int) -> tuple[ConfigNegotiationRuntime, ConfigLockRuntime]:
@@ -88,6 +96,6 @@ def lock_round(a: SeriesRuntime, b: SeriesRuntime) -> None:
 def agents(port_a: int, port_b: int) -> tuple[AgentRuntime, AgentRuntime]:
     """Two composed agents pointed at each other, ready to serve."""
     url_a, url_b = f"http://{build.HOST}:{port_a}/mcp", f"http://{build.HOST}:{port_b}/mcp"
-    a = compose.compose(GROUP_A, "group_a", ActorRole.POLICE, url_b)
-    b = compose.compose(GROUP_B, "group_b", ActorRole.THIEF, url_a)
+    a = compose.compose(GROUP_A, ActorRole.POLICE, url_b)
+    b = compose.compose(GROUP_B, ActorRole.THIEF, url_a)
     return AgentRuntime(a, build.HOST, port_a), AgentRuntime(b, build.HOST, port_b)

@@ -73,7 +73,9 @@ def test_a_signalled_step0_without_a_peer_is_refused(tmp_path: Path) -> None:
     from mars777_police.infra.settings import RuntimeSettings
 
     composition = build.agent(
-        GROUP_A, "group_a", ActorRole.POLICE, f"http://{HOST}:{closed_port()}/mcp"
+        GROUP_A,
+        ActorRole.POLICE,
+        f"http://{HOST}:{closed_port()}/mcp",
     )
     runtime = AgentRuntime(composition, HOST, build.free_port())
     settings = compose.settings_for(ActorRole.POLICE, f"http://{HOST}:1/mcp", 8080)

@@ -20,6 +20,7 @@ from .result_core_runtime import SubGameOutcomeLine
 from .result_core_values import CumulativeResult
 from .result_identity_values import GithubLinks
 from .result_values import ResultContribution, ResultContributionEntry
+from .series_roles import SeriesRoleAssignment
 from .team_declaration_values import TeamDeclaration
 from .token_accounting import TokenAccountingPort
 
@@ -85,18 +86,26 @@ def contribution_of(
     group_id: str,
     lines: tuple[SubGameOutcomeLine, ...],
     tokens: TokenAccountingPort,
+    roles: SeriesRoleAssignment,
 ) -> ResultContribution:
-    """Our own six entries: the declared commit, and what each sub-game cost.
+    """Our own six entries: the commit each played, and what each sub-game cost.
 
-    The commit is the one this participant declared for the whole game, restated
-    per sub-game exactly as `RESULT_CONTRACT.md` requires - it is never re-read
-    from Git mid-series, and it cannot differ between two sub-games.
+    The commit is **role-specific**: a series alternates sides, so the repository
+    that played an odd sub-game is not the one that played an even one. Each
+    entry therefore restates the commit this participant declared for the role it
+    actually played, taken from the frozen schedule rather than from Git - it is
+    never re-read mid-series, and it is never a single scalar spread across six
+    rows that only half of them describe.
     """
-    commit = own_team(declaration, group_id).github_commit
+    commits = own_team(declaration, group_id).github_commits
     return ResultContribution(
         group_id,
         tuple(
-            ResultContributionEntry(line.sub_game, commit, tokens.usage(line.sub_game))
+            ResultContributionEntry(
+                line.sub_game,
+                commits.for_role(roles.role_of(group_id, line.sub_game).value),
+                tokens.usage(line.sub_game),
+            )
             for line in require_complete(lines)
         ),
     )

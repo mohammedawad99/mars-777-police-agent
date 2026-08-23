@@ -57,7 +57,7 @@ def authenticator() -> KeyedAuthenticator:
 
 def step0_exchange(vram: int | None = None) -> Step0DeclarationExchange:
     """A peer's Step-0 exchange; `vram=None` is the CPU-only branch."""
-    declaration = partial(GROUP_B, COMMIT_B, "group_b", vram=vram)
+    declaration = partial(GROUP_B, COMMIT_B, vram=vram)
     return Step0Runtime(GROUP_B, Step0Authenticator(authenticator())).outbound(declaration)
 
 

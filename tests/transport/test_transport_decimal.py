@@ -10,8 +10,9 @@ from decimal import Decimal
 
 import pytest
 from peer_ops import step0_exchange
-from r16_builders import config
+from r16_builders import GROUP_A, GROUP_B, config
 
+from mars777_police.app.participant_slots import slot_of
 from mars777_police.protocol.canonical import canonical_json_bytes
 from mars777_police.protocol.config_lock import config_sha256
 from mars777_police.protocol.config_projection import config_core
@@ -56,12 +57,14 @@ def test_a_trailing_zero_is_numerically_equal_and_lexically_decisive() -> None:
 @pytest.mark.parametrize("vram", [None, 24], ids=["cpu-only", "gpu"])
 def test_hardware_decimal_survives_step0_transport(vram: int | None) -> None:
     original = step0_exchange(vram)
+    slot = slot_of(GROUP_A, GROUP_B, GROUP_B)
     wire = encode_step0(original)
-    assert wire.declaration.teams.group_b is not None
-    assert wire.declaration.teams.group_b.hardware.cpu_freq_ghz == "3.5"
-    rebuilt = decode_step0(wire)
-    assert rebuilt.declaration.teams.group_b is not None
-    assert rebuilt.declaration.teams.group_b.hardware.cpu_freq_ghz == Decimal("3.5")
+    sent = getattr(wire.declaration.teams, slot)
+    assert sent is not None
+    assert sent.hardware.cpu_freq_ghz == "3.5"
+    received = getattr(decode_step0(wire).declaration.teams, slot)
+    assert received is not None
+    assert received.hardware.cpu_freq_ghz == Decimal("3.5")
 
 
 def test_the_codec_never_builds_a_float() -> None:

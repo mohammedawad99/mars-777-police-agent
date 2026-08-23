@@ -36,8 +36,11 @@ def agents() -> Iterator[tuple[AgentRuntime, AgentRuntime]]:
     port_a, port_b = build.pair_urls()
     url_a = f"http://{build.HOST}:{port_a}/mcp"
     url_b = f"http://{build.HOST}:{port_b}/mcp"
-    a = build.runtime_for(compose.compose(GROUP_A, "group_a", ActorRole.POLICE, url_b), port_a)
-    b = build.runtime_for(compose.compose(GROUP_B, "group_b", ActorRole.THIEF, url_a), port_b)
+    a = build.runtime_for(
+        compose.compose(GROUP_A, ActorRole.POLICE, url_b),
+        port_a,
+    )
+    b = build.runtime_for(compose.compose(GROUP_B, ActorRole.THIEF, url_a), port_b)
     yield a, b
 
 

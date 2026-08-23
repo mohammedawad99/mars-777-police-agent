@@ -25,6 +25,7 @@ from a Step-0 disagreement.
 from dataclasses import dataclass
 
 from .declaration_values import Declaration, DeclarationTeams
+from .participant_slots import PARTICIPANT_SLOTS, require_ordered
 from .peer_pregame_messages import Step0DeclarationExchange
 from .ports import Step0AuthPort
 from .protocol_errors import (
@@ -34,8 +35,6 @@ from .protocol_errors import (
     StaleMessageError,
 )
 from .team_declaration_values import TeamDeclaration
-
-PARTICIPANT_SLOTS = ("group_a", "group_b")
 
 
 def sole_subtree(declaration: Declaration) -> tuple[str, TeamDeclaration]:
@@ -106,6 +105,9 @@ class Step0Runtime:
             )
         if not self.auth.verify(peer, peer_team.group_id, exchange.auth):
             raise AuthFailureError("the peer Step-0 proof did not verify")
+        our_slot, ours = sole_subtree(local)
+        peer_slot, _ = sole_subtree(peer)
+        require_ordered({our_slot: ours.group_id, peer_slot: peer_team.group_id})
         return merge(local, peer)
 
 

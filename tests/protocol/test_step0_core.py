@@ -31,32 +31,32 @@ def leaves(node: object, prefix: str = "") -> list[str]:
     return [prefix]
 
 
-def test_the_declared_inventory_is_nineteen_members() -> None:
-    assert STEP0_CORE_MEMBERS == 19
+def test_the_declared_inventory_is_twenty_members() -> None:
+    assert STEP0_CORE_MEMBERS == 20
 
 
-def test_a_gpu_participant_serializes_all_nineteen_inventory_members() -> None:
-    core = step0_core(partial(GROUP_A, COMMIT_A, "group_a"), GROUP_A)
-    assert len(leaves(core)) == STEP0_CORE_MEMBERS == 19
+def test_a_gpu_participant_serializes_all_twenty_inventory_members() -> None:
+    core = step0_core(partial(GROUP_A, COMMIT_A), GROUP_A)
+    assert len(leaves(core)) == STEP0_CORE_MEMBERS == 20
 
 
-def test_a_cpu_only_participant_serializes_eighteen_of_them() -> None:
+def test_a_cpu_only_participant_serializes_nineteen_of_them() -> None:
     """The inventory is unchanged; one conditional member is simply absent."""
-    core = step0_core(partial(GROUP_A, COMMIT_A, "group_a", vram=None), GROUP_A)
-    assert len(leaves(core)) == 18 == STEP0_CORE_MEMBERS - 1
+    core = step0_core(partial(GROUP_A, COMMIT_A, vram=None), GROUP_A)
+    assert len(leaves(core)) == 19 == STEP0_CORE_MEMBERS - 1
 
 
 def test_vram_is_the_sole_conditional_member_of_the_inventory() -> None:
     """No other member is optional, now or by accident later."""
-    with_gpu = set(leaves(step0_core(partial(GROUP_A, COMMIT_A, "group_a"), GROUP_A)))
-    without = set(leaves(step0_core(partial(GROUP_A, COMMIT_A, "group_a", vram=None), GROUP_A)))
-    assert with_gpu - without == {"teams.group_a.hardware.vram_gb"}
+    with_gpu = set(leaves(step0_core(partial(GROUP_A, COMMIT_A), GROUP_A)))
+    without = set(leaves(step0_core(partial(GROUP_A, COMMIT_A, vram=None), GROUP_A)))
+    assert with_gpu - without == {"teams.group_b.hardware.vram_gb"}
     assert without - with_gpu == set()
 
 
-def test_the_nineteen_inventory_members_are_the_enumerated_ones() -> None:
-    core = step0_core(partial(GROUP_A, COMMIT_A, "group_a"), GROUP_A)
-    team = "teams.group_a"
+def test_the_twenty_inventory_members_are_the_enumerated_ones() -> None:
+    core = step0_core(partial(GROUP_A, COMMIT_A), GROUP_A)
+    team = "teams.group_b"
     assert leaves(core) == sorted(
         [
             "game_id",
@@ -76,17 +76,18 @@ def test_the_nineteen_inventory_members_are_the_enumerated_ones() -> None:
             f"{team}.hardware.vram_gb",
             f"{team}.llm_model",
             f"{team}.code_version",
-            f"{team}.github_commit",
+            f"{team}.github_commits.police",
+            f"{team}.github_commits.thief",
             "token_budget_per_series",
         ]
     )
 
 
 def test_the_subtree_sits_under_its_slot_key_never_under_the_group_id() -> None:
-    core = step0_core(partial(GROUP_B, COMMIT_A, "group_b"), GROUP_B)
+    core = step0_core(partial(GROUP_B, COMMIT_A), GROUP_B)
     teams = core["teams"]
     assert isinstance(teams, dict)
-    assert list(teams) == ["group_b"]
+    assert list(teams) == ["group_a"]
     assert GROUP_B not in teams
 
 
@@ -94,14 +95,14 @@ def test_only_the_producing_teams_subtree_is_projected() -> None:
     core = step0_core(merged(), GROUP_A)
     teams = core["teams"]
     assert isinstance(teams, dict)
-    assert list(teams) == ["group_a"]
+    assert list(teams) == ["group_b"]
 
 
 def test_the_excluded_members_are_absent_from_the_bytes() -> None:
     raw = canonical_json_bytes(step0_core(merged(), GROUP_A))
     for forbidden in (b"game_end", b"auth_tag", b"auth_alg", b"key_id", b"step0_auth"):
         assert forbidden not in raw
-    assert b"group_b" not in raw
+    assert b"group_a" not in raw
 
 
 def test_the_projection_is_deterministic_and_sorted() -> None:
@@ -126,5 +127,5 @@ def test_an_undeclared_group_id_is_refused_rather_than_guessed() -> None:
 
 def test_locate_returns_the_slot_and_subtree() -> None:
     slot, team = locate(merged(), GROUP_B)
-    assert slot == "group_b"
+    assert slot == "group_a"
     assert team.group_id == GROUP_B

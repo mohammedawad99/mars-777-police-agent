@@ -63,7 +63,7 @@ def test_the_kit_mode_also_reaches_the_semantic_and_result_authorities() -> None
 def test_a_launch_document_that_contradicts_the_selected_mode_is_refused() -> None:
     """The operator's two statements must agree; neither silently overrides the other."""
     settings = build.settings_for(build.ActorRole.POLICE, "https://opponent.example/mcp")
-    identity = build.identity_for(build.GROUP_A, "group_a")
+    identity = build.identity_for(build.GROUP_A)
 
     with pytest.raises(LocalDefectError):
         compose_agent(settings, identity, build.GROUP_A, ExternalMode.KIT_CORE_V1)
@@ -72,7 +72,7 @@ def test_a_launch_document_that_contradicts_the_selected_mode_is_refused() -> No
 def test_external_mode_without_the_agreed_terms_refuses_to_compose() -> None:
     """The uid derives from the flat terms, and no message on that wire carries them."""
     settings = build.settings_for(build.ActorRole.POLICE, "https://opponent.example/mcp")
-    identity = build.identity_for(build.GROUP_A, "group_a", ExternalMode.KIT_CORE_V1)
+    identity = build.identity_for(build.GROUP_A, mode=ExternalMode.KIT_CORE_V1)
 
     with pytest.raises(LocalDefectError):
         compose_agent(settings, identity, build.GROUP_A, ExternalMode.KIT_CORE_V1)

@@ -20,6 +20,7 @@ from mars777_police.app.interop_profiles import (
 from mars777_police.app.team_declaration_values import (
     HardwareDeclaration,
     RepositoryLinks,
+    RoleCommits,
     TeamDeclaration,
 )
 
@@ -52,7 +53,7 @@ def team(**over: object) -> TeamDeclaration:
         "hardware": hardware(),
         "llm_model": "template",
         "code_version": "0.0.0",
-        "github_commit": GitCommitSha(COMMIT),
+        "github_commits": RoleCommits(GitCommitSha(COMMIT), GitCommitSha(COMMIT)),
     }
     fields.update(over)
     return TeamDeclaration(**fields)  # type: ignore[arg-type]

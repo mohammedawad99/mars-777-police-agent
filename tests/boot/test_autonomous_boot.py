@@ -31,8 +31,8 @@ HOST = build.HOST
 def pair() -> tuple[AgentRuntime, AgentRuntime]:
     """Two composed agents pointed at each other, neither started."""
     port_a, port_b = build.pair_urls()
-    a = build.agent(GROUP_A, "group_a", ActorRole.POLICE, f"http://{HOST}:{port_b}/mcp")
-    b = build.agent(GROUP_B, "group_b", ActorRole.THIEF, f"http://{HOST}:{port_a}/mcp")
+    a = build.agent(GROUP_A, ActorRole.POLICE, f"http://{HOST}:{port_b}/mcp")
+    b = build.agent(GROUP_B, ActorRole.THIEF, f"http://{HOST}:{port_a}/mcp")
     return AgentRuntime(a, HOST, port_a), AgentRuntime(b, HOST, port_b)
 
 
@@ -51,7 +51,9 @@ def test_a_closed_port_raises_the_transport_failure_identity() -> None:
     that identity - and nothing wider - is what a startup retry may catch.
     """
     composition = build.agent(
-        GROUP_A, "group_a", ActorRole.POLICE, f"http://{HOST}:{closed_port()}/mcp"
+        GROUP_A,
+        ActorRole.POLICE,
+        f"http://{HOST}:{closed_port()}/mcp",
     )
     runtime = AgentRuntime(composition, HOST, build.free_port())
 
@@ -69,7 +71,9 @@ def test_a_closed_port_raises_the_transport_failure_identity() -> None:
 def test_a_failed_single_attempt_still_closes_the_runtime() -> None:
     """The historical `connect()` contract is unchanged by the new operation."""
     composition = build.agent(
-        GROUP_A, "group_a", ActorRole.POLICE, f"http://{HOST}:{closed_port()}/mcp"
+        GROUP_A,
+        ActorRole.POLICE,
+        f"http://{HOST}:{closed_port()}/mcp",
     )
     runtime = AgentRuntime(composition, HOST, build.free_port())
 
@@ -85,7 +89,9 @@ def test_a_failed_single_attempt_still_closes_the_runtime() -> None:
 def test_the_startup_budget_is_bounded_and_stops_the_runtime() -> None:
     """A peer that never appears fails inside the budget, leaving nothing open."""
     composition = build.agent(
-        GROUP_A, "group_a", ActorRole.POLICE, f"http://{HOST}:{closed_port()}/mcp"
+        GROUP_A,
+        ActorRole.POLICE,
+        f"http://{HOST}:{closed_port()}/mcp",
     )
     runtime = AgentRuntime(composition, HOST, build.free_port())
     budget = StartupBudget(total_seconds=0.5, pause_seconds=0.05)
@@ -141,7 +147,9 @@ def test_a_budget_must_be_positive_in_both_directions() -> None:
 def test_the_startup_variant_refuses_a_runtime_that_is_not_serving() -> None:
     """Same precondition as `connect`: there is nothing to connect from."""
     composition = build.agent(
-        GROUP_A, "group_a", ActorRole.POLICE, f"http://{HOST}:{closed_port()}/mcp"
+        GROUP_A,
+        ActorRole.POLICE,
+        f"http://{HOST}:{closed_port()}/mcp",
     )
     runtime = AgentRuntime(composition, HOST, build.free_port())
     budget = StartupBudget(total_seconds=1.0, pause_seconds=0.05)

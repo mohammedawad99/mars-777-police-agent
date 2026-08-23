@@ -6,10 +6,14 @@ import composed_builders as build
 import pytest
 from r16_builders import GROUP_A, GROUP_B
 
+from mars777_police.app.kit_messages import KitRole
 from mars777_police.app.protocol_errors import StaleMessageError
+from mars777_police.app.series_roles import alternating
 from mars777_police.composition import compose_agent
 from mars777_police.composition_values import AgentComposition, SeriesIdentity
 from mars777_police.transport.server import PEER_TOOLS
+
+ROLES = alternating(GROUP_A, KitRole.POLICE, GROUP_B)
 
 
 def test_the_composition_exposes_only_what_boot_needs() -> None:
@@ -63,7 +67,7 @@ def test_the_series_audit_gate_is_one_object() -> None:
 def test_the_transport_is_one_object_shared_with_the_late_result() -> None:
     composition = build.after_step0(build.compose())
     assert composition.peer_runner.transport is composition.peer_transport
-    exchange = composition.complete_result(**build.final_result_inputs())
+    exchange = composition.complete_result(**build.final_result_inputs(), roles=ROLES)
     assert exchange.transport is composition.peer_transport
 
 
@@ -107,7 +111,7 @@ def test_the_first_config_round_is_the_one_it_was_told() -> None:
 
 
 def test_the_series_identity_refuses_an_impossible_value() -> None:
-    identity = build.identity_for(GROUP_A, "group_a")
+    identity = build.identity_for(GROUP_A)
     with pytest.raises(ValueError, match="non-empty"):
         dataclasses.replace(identity, game_id="")
     with pytest.raises(ValueError, match="positive int"):
@@ -122,7 +126,7 @@ def test_a_missing_opponent_endpoint_refuses_composition() -> None:
         build.settings_for(ActorRole.POLICE, "https://x.example/mcp"), opponent=None
     )
     with pytest.raises(ValueError, match="opponent public endpoint"):
-        compose_agent(settings, build.identity_for(GROUP_A, "group_a"), GROUP_A)
+        compose_agent(settings, build.identity_for(GROUP_A), GROUP_A)
 
 
 def test_two_compositions_share_nothing() -> None:

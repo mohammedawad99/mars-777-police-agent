@@ -21,6 +21,8 @@ from .app.protocol_errors import LocalDefectError
 from .app.result_core_runtime import SubGameOutcomeLine
 from .app.result_exchange import ResultExchange
 from .app.series_record import contribution_of, cumulative_of, links_of, outcome_line
+from .app.series_roles import SeriesRoleAssignment
+from .app.series_roles_source import series_roles_for
 from .app.state_machine import ProtocolPhase
 from .app.sub_game_closure import closed_sub_game
 from .app.token_accounting import TokenAccountingPort
@@ -40,6 +42,8 @@ class SeriesRuntime:
     tokens: TokenAccountingPort
     orchestrator: LocalOrchestrator
     lines: tuple[SubGameOutcomeLine, ...] = field(default=())
+    roles: SeriesRoleAssignment | None = field(default=None)
+    """The agreed schedule. `None` means "ask the pairing contract at use."""
 
     @property
     def composition(self) -> AgentComposition:
@@ -125,11 +129,13 @@ class SeriesRuntime:
         """Late-build the result owner, once six sub-games and their audits exist."""
         composition = self.composition
         declared = composition.pregame.declaration
+        roles = self.roles or series_roles_for(declared, composition.group_id)
         exchange = composition.complete_result(
             lines=self.lines,
             links=links_of(declared),
             cumulative=cumulative_of(self.lines),
-            own=contribution_of(declared, composition.group_id, self.lines, self.tokens),
+            own=contribution_of(declared, composition.group_id, self.lines, self.tokens, roles),
+            roles=roles,
         )
         exchange.require_series_audit(composition.series_audit)
         self._advance(ProtocolPhase.FINAL_AUDIT)

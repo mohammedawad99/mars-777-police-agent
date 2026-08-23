@@ -7,7 +7,23 @@ these build the values a completed - or deliberately incomplete - series shows.
 import composed_builders as compose
 from r7_builders import CONFIG
 
+from mars777_police.app.declaration_values import Declaration
+from mars777_police.app.kit_messages import KitRole
+from mars777_police.app.result_core_runtime import participants_of
+from mars777_police.app.series_roles import SeriesRoleAssignment, alternating
 from mars777_police.series_runtime import SeriesRuntime
+
+
+def test_roles(declaration: Declaration, group_id: str) -> SeriesRoleAssignment:
+    """TEST-ONLY series authority, stated explicitly rather than inferred.
+
+    Production reads the agreed pairing and refuses when it cannot; a synthetic
+    fixture has no agreement to read, so it declares one here. Keeping the
+    convenience on this side is what lets production stay fail-closed.
+    """
+    participants = participants_of(declaration)
+    other = participants.group_b if participants.group_a == group_id else participants.group_a
+    return alternating(group_id, KitRole.POLICE, other)
 
 
 def merged_declaration() -> object:
@@ -61,9 +77,11 @@ def unagreed_result(series: SeriesRuntime) -> object:
 
     composition = series.composition
     declared = composition.pregame.declaration
+    roles = test_roles(declared, composition.group_id)
     return composition.complete_result(
         lines=series.lines,
         links=links_of(declared),
         cumulative=cumulative_of(series.lines),
-        own=contribution_of(declared, composition.group_id, series.lines, series.tokens),
+        own=contribution_of(declared, composition.group_id, series.lines, series.tokens, roles),
+        roles=roles,
     )

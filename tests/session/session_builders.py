@@ -50,7 +50,7 @@ def pregame() -> PregameSessionRuntime:
         ConfigLockRuntime(
             GAME_ID, GAME_UID, SUB_GAME, PROFILES, shared, shared, default_scent_model()
         ),
-        partial(GROUP_A, COMMIT_A, "group_a"),
+        partial(GROUP_A, COMMIT_A),
     )
 
 

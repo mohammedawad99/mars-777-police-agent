@@ -15,7 +15,9 @@ from mars777_police.app.artifact_store import (
     result_name,
     sub_game_token,
 )
+from mars777_police.app.kit_messages import KitRole
 from mars777_police.app.protocol_errors import LocalDefectError
+from mars777_police.app.result_core_runtime import slot_of
 from mars777_police.app.series_record import (
     contribution_of,
     cumulative_of,
@@ -24,9 +26,13 @@ from mars777_police.app.series_record import (
     own_team,
     require_complete,
 )
+from mars777_police.app.series_roles import alternating
 from mars777_police.app.token_accounting import InvalidTokenUsageError, SeriesTokenLedger
 from mars777_police.domain.terminal import Outcome
 from mars777_police.infra.artifacts import SUFFIX, JsonArtifactStore, serialize
+
+ROLES = alternating(GROUP_A, KitRole.POLICE, GROUP_B)
+
 
 LINES = tuple(outcome_line(n, Outcome.CAPTURE) for n in range(1, 7))
 
@@ -121,22 +127,39 @@ def test_the_cumulative_totals_are_derived_from_the_six_lines() -> None:
     assert cumulative_of(tied).series_outcome == "tie"
 
 
-def test_the_contribution_restates_one_declared_commit_for_all_six() -> None:
+def test_the_contribution_restates_the_commit_of_the_role_each_sub_game_played() -> None:
+    """Role-specific, not one scalar: a series alternates the repository playing.
+
+    The odd sub-games are played from the police repository and the even ones
+    from the thief repository, so the contribution must restate whichever commit
+    actually played - a single commit spread across all six would describe only
+    half of them.
+    """
     declaration = fixtures.merged_declaration()
     ledger = SeriesTokenLedger()
     ledger.charge(2, 40)
-    contribution = contribution_of(declaration, GROUP_A, LINES, ledger)
-    commit = own_team(declaration, GROUP_A).github_commit
+    contribution = contribution_of(declaration, GROUP_A, LINES, ledger, ROLES)
+    commits = own_team(declaration, GROUP_A).github_commits
     assert [entry.sub_game for entry in contribution.entries] == [1, 2, 3, 4, 5, 6]
-    assert {entry.github_commit for entry in contribution.entries} == {commit}
+    assert [entry.github_commit for entry in contribution.entries] == [
+        commits.police,
+        commits.thief,
+        commits.police,
+        commits.thief,
+        commits.police,
+        commits.thief,
+    ]
     assert [entry.tokens for entry in contribution.entries] == [0, 40, 0, 0, 0, 0]
 
 
 def test_the_four_links_come_from_the_two_declared_teams() -> None:
     declaration = fixtures.merged_declaration()
     links = links_of(declaration)
-    assert links.group_a_police == own_team(declaration, GROUP_A).repos.police
-    assert links.group_b_thief == own_team(declaration, GROUP_B).repos.thief
+    for group_id in (GROUP_A, GROUP_B):
+        slot = slot_of(declaration, group_id)
+        team = own_team(declaration, group_id)
+        assert getattr(links, f"{slot}_police") == team.repos.police
+        assert getattr(links, f"{slot}_thief") == team.repos.thief
 
 
 def test_a_partial_declaration_cannot_report_a_result() -> None:

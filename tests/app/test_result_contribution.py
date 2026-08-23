@@ -67,9 +67,28 @@ def test_entries_must_cover_one_through_six_exactly_once_ascending(bad: tuple[ob
         contribution(entries=bad)
 
 
-def test_the_six_commits_must_be_identical() -> None:
+def test_two_commits_are_structurally_allowed_because_a_series_alternates() -> None:
+    """Structural only: this layer bounds the count, never the attribution.
+
+    A participant plays from one repository on the odd sub-games and the other on
+    the even ones, so two distinct commits is the normal shape. Whether each row
+    carries the *right* one of the two is a semantic question this layer cannot
+    answer - `check_declared_commit` owns it, against the declared roles.
+    """
     mixed = (*entries()[:5], entry(6, COMMIT_B, 60))
-    with pytest.raises(InvalidResultValueError, match="same github_commit"):
+    assert contribution(entries=mixed).entries[5].github_commit.value == COMMIT_B
+
+
+def test_one_commit_repeated_is_still_structurally_valid() -> None:
+    """Legal when a group's two repositories genuinely declare the same commit."""
+    assert len({e.github_commit for e in contribution().entries}) == 1
+
+
+def test_a_third_distinct_commit_is_refused() -> None:
+    """Only two repositories play a series, so a third commit describes nothing."""
+    third = "c" * 40
+    mixed = (*entries()[:4], entry(5, COMMIT_B, 50), entry(6, third, 60))
+    with pytest.raises(InvalidResultValueError, match="at most two distinct"):
         contribution(entries=mixed)
 
 

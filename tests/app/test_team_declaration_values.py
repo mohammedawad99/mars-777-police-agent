@@ -5,12 +5,17 @@ import dataclasses
 import pytest
 from pregame_builders import COMMIT, hardware, team
 
-from mars777_police.app.team_declaration_values import InvalidTeamDeclarationError
+from mars777_police.app.artifact_values import GitCommitSha
+from mars777_police.app.team_declaration_values import (
+    InvalidTeamDeclarationError,
+    RoleCommits,
+)
 
 
 def test_valid_team_declaration() -> None:
     value = team()
-    assert value.github_commit.value == COMMIT
+    assert value.github_commits.police.value == COMMIT
+    assert value.github_commits.thief.value == COMMIT
     assert value.members == ("id-1001",)
 
 
@@ -58,9 +63,20 @@ def test_hardware_must_be_hardware_declaration() -> None:
         team(hardware={"os": "Linux"})
 
 
-def test_github_commit_must_be_the_shared_primitive() -> None:
-    with pytest.raises(InvalidTeamDeclarationError, match="github_commit must be a GitCommitSha"):
-        team(github_commit=COMMIT)
+def test_github_commits_must_be_the_shared_role_keyed_value() -> None:
+    with pytest.raises(InvalidTeamDeclarationError, match="github_commits must be a RoleCommits"):
+        team(github_commits=GitCommitSha(COMMIT))
+
+
+def test_each_role_commit_must_be_the_shared_primitive() -> None:
+    with pytest.raises(InvalidTeamDeclarationError, match="thief commit must be a GitCommitSha"):
+        RoleCommits(GitCommitSha(COMMIT), COMMIT)  # type: ignore[arg-type]
+
+
+def test_an_unknown_role_has_no_declared_commit() -> None:
+    commits = RoleCommits(GitCommitSha(COMMIT), GitCommitSha(COMMIT))
+    with pytest.raises(InvalidTeamDeclarationError, match="no commit is declared for role"):
+        commits.for_role("referee")
 
 
 def test_hardware_value_is_reused_not_copied() -> None:

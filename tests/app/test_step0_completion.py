@@ -12,7 +12,7 @@ from mars777_police.app.declaration_values import Declaration
 from mars777_police.app.state_machine import IllegalTransitionError, ProtocolMachine, ProtocolPhase
 from mars777_police.app.step0_runtime import Step0Completion
 
-PARTIAL = partial(GROUP_A, COMMIT_A, "group_a")
+PARTIAL = partial(GROUP_A, COMMIT_A)
 
 
 def test_both_directions_complete_is_the_only_complete_state() -> None:

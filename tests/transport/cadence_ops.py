@@ -26,13 +26,18 @@ from r16_builders import (
 
 from mars777_police.app.artifact_values import GitCommitSha
 from mars777_police.app.capture_values import CaptureAnswer, TurnOutcome
+from mars777_police.app.kit_messages import KitRole
 from mars777_police.app.peer_final_messages import ResultAgreement
 from mars777_police.app.protocol_values import Sha256Digest
 from mars777_police.app.result_agreement_runtime import ResultAgreementRuntime
 from mars777_police.app.result_exchange import ResultExchange
 from mars777_police.app.result_values import ResultContribution, ResultContributionEntry
+from mars777_police.app.series_roles import alternating
 from mars777_police.protocol.result_core import ResultDigester
 from mars777_police.transport.inbound_session import InboundSession
+
+ROLES = alternating(GROUP_A, KitRole.POLICE, GROUP_B)
+
 
 COMMITS = {GROUP_A: COMMIT_A, GROUP_B: COMMIT_B}
 
@@ -57,6 +62,7 @@ def exchange_for(group_id: str, base: int) -> ResultExchange:
         LINKS,
         CUMULATIVE,
         contribution_for(group_id, base),
+        ROLES,
     )
 
 

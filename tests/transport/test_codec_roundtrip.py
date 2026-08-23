@@ -17,8 +17,9 @@ from peer_ops import (
     reveal,
     step0_exchange,
 )
-from r16_builders import GROUP_B
+from r16_builders import GROUP_A, GROUP_B
 
+from mars777_police.app.participant_slots import slot_of
 from mars777_police.protocol.canonical import canonical_json_bytes
 from mars777_police.protocol.config_lock import config_sha256, lock_context_core
 from mars777_police.protocol.config_projection import config_core
@@ -68,8 +69,9 @@ def test_a_cpu_only_core_still_omits_vram_after_transport() -> None:
     assert b'"vram_gb"' not in raw
     assert b"null" not in raw
     assert b'"gpu":false' in raw
-    assert rebuilt.declaration.teams.group_b is not None
-    assert rebuilt.declaration.teams.group_b.hardware.vram_gb is None
+    seated = getattr(rebuilt.declaration.teams, slot_of(GROUP_A, GROUP_B, GROUP_B))
+    assert seated is not None
+    assert seated.hardware.vram_gb is None
 
 
 def test_config_proposal_round_trips_with_identical_canonical_bytes() -> None:

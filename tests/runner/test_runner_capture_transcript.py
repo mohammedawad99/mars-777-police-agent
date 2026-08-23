@@ -27,8 +27,8 @@ from mars777_police.domain.board import Board, Position
 @pytest.fixture
 def pair() -> Iterator[tuple[object, object]]:
     """Side A police, side B thief, each behind its own real inbound server."""
-    a = build.side(GROUP_A, "group_a", ActorRole.POLICE)
-    b = build.side(GROUP_B, "group_b", ActorRole.THIEF)
+    a = build.side(GROUP_A, ActorRole.POLICE)
+    b = build.side(GROUP_B, ActorRole.THIEF)
     with build.server_for(a) as server_a, build.server_for(b) as server_b:
         a.url, b.url = server_a.url, server_b.url
         yield a, b
@@ -118,7 +118,7 @@ def test_the_barrier_that_closes_the_last_escape_is_retained_as_caught(pair: tup
 
 def test_our_own_producer_refuses_a_declaration_this_side_may_not_make() -> None:
     """A thief that declared would be refused by the peer; it never sends one."""
-    thief = build.side(GROUP_B, "group_b", ActorRole.THIEF)
+    thief = build.side(GROUP_B, ActorRole.THIEF)
     with pytest.raises(LocalDefectError, match="only the police"):
         thief.producer.prepare_turn(
             state=sealed(ActorRole.THIEF),
@@ -132,7 +132,7 @@ def test_our_own_producer_refuses_a_declaration_this_side_may_not_make() -> None
 
 
 def test_a_barrier_carries_no_declaration_because_it_is_one() -> None:
-    police = build.side(GROUP_A, "group_a", ActorRole.POLICE)
+    police = build.side(GROUP_A, ActorRole.POLICE)
     with pytest.raises(LocalDefectError, match="declares its own target"):
         police.producer.prepare_turn(
             state=sealed(ActorRole.POLICE),

@@ -52,8 +52,8 @@ def config_with(response: int, watchdog: int = 60) -> NegotiatedConfig:
 def paired() -> tuple[AgentComposition, AgentComposition]:
     """Two really composed agents, pointed at each other. Nothing is running."""
     return (
-        compose.compose(GROUP_A, "group_a", ActorRole.POLICE, PORTS[1]),
-        compose.compose(GROUP_B, "group_b", ActorRole.THIEF, PORTS[0]),
+        compose.compose(GROUP_A, ActorRole.POLICE, PORTS[1]),
+        compose.compose(GROUP_B, ActorRole.THIEF, PORTS[0]),
     )
 
 

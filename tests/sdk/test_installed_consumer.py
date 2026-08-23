@@ -36,7 +36,7 @@ def test_an_external_consumer_builds_the_facade_from_the_installed_package() -> 
     )
 
     assert finished.returncode == 0, finished.stderr
-    assert finished.stdout.strip() == "1.01 police"
+    assert finished.stdout.strip() == "1.02 police"
 
 
 def test_an_external_consumer_performs_a_real_operation_through_the_facade() -> None:

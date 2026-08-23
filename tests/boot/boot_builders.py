@@ -33,12 +33,15 @@ def runtime_for(composition: AgentComposition, port: int | None = None) -> Agent
 
 def agent(
     group_id: str = GROUP_A,
-    slot: str = "group_a",
     role: ActorRole = ActorRole.POLICE,
     opponent: str = "http://127.0.0.1:1/mcp",
 ) -> AgentComposition:
-    """One real composed agent pointed at *opponent*."""
-    return compose.compose(group_id, slot, role, opponent)
+    """One real composed agent pointed at *opponent*.
+
+    There is no slot parameter: the seat follows the deterministic identifier
+    order, so a fixture names the producing group and never where it sits.
+    """
+    return compose.compose(group_id, role, opponent)
 
 
 def pair_urls() -> tuple[int, int]:
@@ -46,6 +49,6 @@ def pair_urls() -> tuple[int, int]:
     return free_port(), free_port()
 
 
-def other() -> tuple[str, str, ActorRole]:
-    """The opposing side's identity."""
-    return GROUP_B, "group_b", ActorRole.THIEF
+def other() -> tuple[str, ActorRole]:
+    """The opposing side's identity, for splatting into `agent`."""
+    return GROUP_B, ActorRole.THIEF

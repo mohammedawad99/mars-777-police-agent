@@ -11,12 +11,17 @@ from peer_ops import agreement
 from r16_builders import GROUP_A, GROUP_B
 from test_composed_end_to_end import held_runner
 
+from mars777_police.app.kit_messages import KitRole
 from mars777_police.app.peer_supervision import PeerDeadline, TimeoutPolicy
 from mars777_police.app.protocol_errors import StaleMessageError
 from mars777_police.app.series_audit_gate import SeriesAuditGate
+from mars777_police.app.series_roles import alternating
 from mars777_police.transport.client import PeerClient
 from mars777_police.transport.codec_final import encode_result_agreement
 from mars777_police.transport.peer_transport import FastMcpPeerTransport
+
+ROLES = alternating(GROUP_A, KitRole.POLICE, GROUP_B)
+
 
 TIMEOUT = 20.0
 
@@ -60,7 +65,7 @@ def test_the_late_result_becomes_visible_to_both_paths(pair: tuple) -> None:
     (a, _), (_, _) = pair
     build.after_step0(a)
     assert a.runtime_context.result is None
-    exchange = a.complete_result(**build.final_result_inputs())
+    exchange = a.complete_result(**build.final_result_inputs(), roles=ROLES)
     assert a.peer_runner.results() is exchange
     assert a.inbound_operations.results() is exchange
     assert exchange.transport is a.peer_transport
@@ -89,8 +94,8 @@ def test_the_composed_graph_drives_a_real_result_agreement(pair: tuple) -> None:
             runner_b = dataclasses.replace(b.peer_runner, transport=b_to_a)
             await runner_a.send_step0(a.identity.declaration)
             await runner_b.send_step0(b.identity.declaration)
-            exchange_a = a.complete_result(**build.final_result_inputs())
-            exchange_b = b.complete_result(**build.final_result_inputs_for(GROUP_B))
+            exchange_a = a.complete_result(**build.final_result_inputs(), roles=ROLES)
+            exchange_b = b.complete_result(**build.final_result_inputs_for(GROUP_B), roles=ROLES)
             exchange_a.transport, exchange_b.transport = a_to_b, b_to_a
             await runner_b.open_result_agreement()
             await runner_a.respond_to_result(exchange_a.timestamp)

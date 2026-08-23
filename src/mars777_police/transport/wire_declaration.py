@@ -42,6 +42,15 @@ class HardwareWire(BaseModel):
     vram_gb: int | None = None
 
 
+class RoleCommitsWire(BaseModel):
+    """The commit each of the declaring team's two repositories played."""
+
+    model_config = WIRE
+
+    police: CommitText
+    thief: CommitText
+
+
 class TeamDeclarationWire(BaseModel):
     """One participant's complete declaration subtree."""
 
@@ -55,7 +64,7 @@ class TeamDeclarationWire(BaseModel):
     hardware: HardwareWire
     llm_model: NonEmptyText
     code_version: NonEmptyText
-    github_commit: CommitText
+    github_commits: RoleCommitsWire
 
 
 class DeclarationTimesWire(BaseModel):

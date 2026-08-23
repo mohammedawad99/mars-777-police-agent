@@ -29,8 +29,8 @@ CURSOR = TurnCursor(build.SUB_GAME, 1)
 @pytest.fixture
 def pair() -> Iterator[tuple[object, object]]:
     """Side A and side B, each behind its own real inbound server."""
-    a = build.side(GROUP_A, "group_a", ActorRole.POLICE)
-    b = build.side(GROUP_B, "group_b", ActorRole.THIEF)
+    a = build.side(GROUP_A, ActorRole.POLICE)
+    b = build.side(GROUP_B, ActorRole.THIEF)
     with build.server_for(a) as server_a, build.server_for(b) as server_b:
         a.url, b.url = server_a.url, server_b.url
         yield a, b

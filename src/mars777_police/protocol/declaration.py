@@ -25,15 +25,13 @@ from typing import Final
 
 from ..app.auth_values import AuthProof
 from ..app.declaration_values import Declaration
+from ..app.participant_slots import PARTICIPANT_SLOTS
 from ..app.protocol_errors import LocalDefectError
 from ..app.team_declaration_values import HardwareDeclaration, TeamDeclaration
 from .keyed_auth import STEP0_CONTEXT, KeyedAuthenticator
 
-STEP0_CORE_MEMBERS: Final[int] = 19
+STEP0_CORE_MEMBERS: Final[int] = 20
 """The frozen member count, with `hardware.vram_gb` present (§R12-FIX-2)."""
-
-PARTICIPANT_SLOTS: Final[tuple[str, str]] = ("group_a", "group_b")
-"""The canonical participant slot keys - positions, never an ordering."""
 
 
 def locate(declaration: Declaration, group_id: str) -> tuple[str, TeamDeclaration]:
@@ -68,7 +66,10 @@ def _team_core(team: TeamDeclaration) -> dict[str, object]:
         "hardware": _hardware_core(team.hardware),
         "llm_model": team.llm_model,
         "code_version": team.code_version,
-        "github_commit": team.github_commit.value,
+        "github_commits": {
+            "police": team.github_commits.police.value,
+            "thief": team.github_commits.thief.value,
+        },
     }
 
 

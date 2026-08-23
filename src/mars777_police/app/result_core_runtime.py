@@ -2,13 +2,11 @@
 
 The merge is deliberately **independent of who performs it**: for every sub-game
 and each participant slot, that slot's contributed commit and token count are
-placed in the participant-scoped object by a fixed rule. Dependence on the
-assembler was precisely the defect that made the core non-derivable before, so
-nothing here consults "our" side or a role.
+placed by a fixed rule. Dependence on the assembler was precisely the defect that
+made the core non-derivable before, so nothing here consults "our" side.
 
 `total_tokens` is **derived**, never transmitted: each participant's total is the
-sum of its six contributed sub-game values, so one semantic fact has exactly one
-representation and a separately reported total cannot contradict its parts.
+sum of its six contributed values, so one fact has exactly one representation.
 
 Slots come from the merged `Declaration`, the only authority on which participant
 occupies `group_a`. A contribution's `group_id` **selects** a slot; it never
@@ -25,6 +23,7 @@ from dataclasses import dataclass
 from ..domain.terminal import Outcome
 from .artifact_values import UtcTimestamp
 from .declaration_values import Declaration
+from .participant_slots import PARTICIPANT_SLOTS
 from .protocol_errors import LocalDefectError, ReportDisagreeError
 from .result_core_values import CumulativeResult, ResultApprovalCore, SubGameResult
 from .result_identity_values import GithubLinks, ResultParticipants
@@ -33,8 +32,7 @@ from .result_values import (
     ParticipantTokenUsage,
     ResultContribution,
 )
-
-PARTICIPANT_SLOTS = ("group_a", "group_b")
+from .series_roles import SeriesRoleAssignment
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,14 +67,17 @@ def slot_of(declaration: Declaration, group_id: str) -> str:
     raise ReportDisagreeError(f"{group_id!r} is not a declared participant of this game")
 
 
-def check_declared_commit(declaration: Declaration, contribution: ResultContribution) -> None:
-    """Refuse a contribution whose commit is not the one that participant declared."""
+def check_declared_commit(
+    declaration: Declaration, contribution: ResultContribution, roles: SeriesRoleAssignment
+) -> None:
+    """Refuse a commit that is not the one declared for the role actually played."""
     team = getattr(declaration.teams, slot_of(declaration, contribution.group_id))
     for entry in contribution.entries:
-        if entry.github_commit != team.github_commit:
+        role = roles.role_of(contribution.group_id, entry.sub_game)
+        if entry.github_commit != team.github_commits.for_role(role.value):
             raise ReportDisagreeError(
-                f"sub-game {entry.sub_game} contributes a commit that {contribution.group_id!r}"
-                " did not declare for this game",
+                f"sub-game {entry.sub_game} carries a commit {contribution.group_id!r}"
+                f" did not declare for the {role.value} role",
             )
 
 
@@ -125,10 +126,11 @@ def assemble(
     links: GithubLinks,
     cumulative: CumulativeResult,
     timestamp: UtcTimestamp,
+    roles: SeriesRoleAssignment,
 ) -> ResultApprovalCore:
     """Return the approval core both peers derive from the same inputs."""
     for item in contributions:
-        check_declared_commit(declaration, item)
+        check_declared_commit(declaration, item, roles)
     placed = by_slot(declaration, contributions)
     return ResultApprovalCore(
         declaration.game_id,

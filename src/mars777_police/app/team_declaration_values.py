@@ -52,6 +52,36 @@ class RepositoryLinks:
 
 
 @dataclass(frozen=True, slots=True)
+class RoleCommits:
+    """The exact commit each of the declaring team's two repositories played.
+
+    Role-keyed rather than a single scalar because a series alternates roles: the
+    odd sub-games are played from one repository and the even ones from the
+    other, so one commit could only ever describe half of them. The keys mirror
+    `RepositoryLinks` exactly, which is what makes the repository a commit
+    belongs to structural instead of conventional.
+    """
+
+    police: GitCommitSha
+    thief: GitCommitSha
+
+    def __post_init__(self) -> None:
+        for name, value in (("police", self.police), ("thief", self.thief)):
+            if type(value) is not GitCommitSha:
+                raise InvalidTeamDeclarationError(
+                    f"{name} commit must be a GitCommitSha, got {type(value).__name__}",
+                )
+
+    def for_role(self, role: str) -> GitCommitSha:
+        """The commit declared for *role*, or a typed refusal for anything else."""
+        if role == "police":
+            return self.police
+        if role == "thief":
+            return self.thief
+        raise InvalidTeamDeclarationError(f"no commit is declared for role {role!r}")
+
+
+@dataclass(frozen=True, slots=True)
 class HardwareDeclaration:
     """The Step-0 machine specification of one participant (Ch 5 p.55).
 
@@ -99,7 +129,7 @@ class TeamDeclaration:
     hardware: HardwareDeclaration
     llm_model: str
     code_version: str
-    github_commit: GitCommitSha
+    github_commits: RoleCommits
 
     def __post_init__(self) -> None:
         _require_str(self.group_id, "group_id")
@@ -115,7 +145,7 @@ class TeamDeclaration:
         for name, value, expected in (
             ("repos", self.repos, RepositoryLinks),
             ("hardware", self.hardware, HardwareDeclaration),
-            ("github_commit", self.github_commit, GitCommitSha),
+            ("github_commits", self.github_commits, RoleCommits),
         ):
             if type(value) is not expected:
                 raise InvalidTeamDeclarationError(

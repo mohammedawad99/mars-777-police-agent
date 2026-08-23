@@ -50,7 +50,7 @@ def test_the_runner_never_sleeps_polls_or_counts_retries() -> None:
 
 def test_the_turn_provider_is_resolved_per_operation() -> None:
     """A consumed turn runtime must not be reused for the next turn."""
-    peer = build.side(GROUP_A, "group_a", ActorRole.POLICE)
+    peer = build.side(GROUP_A, ActorRole.POLICE)
     first, second = turn_builders.runtime(), turn_builders.runtime()
     resolved = iter([first, second, second])
     spy = SpyTransport()
@@ -80,8 +80,8 @@ def test_the_turn_provider_is_resolved_per_operation() -> None:
 
 def test_the_evidence_provider_is_resolved_per_operation() -> None:
     """A completed sub-game producer must not serve the next sub-game."""
-    peer = build.side(GROUP_A, "group_a", ActorRole.POLICE)
-    other = build.side(GROUP_A, "group_a", ActorRole.POLICE).producer
+    peer = build.side(GROUP_A, ActorRole.POLICE)
+    other = build.side(GROUP_A, ActorRole.POLICE).producer
     resolved = iter([peer.producer, other])
     spy = SpyTransport()
     runner = PeerRunner(
@@ -109,7 +109,7 @@ def test_the_evidence_provider_is_resolved_per_operation() -> None:
 
 def test_revealing_a_turn_we_did_not_register_is_refused() -> None:
     """The prepared turn must be the commitment the runtime actually holds."""
-    peer = build.side(GROUP_A, "group_a", ActorRole.POLICE)
+    peer = build.side(GROUP_A, ActorRole.POLICE)
     spy = SpyTransport()
     runner = peer.runner(spy)
     prepared = asyncio.run(

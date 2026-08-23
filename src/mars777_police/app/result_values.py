@@ -131,9 +131,17 @@ class ResultContribution:
                 f"entries must cover sub-games {SUB_GAME_SEQUENCE} exactly once each in"
                 " ascending order; they are never sorted, deduplicated or repaired",
             )
+        # STRUCTURAL ONLY. Two repositories play a series, so a participant can
+        # contribute at most two distinct commits. This bound says nothing about
+        # whether each row carries the RIGHT one of the two: a contribution that
+        # inverts them - police rows holding the thief commit and vice versa -
+        # passes here and is caught only by `check_declared_commit`, which
+        # compares each row against the role that sub-game was actually played
+        # in. Do not read this count as proof of attribution.
         commits = {entry.github_commit for entry in self.entries}
-        if len(commits) != 1:
+        if not 1 <= len(commits) <= 2:
             raise InvalidResultValueError(
-                "every entry must carry the same github_commit: a participant's played"
-                " commit is fixed for the whole game",
+                "entries may carry at most two distinct github_commit values: a series"
+                " alternates roles, so a participant plays from one repository on the"
+                " odd sub-games and the other on the even ones, and never more",
             )

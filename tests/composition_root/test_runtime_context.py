@@ -7,8 +7,12 @@ import turn_builders
 from evidence_builders import producer
 
 from mars777_police.app.active_runtime_context import ActiveRuntimeContext
+from mars777_police.app.kit_messages import KitRole
 from mars777_police.app.protocol_errors import LocalDefectError, StaleMessageError
+from mars777_police.app.series_roles import alternating
 from mars777_police.app.turn_cursor import TurnCursor
+
+ROLES = alternating("MaRs-777", KitRole.POLICE, "s82kma9e")
 
 
 def test_every_slot_starts_unbound() -> None:
@@ -93,7 +97,7 @@ def test_a_turn_may_be_bound_before_any_sub_game() -> None:
 def test_the_result_binds_once_for_the_series() -> None:
     """A second, different answer to what the series produced is refused."""
     composition = build.after_step0(build.compose())
-    exchange = composition.complete_result(**build.final_result_inputs())
+    exchange = composition.complete_result(**build.final_result_inputs(), roles=ROLES)
     assert composition.runtime_context.current_result() is exchange
     with pytest.raises(LocalDefectError, match="already has a result"):
         composition.runtime_context.bind_result(exchange)

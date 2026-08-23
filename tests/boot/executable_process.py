@@ -18,9 +18,10 @@ from pathlib import Path
 import composed_builders as compose
 import r7_builders as r7
 from boot_builders import HOST, SECRET, free_port
-from r16_builders import GROUP_A
+from r16_builders import GROUP_A, GROUP_B
 
 from mars777_police import __main__ as entry
+from mars777_police.app.participant_slots import slot_of
 from mars777_police.transport.codec_auth import encode_profiles
 from mars777_police.transport.codec_config import encode_config
 from mars777_police.transport.codec_declaration import encode_declaration
@@ -97,12 +98,24 @@ def spawn_opponent(
     script = Path(__file__).with_name("opponent_entrypoint.py")
     return subprocess.Popen(
         [sys.executable, str(script), role, str(port), opponent_url, str(root), variant],
-        env=dict(os.environ),
+        env={**os.environ, "MARS777_GAME_CONTRACT": str(SYNTHETIC_CONTRACT)},
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
         creationflags=GROUP_FLAG,
     )
+
+
+SYNTHETIC_CONTRACT = Path(__file__).resolve().parent / "synthetic_game_contract.json"
+"""The pairing this synthetic series plays under.
+
+The two spawned processes identify as `MaRs-777` and `GROUP-XY`, and the shipped
+agreement names only the real counted pairing - so without an explicit synthetic
+contract the `GROUP-XY` process correctly fails closed with no agreed role, dies
+before requesting the result, and leaves its counterpart waiting until timeout.
+That is the production behaviour working; the harness simply has to say which
+pairing it is playing.
+"""
 
 
 def environment(
@@ -122,10 +135,11 @@ def environment(
         "MARS777_AUTH_SECRET": SECRET,
         "MARS777_ARTIFACT_ROOT": str(root if root is not None else Path.cwd()),
         "MARS777_OPPONENT_ENDPOINT": opponent or f"http://{HOST}:{free_port()}{MCP_PATH}",
+        "MARS777_GAME_CONTRACT": str(SYNTHETIC_CONTRACT),
     }
 
 
-def launch_document(group_id: str = GROUP_A, slot: str = "group_a", config: object = None) -> str:
+def launch_document(group_id: str = GROUP_A, slot: str | None = None, config: object = None) -> str:
     """A launch document in the exact frozen wire shapes, from real values.
 
     `config` is this side's opening candidate, in the same `NegotiatedConfigWire`
@@ -144,9 +158,15 @@ def launch_document(group_id: str = GROUP_A, slot: str = "group_a", config: obje
 
 
 def written_launch(
-    directory: Path, group_id: str = GROUP_A, slot: str = "group_a", config: object = None
+    directory: Path, group_id: str = GROUP_A, slot: str | None = None, config: object = None
 ) -> Path:
-    """Write the launch document a subprocess can be started with."""
+    """Write the launch document a subprocess can be started with.
+
+    The producer's subtree is seated by the deterministic identifier order, so a
+    caller names the producing group and never picks its slot. Passing one
+    explicitly is how a negative test asserts a wrong layout is refused.
+    """
+    slot = slot or slot_of(GROUP_A, GROUP_B, group_id)
     path = directory / "launch.json"
     path.write_text(launch_document(group_id, slot, config), encoding="utf-8")
     return path

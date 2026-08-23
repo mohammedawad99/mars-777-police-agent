@@ -9,7 +9,16 @@ import turn_builders
 from cadence_ops import exchange_for
 from live_server import LiveServer
 from peer_ops import authenticator
-from r16_builders import COMMIT_A, GAME_ID, GAME_UID, GROUP_A, PROFILES, config, partial
+from r16_builders import (
+    COMMIT_A,
+    GAME_ID,
+    GAME_UID,
+    GROUP_A,
+    GROUP_B,
+    PROFILES,
+    config,
+    partial,
+)
 
 from mars777_police.app.audit_runtime import AuditRuntime
 from mars777_police.app.config_lock_runtime import ConfigLockRuntime
@@ -17,6 +26,7 @@ from mars777_police.app.config_negotiation_runtime import ConfigNegotiationRunti
 from mars777_police.app.declaration_values import Declaration
 from mars777_police.app.outbound_evidence_runtime import OutboundEvidenceRuntime
 from mars777_police.app.outbound_evidence_values import LocalEvidenceContext
+from mars777_police.app.participant_slots import slot_of
 from mars777_police.app.peer_runner import PeerRunner
 from mars777_police.app.peer_transport import PeerTransportPort
 from mars777_police.app.pregame_session_runtime import PregameSessionRuntime
@@ -89,8 +99,13 @@ class Side:
         )
 
 
-def side(group_id: str, slot: str, role: ActorRole) -> Side:
-    """Build one production side with a fresh turn, audit and evidence runtime."""
+def side(group_id: str, role: ActorRole) -> Side:
+    """Build one production side with a fresh turn, audit and evidence runtime.
+
+    The declaration slot is derived from the pairing, never passed in: a
+    fixture says which group is producing, not where that group sits.
+    """
+    slot = slot_of(GROUP_A, GROUP_B, group_id)
     return Side(
         group_id,
         turn_builders.runtime(role),

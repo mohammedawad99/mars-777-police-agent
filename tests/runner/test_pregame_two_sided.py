@@ -18,8 +18,8 @@ from mars777_police.domain.scent_model_default import default_scent_model
 
 def sides() -> tuple[object, object]:
     """The opener and the responder, by the frozen initial-proposer rule."""
-    opener = build.side(GROUP_B, "group_b", ActorRole.THIEF)
-    other = build.side(GROUP_A, "group_a", ActorRole.POLICE)
+    opener = build.side(GROUP_B, ActorRole.THIEF)
+    other = build.side(GROUP_A, ActorRole.POLICE)
     return opener, other
 
 

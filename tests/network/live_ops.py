@@ -39,7 +39,7 @@ class LiveOperations:
     def __init__(self, status: Path) -> None:
         self.status = status
         self.seen: list[str] = []
-        self.local = partial(GROUP_A, COMMIT_A, "group_a")
+        self.local = partial(GROUP_A, COMMIT_A)
         self.step0 = Step0Runtime(GROUP_A, Step0Authenticator(authenticator()))
         self.negotiation = ConfigNegotiationRuntime(
             GROUP_A,
