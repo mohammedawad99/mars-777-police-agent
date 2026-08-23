@@ -32,6 +32,15 @@ NAMESPACE: Final[str] = "mars777-research/v1/"
 SEALED_NAMESPACE: Final[str] = "mars777-research/final-holdout-v1/"
 """A namespace of its own, so the sealed bank cannot collide with a working one."""
 
+SEALED_NAMESPACE_V2: Final[str] = "mars777-research/final-holdout-v2/"
+"""The second sealed namespace, for the second promotion cycle.
+
+The v1 bank is **spent**: a frozen candidate was evaluated against it exactly
+once and the result is committed. A consumed holdout does not become blind again
+by being reused, so a new cycle gets a new version rather than a second look at
+the old one - which is the rule §9 froze, applied to a cycle that passed rather
+than to one that failed."""
+
 DEVELOPMENT: Final[str] = "development"
 VALIDATION: Final[str] = "holdout"
 """The bank Stage 9B-0 executed. Its **label** keeps the old name so the
@@ -40,11 +49,13 @@ outcomes were read before candidate hypotheses were ranked."""
 
 STRESS: Final[str] = "stress"
 FINAL_HOLDOUT: Final[str] = "final_holdout"
+FINAL_HOLDOUT_V2: Final[str] = "final_holdout_v2"
 
 DEVELOPMENT_SIZE: Final[int] = 64
 VALIDATION_SIZE: Final[int] = 64
 STRESS_SIZE: Final[int] = 16
 FINAL_HOLDOUT_SIZE: Final[int] = 64
+FINAL_HOLDOUT_V2_SIZE: Final[int] = 64
 
 
 def seed_at(name: str, index: int, namespace: str = NAMESPACE) -> int:
@@ -100,6 +111,15 @@ def final_holdout_bank() -> SeedBank:
     return bank(FINAL_HOLDOUT, FINAL_HOLDOUT_SIZE, SEALED_NAMESPACE)
 
 
+def final_holdout_v2_bank() -> SeedBank:
+    """The second sealed bank. Fixed now, while no v2 candidate exists.
+
+    Disjoint from every working bank *and* from the spent v1 bank, by namespace
+    and checked by `disjoint`. No game has been played on it.
+    """
+    return bank(FINAL_HOLDOUT_V2, FINAL_HOLDOUT_V2_SIZE, SEALED_NAMESPACE_V2)
+
+
 def stress_bank() -> SeedBank:
     """Rare and adversarial configurations, reported separately."""
     return bank(STRESS, STRESS_SIZE)
@@ -111,8 +131,8 @@ def working_banks() -> tuple[SeedBank, ...]:
 
 
 def banks() -> tuple[SeedBank, ...]:
-    """Every bank that exists, sealed one included, for the manifest only."""
-    return (*working_banks(), final_holdout_bank())
+    """Every bank that exists, both sealed ones included, for the manifest only."""
+    return (*working_banks(), final_holdout_bank(), final_holdout_v2_bank())
 
 
 def disjoint(first: SeedBank, second: SeedBank) -> bool:

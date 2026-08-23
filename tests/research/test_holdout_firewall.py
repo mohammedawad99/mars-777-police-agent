@@ -90,17 +90,25 @@ def test_the_seal_still_reports_no_results() -> None:
     assert "scenarios" not in document
 
 
+SEAL_MANIFESTS = ("final_holdout.json", "final_holdout_v2.json")
+"""Sealed manifests. Metadata about *which* scenarios, never an outcome."""
+
+
 def test_exactly_one_final_holdout_result_exists_and_it_is_the_one_shot() -> None:
     """Updated at Stage 9B-2, when the set was legitimately spent.
 
     Before the evaluation this asserted that **no** result existed. The property
     that matters now is that there is exactly **one**, produced by the single
-    official run - a second file would mean the holdout had been replayed.
+    official run - a second file would mean a holdout had been replayed.
+
+    A *seal* is not a result. Stage E-0 sealed a second set, whose manifest sits
+    beside the first; both are excluded by name, so this still counts outcomes
+    and a v2 result appearing would fail here exactly as it should.
     """
     produced = sorted(
         one.name
         for one in (ROOT / "results").rglob("*.json")
-        if one.is_file() and "final_holdout" in one.name and one.name != "final_holdout.json"
+        if one.is_file() and "final_holdout" in one.name and one.name not in SEAL_MANIFESTS
     )
     rows = sorted(one.name for one in (ROOT / "results").rglob("*final_holdout*.csv"))
 

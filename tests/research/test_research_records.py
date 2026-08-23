@@ -149,6 +149,7 @@ def test_the_manifest_identifies_every_input_by_hash() -> None:
         "holdout",
         "stress",
         "final_holdout",
+        "final_holdout_v2",
     }
     assert len(str(document["config_corpus_sha256"])) == 64
 

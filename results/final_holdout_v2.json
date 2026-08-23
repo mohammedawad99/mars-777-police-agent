@@ -1,0 +1,12 @@
+{
+  "bank": "final_holdout_v2",
+  "commitment_sha256": "5bf90845113384c6364d24f9216a0e74f01986ab74b9b4c7f5dd2b0ffe72a787",
+  "count": 2181,
+  "excluded_as_already_played": 66,
+  "namespace": "mars777-research/final-holdout-v2/",
+  "results_present": false,
+  "scenario_version": "scenario-1",
+  "sealed_at": "stage-E-0",
+  "seed_sha256": "34bddb9b9c24e387d73e40439ca0ba7a946957654860384f630f5d0a2a826ae1",
+  "supersedes": "final_holdout"
+}
