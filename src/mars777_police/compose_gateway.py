@@ -21,11 +21,14 @@ from .app.kit_messages import KitRole
 from .app.protocol_errors import LocalDefectError
 from .app.public_endpoint_policy import SystemHostResolver
 from .app.public_network_workflow import PublicNetworkService
+from .app.series_declaration import SeriesDeclarationWriter
 from .app.step0_runtime import Step0Runtime
+from .artifact_documents import declaration_document
 from .composition import compose_agent
 from .composition_inputs import keyed_authenticator
 from .first_role_source import series_first_role
 from .identity import ROLE
+from .infra.artifacts import JsonArtifactStore
 from .infra.ngrok_ingress import NgrokPublicIngress, fetch
 from .infra.ngrok_process import NgrokProcess
 from .infra.ngrok_settings import NgrokSettings
@@ -129,10 +132,14 @@ def _step0_receiver(settings: RuntimeSettings, launch: Path) -> Step0Handler:
             " Step-0 is a mutual exchange and a one-sided one leaves the peer waiting",
         )
     opponent = settings.opponent.url
+    declared = SeriesDeclarationWriter(
+        JsonArtifactStore(settings.artifact_root), declaration_document
+    )
 
     async def receive(payload: dict[str, object]) -> None:
         wire = Step0ExchangeWire.model_validate(payload)
         composition.pregame.accept_step0(decode_step0(wire))
+        declared.write(composition.pregame.declaration)
         await send_step0(opponent, composition.pregame.step0.outbound(ours))
 
     return receive
