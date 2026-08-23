@@ -26,16 +26,18 @@ authenticated context, without the live session that produced it.
 """
 
 from .app.artifact_store import ArtifactDocument
-from .app.config_artifact_values import ConfigArtifactContent
+from .app.config_artifact_values import ConfigArtifactContent, TermsConfigArtifactContent
 from .app.declaration_values import Declaration
 from .app.pregame_session_runtime import PregameSessionRuntime
 from .app.protocol_errors import LocalDefectError
 from .app.result_exchange import ResultExchange
+from .app.terms_agreement_values import TermsAgreementEvidence
 from .domain.negotiated_config import NegotiatedConfig
+from .domain.scent_model import ScentModelAgreement
 from .protocol.config_lock import config_sha256
 from .protocol.result_core import result_core
 from .protocol.scent_model import scent_model_sha256
-from .transport.codec_artifacts import encode_config_artifact
+from .transport.codec_artifacts import encode_config_artifact, encode_terms_config_artifact
 from .transport.codec_declaration import encode_declaration
 
 
@@ -71,6 +73,31 @@ def config_document(config: NegotiatedConfig, pregame: PregameSessionRuntime) ->
         raise LocalDefectError("the config offered for the record is not the locked core")
     content = ConfigArtifactContent(config, model, digest, evidence)
     document: dict[str, object] = encode_config_artifact(content).model_dump(mode="json")
+    return document
+
+
+def terms_config_document(
+    config: NegotiatedConfig,
+    model: ScentModelAgreement,
+    evidence: TermsAgreementEvidence,
+) -> ArtifactDocument:
+    """The same artifact, proven by the agreement the reference wire carries.
+
+    Every check `config_document` makes about *coherence* is made here too - the
+    stored model must be the one the context names, and the config offered must
+    be the one the context digests. What is not required is a keyed lock, because
+    the book does not require one and the opponent's runner performs none.
+
+    The signature is checked against the config's own terms rather than trusted:
+    a stored digest the stored bytes cannot reproduce is a record of nothing.
+    """
+    digest = scent_model_sha256(model)
+    if digest != evidence.context.scent_model_sha256:
+        raise LocalDefectError("the agreed model is not the one the terms agreement names")
+    if config_sha256(config) != evidence.context.config_sha256:
+        raise LocalDefectError("the config offered for the record is not the agreed core")
+    content = TermsConfigArtifactContent(config, model, digest, evidence)
+    document: dict[str, object] = encode_terms_config_artifact(content).model_dump(mode="json")
     return document
 
 

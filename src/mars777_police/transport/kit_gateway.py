@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from ..app.kit_handoff import SeriesHandoff
 from ..app.kit_messages import KitRole
 from ..app.kit_series_rows import SeriesRowCollector
+from ..app.official_artifacts import OfficialArtifactCollector
 from ..app.protocol_errors import StaleMessageError
 from .kit_envelopes import KIT_ARGUMENT_NAMES, KIT_OK, KitJson, KitNegotiateMessage, parse_kit
 
@@ -39,6 +40,13 @@ class KitGroupGateway:
     handoff: SeriesHandoff
     routes: dict[KitRole, Forward]
     deadline: float
+    artifacts: OfficialArtifactCollector = field(default_factory=OfficialArtifactCollector)
+    """The group's per-sub-game official documents, from whichever backend built each.
+
+    Kept beside the rows and for the same reason: this is the only part of the
+    group both backends can reach. It stores documents and judges none of them.
+    """
+
     collected: SeriesRowCollector = field(default_factory=SeriesRowCollector)
     """The group's finished rows, contributed by both backends while both are alive.
 
@@ -85,6 +93,19 @@ class KitGroupGateway:
     def contribute(self, row: KitJson) -> None:
         """Take one finished row from the backend that played it."""
         self.collected.record(row)
+
+    def contribute_artifact(self, kind: str, sub_game: int, document: KitJson) -> None:
+        """Take one official per-sub-game document from the backend that built it.
+
+        Held here for the same reason the rows are: a two-process group plays
+        three sub-games in each process and still owes one set of fourteen files,
+        so the halves have to meet where both backends can reach.
+        """
+        self.artifacts.record(kind, sub_game, document)
+
+    def official_artifact(self, kind: str, sub_game: int) -> KitJson | None:
+        """One collected document, for whichever process writes the series out."""
+        return self.artifacts.get(kind, sub_game)
 
     def series_rows(self) -> tuple[KitJson, ...]:
         """The group's six finished rows, for the backend that settles the series."""

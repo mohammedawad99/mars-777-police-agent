@@ -17,6 +17,7 @@ from ..domain.negotiated_config import NegotiatedConfig
 from ..domain.scent_model import ScentModelAgreement
 from .peer_pregame_messages import ConfigLockEvidence
 from .protocol_values import Sha256Digest
+from .terms_agreement_values import TermsAgreementEvidence
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,3 +30,21 @@ class ConfigArtifactContent:
     """The digest **as stored**, never as recomputed - comparing them is the point."""
 
     evidence: ConfigLockEvidence
+
+
+@dataclass(frozen=True, slots=True)
+class TermsConfigArtifactContent:
+    """The same three layers, evidenced by the nonce-bound terms agreement.
+
+    Separate from `ConfigArtifactContent` rather than a union member: a reader
+    holding one of these knows, from its type alone, that the middle layer is an
+    unkeyed digest anybody can recompute. Collapsing the two would make that
+    difference a runtime question at every use site.
+    """
+
+    config: NegotiatedConfig
+    scent_model: ScentModelAgreement
+    scent_model_sha256: Sha256Digest
+    """The digest **as stored**, never as recomputed - comparing them is the point."""
+
+    evidence: TermsAgreementEvidence

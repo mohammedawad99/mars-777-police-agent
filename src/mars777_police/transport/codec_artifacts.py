@@ -15,13 +15,16 @@ from collections.abc import Mapping
 
 from pydantic import ValidationError
 
-from ..app.config_artifact_values import ConfigArtifactContent
+from ..app.config_artifact_values import ConfigArtifactContent, TermsConfigArtifactContent
 from ..app.protocol_errors import MalformedMessageError
 from ..app.protocol_values import Sha256Digest
+from .codec_auth import encode_profiles
 from .codec_config import decode_config, encode_config
 from .codec_pregame import decode_lock, encode_lock
 from .codec_scent_model import decode_scent_model, encode_scent_model
 from .wire_artifacts import ConfigArtifactWire, ScentModelEvidenceWire
+from .wire_config import ConfigLockContextWire
+from .wire_terms_artifact import TermsAgreementWire, TermsConfigArtifactWire
 
 
 def read_config_artifact(document: Mapping[str, object]) -> ConfigArtifactWire:
@@ -48,6 +51,33 @@ def encode_config_artifact(content: ConfigArtifactContent) -> ConfigArtifactWire
     return ConfigArtifactWire(
         config=encode_config(content.config),
         config_lock=encode_lock(content.evidence),
+        scent_model_evidence=ScentModelEvidenceWire(
+            model=encode_scent_model(content.scent_model),
+            scent_model_sha256=content.scent_model_sha256.value,
+        ),
+    )
+
+
+def encode_terms_config_artifact(
+    content: TermsConfigArtifactContent,
+) -> TermsConfigArtifactWire:
+    """Render one config artifact evidenced by the nonce-bound terms agreement."""
+    evidence = content.evidence
+    context = evidence.context
+    return TermsConfigArtifactWire(
+        config=encode_config(content.config),
+        terms_agreement=TermsAgreementWire(
+            context=ConfigLockContextWire(
+                game_id=context.game_id,
+                game_uid=context.game_uid,
+                sub_game=context.sub_game,
+                config_sha256=context.config_sha256.value,
+                profiles=encode_profiles(context.profiles),
+                scent_model_sha256=context.scent_model_sha256.value,
+            ),
+            nonce=evidence.nonce,
+            terms_signature=evidence.terms_signature,
+        ),
         scent_model_evidence=ScentModelEvidenceWire(
             model=encode_scent_model(content.scent_model),
             scent_model_sha256=content.scent_model_sha256.value,

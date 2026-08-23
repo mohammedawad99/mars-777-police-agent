@@ -26,8 +26,16 @@ from .wire_errors import outbound
 GATEWAY_TOOLS = ("negotiate", "receive_turn", "submit_audit", "receive_control")
 """The public surface, identical to a backend's. The router is invisible."""
 
-ADMIN_TOOLS = ("sub_game_settled", "contribute_row", "series_rows")
-"""The private surface, loopback only, and never part of the KIT contract."""
+ADMIN_TOOLS = (
+    "sub_game_settled",
+    "contribute_row",
+    "contribute_artifact",
+    "official_artifact",
+    "series_rows",
+)
+"""The private surface, loopback only, and never part of the KIT contract.
+
+Listed in registration order, which a test compares against the live server."""
 
 
 def build_gateway_tools(
@@ -134,6 +142,23 @@ def build_gateway_admin(gateway: KitGroupGateway, name: str = "mars777-group-adm
         except BaseException as failure:
             raise outbound(failure) from None
         return KIT_OK
+
+    @server.tool
+    async def contribute_artifact(kind: str, sub_game: int, document: KitJson) -> dict[str, bool]:
+        """Hand the group one official per-sub-game document it must write out."""
+        try:
+            gateway.contribute_artifact(kind, sub_game, document)
+        except BaseException as failure:
+            raise outbound(failure) from None
+        return KIT_OK
+
+    @server.tool
+    async def official_artifact(kind: str, sub_game: int) -> KitJson | None:
+        """One collected document, or `None` where none has been contributed."""
+        try:
+            return gateway.official_artifact(kind, sub_game)
+        except BaseException as failure:
+            raise outbound(failure) from None
 
     @server.tool
     async def series_rows() -> list[KitJson]:
