@@ -70,7 +70,9 @@ def service(ingress: TrackingIngress) -> PublicNetworkService:
     )
 
 
-def launcher(network: PublicNetworkService, admin_port: int = 0) -> KitPublicLauncher:
+def launcher(
+    network: PublicNetworkService, admin_port: int = 0, declared: str | None = None
+) -> KitPublicLauncher:
     gateway = KitGroupGateway(
         handoff=SeriesHandoff(KitRole.POLICE),
         routes={},
@@ -83,4 +85,5 @@ def launcher(network: PublicNetworkService, admin_port: int = 0) -> KitPublicLau
         backend_endpoints=(POLICE_BACKEND, THIEF_BACKEND),
         evidence_root="runtime/friendly",
         admin_port=admin_port,
+        declared_endpoint=declared,
     )

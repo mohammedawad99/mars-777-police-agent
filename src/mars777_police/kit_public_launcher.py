@@ -15,10 +15,21 @@ artifact.
 **Nothing is remembered between runs.** The endpoint is whatever this run's
 discovery returned, and closing forgets it: a stale hostname reused after a
 restart is a route to somebody else's tunnel.
+
+**A declaration that names a different endpoint never reaches a peer.** When
+this route carries Step-0, the declaration we are about to authenticate has
+already been written, and `mcp_endpoint` is inside the authenticated core. If
+it does not name the ingress discovery actually returned, those bytes claim an
+address no opponent can reach - the mismatch `FR-015b` exists to prevent. The
+opponent found exactly this in a rehearsal, where the launch document carried a
+placeholder and the transport happened to work because the peer URL was
+configured separately. Discovery and the declaration are compared here, once,
+before anything is served to anyone.
 """
 
 from dataclasses import dataclass, field
 
+from .app.protocol_errors import LocalDefectError
 from .app.public_endpoint_values import LocalPeerEndpoint, OwnPublicPeerEndpoint
 from .app.public_network_workflow import PublicNetworkService
 from .app.run_class import RunClass
@@ -52,6 +63,9 @@ class KitPublicLauncher:
     Once per series and group-level, so it is received here rather than routed to
     a backend: the six sub-games are what the backends own."""
 
+    declared_endpoint: str | None = field(default=None)
+    """What our own Step-0 declaration says a peer should reach us at, if any."""
+
     endpoint: OwnPublicPeerEndpoint | None = field(default=None)
     routes: KitBackendRoutes | None = field(default=None)
     _served: list[ServedHttp] = field(default_factory=list)
@@ -68,10 +82,25 @@ class KitPublicLauncher:
             self.public_port = await self._serve(tools, 0)
             self.admin_port = await self._serve(build_gateway_admin(self.gateway), self.admin_port)
             self.endpoint = self.network.establish(LocalPeerEndpoint(self.host, self.public_port))
+            self._require_declared(self.endpoint)
         except BaseException:
             await self.close()
             raise
         return self.endpoint
+
+    def _require_declared(self, discovered: OwnPublicPeerEndpoint) -> None:
+        """Refuse a route whose declaration names somewhere else.
+
+        Only when a declaration exists: a route carrying no Step-0 has promised
+        a peer nothing, and there is no claim to contradict.
+        """
+        if self.declared_endpoint is None or self.declared_endpoint == discovered.url:
+            return
+        raise LocalDefectError(
+            f"our declaration names {self.declared_endpoint!r} but this run's ingress is"
+            f" {discovered.url!r}; authenticating that declaration would hand the opponent"
+            " an address it cannot reach",
+        )
 
     async def close(self) -> None:
         """Tear the route down, then both servers. Safe from any point, and twice."""

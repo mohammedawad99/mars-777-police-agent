@@ -34,7 +34,7 @@ from .infra.settings import RuntimeSettings, load_runtime_settings
 from .kit_public_launcher import KitPublicLauncher
 from .launch_input import read_launch_document
 from .operator_requests import PublicGatewayRequest
-from .protocol.declaration import Step0Authenticator
+from .protocol.declaration import Step0Authenticator, locate
 from .transport.codec_declaration import decode_step0
 from .transport.kit_backend_routes import KitBackendRoutes
 from .transport.kit_gateway import KitGroupGateway
@@ -94,7 +94,20 @@ def compose_public_gateway(request: PublicGatewayRequest) -> KitPublicLauncher:
         evidence_root=str(request.evidence_root),
         routes=routes,
         step0=None if request.launch is None else _step0_receiver(settings, request.launch),
+        declared_endpoint=None if request.launch is None else _declared_endpoint(request.launch),
     )
+
+
+def _declared_endpoint(launch: Path) -> str:
+    """The endpoint our own declaration promises, from the subtree we authored.
+
+    Read through `locate` rather than a slot name: which slot holds us is an
+    ordering fact about the pairing, and hard-coding one here would read the
+    opponent's endpoint in any pairing that seats us second.
+    """
+    declaration = read_launch_document(launch).identity.declaration
+    _, ours = locate(declaration, GROUP_CODE)
+    return ours.mcp_endpoint
 
 
 def _step0_receiver(settings: RuntimeSettings, launch: Path) -> Step0Handler:
