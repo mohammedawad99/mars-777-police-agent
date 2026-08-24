@@ -33,6 +33,10 @@ SEALED_NAMESPACE: Final[str] = "mars777-research/final-holdout-v1/"
 """A namespace of its own, so the sealed bank cannot collide with a working one."""
 
 SEALED_NAMESPACE_V2: Final[str] = "mars777-research/final-holdout-v2/"
+
+SEALED_NAMESPACE_V3: Final[str] = "mars777-research/final-holdout-v3/"
+"""The third sealed namespace. v2 was consumed by the P4 evaluation and can
+never be blind again; a new cycle with a genuinely new candidate needs its own."""
 """The second sealed namespace, for the second promotion cycle.
 
 The v1 bank is **spent**: a frozen candidate was evaluated against it exactly
@@ -50,12 +54,14 @@ outcomes were read before candidate hypotheses were ranked."""
 STRESS: Final[str] = "stress"
 FINAL_HOLDOUT: Final[str] = "final_holdout"
 FINAL_HOLDOUT_V2: Final[str] = "final_holdout_v2"
+FINAL_HOLDOUT_V3: Final[str] = "final_holdout_v3"
 
 DEVELOPMENT_SIZE: Final[int] = 64
 VALIDATION_SIZE: Final[int] = 64
 STRESS_SIZE: Final[int] = 16
 FINAL_HOLDOUT_SIZE: Final[int] = 64
 FINAL_HOLDOUT_V2_SIZE: Final[int] = 64
+FINAL_HOLDOUT_V3_SIZE: Final[int] = 64
 
 
 def seed_at(name: str, index: int, namespace: str = NAMESPACE) -> int:
@@ -118,6 +124,17 @@ def final_holdout_v2_bank() -> SeedBank:
     and checked by `disjoint`. No game has been played on it.
     """
     return bank(FINAL_HOLDOUT_V2, FINAL_HOLDOUT_V2_SIZE, SEALED_NAMESPACE_V2)
+
+
+def final_holdout_v3_bank() -> SeedBank:
+    """The third sealed bank, fixed before the P6 candidate was evaluated on it.
+
+    v2 is spent: the P4 evaluation consumed it, and a spent holdout does not
+    become blind again by being renamed. This bank has its own namespace, is
+    checked disjoint from both spent banks and from every working bank, and no
+    game has been played on it at the moment it is committed.
+    """
+    return bank(FINAL_HOLDOUT_V3, FINAL_HOLDOUT_V3_SIZE, SEALED_NAMESPACE_V3)
 
 
 def stress_bank() -> SeedBank:

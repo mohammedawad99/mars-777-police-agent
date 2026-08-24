@@ -1,0 +1,19 @@
+{
+  "candidate": "P6-lookahead",
+  "revision": "p6-lookahead-1",
+  "module": "research/candidates/lookahead.py",
+  "candidate_sha256": "bcddd79cb3b2885965c5f227aad3827cf84c0528101b4c467f8985c171ea5231",
+  "frozen_before_holdout": true,
+  "sealed": {
+    "sealed_at": "stage-P6-0",
+    "namespace": "mars777-research/final-holdout-v3/",
+    "bank": "final_holdout_v3",
+    "scenario_version": "scenario-1",
+    "count": 2229,
+    "seed_sha256": "65bef0d3167f78b21858586085f46ab5e326d282286289a66700b993ec70e536",
+    "commitment_sha256": "9f51f0c3e53ebe53acdc60738af7efdcd4e26d3b049d4a1b31d01bd76feae3bf",
+    "results_present": false,
+    "supersedes": "final_holdout_v2",
+    "excluded_as_already_played": 18
+  }
+}

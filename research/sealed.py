@@ -26,10 +26,13 @@ from .scenario import SCENARIO_VERSION, openings, scenario_id
 from .seeds import (
     FINAL_HOLDOUT,
     FINAL_HOLDOUT_V2,
+    FINAL_HOLDOUT_V3,
     SEALED_NAMESPACE,
     SEALED_NAMESPACE_V2,
+    SEALED_NAMESPACE_V3,
     final_holdout_bank,
     final_holdout_v2_bank,
+    final_holdout_v3_bank,
 )
 
 SEALED_AT = "stage-9B-0F"
@@ -43,6 +46,12 @@ RESULTS_PRESENT: Final[bool] = False
 until a frozen candidate is evaluated exactly once, in a later stage."""
 
 RESULTS_PRESENT_V2: Final[bool] = False
+
+SEALED_AT_V3 = "stage-P6-0"
+"""Sealed before P6 was evaluated on it, and after P6 itself was frozen."""
+
+RESULTS_PRESENT_V3: Final[bool] = False
+"""False at the moment of sealing. It is what makes the commitment mean anything."""
 """The same claim for the second sealed set, and true of it today.
 
 The v1 flag stayed `False` in the *sealed manifest* even after that set was
@@ -111,6 +120,48 @@ def carried_over(role: str) -> int:
     """How many v2 scenarios were dropped because v1 had already played them."""
     enumerated = len(_enumerate(role, final_holdout_v2_bank().seeds).scenarios)
     return enumerated - len(sealed_set_v2(role).scenarios)
+
+
+def sealed_set_v3(role: str) -> SealedSet:
+    """The **v3** sealed scenarios, minus anything v1 or v2 already played.
+
+    Both earlier banks are spent, so both are excluded rather than only the
+    most recent. `scenario_id` covers the family, the configuration and both
+    opening cells, so a configuration with a finite opening space reproduces the
+    same scenarios however the seeds are drawn - which is exactly how v2
+    inherited sixty-six already-played scenarios from v1.
+
+    Excluded before any v3 result exists, and the count recorded in the manifest,
+    so the exclusion is checkable rather than trusted.
+    """
+    spent = set(sealed_set(role).scenarios) | set(sealed_set_v2(role).scenarios)
+    fresh = tuple(
+        one for one in _enumerate(role, final_holdout_v3_bank().seeds).scenarios if one not in spent
+    )
+    return SealedSet(role, fresh)
+
+
+def carried_over_v3(role: str) -> int:
+    """How many v3 scenarios were dropped because v1 or v2 had already played them."""
+    enumerated = len(_enumerate(role, final_holdout_v3_bank().seeds).scenarios)
+    return enumerated - len(sealed_set_v3(role).scenarios)
+
+
+def sealed_document_v3(role: str) -> dict[str, object]:
+    """The v3 sealed manifest, naming its own namespace, bank and stage."""
+    document = dict(sealed_set_v3(role).as_document())
+    document.update(
+        {
+            "sealed_at": SEALED_AT_V3,
+            "namespace": SEALED_NAMESPACE_V3,
+            "bank": FINAL_HOLDOUT_V3,
+            "seed_sha256": final_holdout_v3_bank().digest,
+            "results_present": RESULTS_PRESENT_V3,
+            "supersedes": FINAL_HOLDOUT_V2,
+            "excluded_as_already_played": carried_over_v3(role),
+        }
+    )
+    return document
 
 
 def _enumerate(role: str, seeds: tuple[int, ...]) -> SealedSet:
