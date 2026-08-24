@@ -1,0 +1,28 @@
+{
+  "cycle": "P5",
+  "bank": "development",
+  "n": 2247,
+  "baseline": {"strategy": "CompetitiveStrategy", "captures": 261, "rate": 0.1162},
+  "candidates": {
+    "P5-arbiter": {
+      "captures": 207, "rate": 0.0921, "delta": -0.0240,
+      "paired_gains": 5, "paired_losses": 59, "net": -54,
+      "verdict": "REJECTED",
+      "family_deltas": {
+        "adversarial_corner": -34, "center_mobility": -16, "random_legal": -2,
+        "scent_aware": -2, "barrier_aware": 0, "evasive": 0, "pursuit": 0
+      }
+    },
+    "V3-mobility": {
+      "captures": 157, "rate": 0.0699, "delta": -0.0463,
+      "paired_gains": 3, "paired_losses": 107, "net": -104,
+      "verdict": "REJECTED",
+      "family_deltas": {
+        "adversarial_corner": -60, "center_mobility": -22, "random_legal": -8,
+        "pursuit": -5, "barrier_aware": -4, "evasive": -3, "scent_aware": -2
+      }
+    }
+  },
+  "finding": "Containment substitutes for pursuit precisely where pursuit already works. Both candidates regress hardest on adversarial_corner, the family a pursuer should exploit, and the arbiter reproduces a weaker form of the same loss because its contain branch engages on exactly those states. The mechanism is not underweighted; it costs captures.",
+  "next": "A different mechanism rather than a re-weighting: bounded adversarial lookahead over legal evader replies."
+}

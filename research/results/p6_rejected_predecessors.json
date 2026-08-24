@@ -1,0 +1,11 @@
+{
+  "note": "Negative results retained: a record that only ever tried things that worked is not evidence.",
+  "P5-arbiter": {"bank": "development", "delta": -0.0240, "gains": 5, "losses": 59, "verdict": "REJECTED",
+    "why": "containment substitutes for pursuit exactly where pursuit already works"},
+  "V3-mobility": {"bank": "development", "delta": -0.0463, "gains": 3, "losses": 107, "verdict": "REJECTED",
+    "why": "same mechanism, unmitigated; -60 on adversarial_corner"},
+  "P6-lookahead-r1": {"bank": "development", "delta": -0.1162, "gains": 0, "losses": 261, "verdict": "DEFECT, not a finding",
+    "why": "returned a MoveAction in every state, discarding the shipped barrier gate through which the policy captures. Measured two changes at once. Corrected to defer to the shipped policy whenever it wants a barrier."},
+  "P7-roomy-1": {"bank": "development", "verdict": "COLLAPSED to P6",
+    "why": "gated on reachable-region share, which reads 1.0 almost everywhere on an open board because both walk the same connected component. Connectivity is not confinement."}
+}

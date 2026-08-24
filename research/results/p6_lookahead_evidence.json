@@ -1,0 +1,42 @@
+{
+  "cycle": "P6",
+  "candidate": "P6-lookahead",
+  "revision": "p6-lookahead-1",
+  "mechanism": "bounded adversarial lookahead, one ply each side, over the evader's legal replies from the strongest believed cell; the shipped barrier gate is untouched",
+  "banks": {
+    "development": {"n": 2247, "baseline": 261, "candidate": 303, "delta": 0.0187,
+                    "gains": 92, "losses": 50, "net": 42,
+                    "ci95": [0.0083, 0.0291], "significant": true},
+    "validation":  {"n": 2219, "baseline": 302, "candidate": 359, "delta": 0.0257,
+                    "gains": 107, "losses": 50, "net": 57,
+                    "ci95": [0.0146, 0.0368], "significant": true},
+    "stress":      {"n": 567,  "baseline": 85,  "candidate": 87,  "delta": 0.0035,
+                    "gains": 12, "losses": 10, "net": 2,
+                    "ci95": [-0.0127, 0.0197], "significant": false}
+  },
+  "family_deltas_validation": {
+    "pursuit": 40, "center_mobility": 38, "random_legal": 4, "evasive": 2,
+    "scent_aware": -1, "barrier_aware": -4, "adversarial_corner": -22
+  },
+  "severe_regression": {
+    "family": "adversarial_corner",
+    "development": -37, "validation": -22, "stress": -5,
+    "analysis": "Consistent and explained rather than incidental. Worst-case search is pessimistic by construction: it declines a close because the evader COULD step away. adversarial_corner is documented in the harness as a family that deliberately walks into tight regions - 'the case a pursuer should exploit and an evader should never choose' - so it is a probe of bad evader play, not realistic surviving behaviour. Against it the pessimism is unwarranted and costs captures the greedy policy would take.",
+    "gating_attempted": "P7 gated the search on evader mobility. A gate at >=3 legal moves never fires (identical to ungated). A gate at >=4 reduces the regression to -19 on validation but also cuts the gain to +34 net from +57. The loss and the gain come from one mechanism and trade proportionally; the regression is not separable.",
+    "classification": "artificial adversarial probe, not realistic important opponent behaviour"
+  },
+  "latency_ms": {
+    "7x7": {"p50": 0.7742, "p95": 0.8388, "p99": 0.9227, "max": 1.3944},
+    "20x20": {"p50": 0.9024, "p95": 0.9485, "p99": 0.9834, "max": 1.0134},
+    "response_timeout_ms": 30000,
+    "verdict": "unchanged order of magnitude; ~35000x margin"
+  },
+  "legality": {
+    "hidden_state": "none - reads only board, own position, quota and lawful scent belief",
+    "opponent_identity": "none - no group id, commit, repository or trajectory",
+    "action_source": "moves from legal_moves; barriers delegated to the shipped policy, which draws from is_placeable",
+    "determinism": "same state, same action"
+  },
+  "status": "SURVIVED development, validation and stress. Sealed holdout V3 is warranted before promotion.",
+  "not_yet_done": ["sealed holdout V3", "production port", "local production rehearsal"]
+}
