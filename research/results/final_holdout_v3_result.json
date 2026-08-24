@@ -1,0 +1,34 @@
+{
+  "cycle": "P6",
+  "candidate": "P6-lookahead",
+  "candidate_sha256": "bcddd79cb3b2885965c5f227aad3827cf84c0528101b4c467f8985c171ea5231",
+  "bank": "final_holdout_v3",
+  "commitment_sha256": "9f51f0c3e53ebe53acdc60738af7efdcd4e26d3b049d4a1b31d01bd76feae3bf",
+  "consumed_once": true,
+  "n": 2247,
+  "baseline_captures": 285,
+  "candidate_captures": 293,
+  "delta": 0.0036,
+  "ci95": [
+    -0.0052,
+    0.0124
+  ],
+  "paired_gains": 55,
+  "paired_losses": 47,
+  "net": 8,
+  "significant": false,
+  "family_deltas": {
+    "center_mobility": 27,
+    "pursuit": 16,
+    "random_legal": 3,
+    "barrier_aware": 0,
+    "evasive": 0,
+    "scent_aware": 0,
+    "adversarial_corner": -38
+  },
+  "verdict": "REJECTED FOR PROMOTION",
+  "reasoning": "The working banks showed +0.0187 and +0.0257 with intervals excluding zero. The unseen bank shows +0.0036 with an interval that includes zero, so on scenarios the candidate was never screened against it is statistically indistinguishable from production. The directional gains persist - center_mobility +27, pursuit +16 - but adversarial_corner regresses -38, the largest of any bank, and offsets them almost entirely.",
+  "generalisation_finding": "The holdout carries more baseline captures on adversarial_corner (117) than development (92) or validation (101). The candidate's apparent edge on the working banks was therefore partly a function of how much weight those banks gave the one family it regresses on. That is precisely what an unseen bank exists to expose.",
+  "post_holdout_tuning": "none - the candidate was frozen by module digest before the bank was consumed, and is not being retuned",
+  "consequence": "Production CompetitiveStrategy remains the Police strategy. A future cycle needs a new sealed version; v3 is now spent and can never be blind again."
+}

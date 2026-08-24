@@ -50,8 +50,10 @@ RESULTS_PRESENT_V2: Final[bool] = False
 SEALED_AT_V3 = "stage-P6-0"
 """Sealed before P6 was evaluated on it, and after P6 itself was frozen."""
 
-RESULTS_PRESENT_V3: Final[bool] = False
-"""False at the moment of sealing. It is what makes the commitment mean anything."""
+RESULTS_PRESENT_V3: Final[bool] = True
+"""False when sealed; true now. The v3 bank was consumed once by the P6
+evaluation and can never be blind again - see `results/final_holdout_v3_result`,
+which rejected the candidate."""
 """The same claim for the second sealed set, and true of it today.
 
 The v1 flag stayed `False` in the *sealed manifest* even after that set was
