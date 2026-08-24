@@ -60,6 +60,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="series launch document; required for a route that also receives Step-0",
     )
     parser.add_argument("--evidence-root", default="runtime/friendly", type=Path)
+    parser.add_argument(
+        "--counted",
+        action="store_true",
+        help=(
+            "run this series as the counted league encounter."
+            " Absent, the run is a rehearsal and can never report."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -73,6 +81,7 @@ def build(arguments: argparse.Namespace) -> KitPublicLauncher:
             launch=arguments.launch,
             first_role=arguments.first_role,
             evidence_root=arguments.evidence_root,
+            counted=arguments.counted,
         )
     )
 

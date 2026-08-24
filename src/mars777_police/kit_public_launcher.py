@@ -29,6 +29,7 @@ before anything is served to anyone.
 
 from dataclasses import dataclass, field
 
+from .app.counted_mode import CountedRun, rehearsal
 from .app.protocol_errors import LocalDefectError
 from .app.public_endpoint_values import LocalPeerEndpoint, OwnPublicPeerEndpoint
 from .app.public_network_workflow import PublicNetworkService
@@ -62,6 +63,9 @@ class KitPublicLauncher:
 
     Once per series and group-level, so it is received here rather than routed to
     a backend: the six sub-games are what the backends own."""
+
+    counted: CountedRun = field(default_factory=rehearsal)
+    """What this run is allowed to be worth. A rehearsal unless someone said otherwise."""
 
     declared_endpoint: str | None = field(default=None)
     """What our own Step-0 declaration says a peer should reach us at, if any."""
@@ -121,7 +125,9 @@ class KitPublicLauncher:
         return PublicLaunchStatus(
             group_id=self.group_id,
             public_endpoint=None if self.endpoint is None else self.endpoint.url,
-            run_class=RunClass.KIT_FRIENDLY_ONLY,
+            run_class=(
+                RunClass.COUNTED_CAPABLE if self.counted.is_counted else RunClass.KIT_FRIENDLY_ONLY
+            ),
             evidence_root=self.evidence_root,
             backends_configured=len(self.backend_endpoints),
         )

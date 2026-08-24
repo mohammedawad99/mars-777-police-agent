@@ -15,6 +15,8 @@ from collections.abc import Callable
 from pathlib import Path
 
 from . import GROUP_CODE
+from .app.counted_mode import counted as counted_run
+from .app.counted_mode import rehearsal as rehearsal_run
 from .app.gatekeeper import Gatekeeper
 from .app.kit_handoff import SeriesHandoff
 from .app.kit_messages import KitRole
@@ -98,6 +100,7 @@ def compose_public_gateway(request: PublicGatewayRequest) -> KitPublicLauncher:
         routes=routes,
         step0=None if request.launch is None else _step0_receiver(settings, request.launch),
         declared_endpoint=None if request.launch is None else _declared_endpoint(request.launch),
+        counted=counted_run() if request.counted else rehearsal_run(),
     )
 
 

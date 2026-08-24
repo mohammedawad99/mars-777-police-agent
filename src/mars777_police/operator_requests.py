@@ -71,3 +71,11 @@ class PublicGatewayRequest:
     frozen contract, which is the only place that may decide between them.
     """
     evidence_root: Path = FRIENDLY_EVIDENCE_ROOT
+
+    counted: bool = False
+    """Whether this run may ever be counted or reported.
+
+    Defaulted to `False` and carried from the operator's own command rather than
+    inferred from a launch document, a secret's presence or an endpoint: what a
+    run is worth is a decision somebody makes, not a state a process discovers.
+    Every path that could report asks `CountedMode`, which this becomes."""
