@@ -1,10 +1,38 @@
-# Counted / rehearsal runbook — MaRs-777
+# Counted / rehearsal runbook - MaRs-777
 
-The one document an operator needs. Nothing here requires reconstructing
-context from a conversation.
-
-Order matters, and several steps exist because a live run failed on them rather
-than because somebody was being careful.
+> ## STOP: WHAT MAKES A SERIES COUNTED IS THE GATEWAY, NOT THE BACKENDS
+>
+> **The fatal mistake, and it is invisible on screen.** A real counted series
+> against `s82kma9e` completed six sub-games, six mutual audits and a genuine
+> bidirectional settlement, wrote exactly fourteen official artifacts, and the
+> lecturer was never mailed. Appendix E rule 35 scores a missing report **0 for
+> both groups**. Nothing in the banner said anything was wrong.
+>
+> **Where counted-ness actually lives.** `kit_backend_main` is pinned to
+> `KIT_FRIENDLY_ONLY` and that is **correct and by design** - the role backends
+> play the KIT wire and each holds only three sub-games, so neither can ever see
+> the series. Only the gateway holds it, which is why `SeriesResultOwner` exists.
+> So the counted artifacts *and* the single completion report are the
+> **gateway's** responsibility, reached through `kit_gateway_main --counted`.
+>
+> **What went wrong was not which backend ran.** It was that the counted gateway
+> rendered its result through `kit_result_document` alone - carrying
+> `series_consensus_sha256` and none of the three members the reporting gate
+> reads - and that no reporter was armed anywhere in the gateway lifecycle.
+> Stage 9C fixes both.
+>
+> **Therefore, for every counted series:**
+>
+> 1. The gateway **must** carry `--counted`. Without it there is no writer, no
+>    official set and no report - the run is a rehearsal whatever else is true.
+> 2. Confirm `COUNTED_SERIES_WRITER = ARMED` before Step-0 (section 3d). The
+>    banner's `COUNTED_CAPABLE` proves only that the *gateway* is counted; it
+>    does **not** prove the series can ever be reported.
+> 3. Never read a backend's own `friendly_<game_id>_<role>.json` contribution as
+>    counted evidence. It is `DEVELOPMENT_EVIDENCE` and sits outside the
+>    official fourteen by construction.
+> 4. A backend exiting after its last owned sub-game is **normal**. The g06
+>    owner is the one that must stay alive through the full settlement window.
 
 ---
 
@@ -92,6 +120,36 @@ uv build
 uv run python -m mars777_police.gmail_preflight
 ```
 
+## 3d. Prove the run is actually counted - before Step-0
+
+The gateway banner is not sufficient evidence: it reports the gateway's run
+class, not whether the series can ever be reported. Assert the writer is armed.
+
+```bash
+uv run python -c "
+from pathlib import Path; import os
+from mars777_police.compose_series_writer import series_writer
+from mars777_police.infra.settings import load_runtime_settings
+from mars777_police.app.sealed_record_values import ActorRole
+from mars777_police.operator_requests import PublicGatewayRequest
+s = load_runtime_settings(os.environ, expected_role=ActorRole(os.environ['MARS777_ROLE']))
+r = PublicGatewayRequest(
+    police_endpoint='http://127.0.0.1:8811/mcp',
+    thief_endpoint='http://127.0.0.1:8812/mcp',
+    ngrok=Path(os.environ['MARS777_NGROK']),
+    launch=Path(os.environ['MARS777_LAUNCH']),
+    counted=True)
+print('COUNTED_SERIES_WRITER =', 'ARMED' if series_writer(s, r) else 'ABSENT')
+"
+```
+
+`COUNTED_SERIES_WRITER = ARMED` is the fact to check. `ABSENT` means the run
+would play a whole series and report nothing.
+
+**Never start a counted series through `kit_backend_main`.** Its run class is
+`KIT_FRIENDLY_ONLY`; `KitRoleBackend` refuses any other classification at
+construction, and the counted runtime is unreachable from it.
+
 ---
 
 ## 4. Start order — peer, gateway, backends
@@ -171,6 +229,23 @@ Reporting-delivery evidence is **outside** the official fourteen. A set that is
 short is refused whole rather than written partially.
 
 ---
+
+## 7d. Token counts are participant-owned — and gate the report
+
+Each participant contributes its **own** six token counts inside its own
+`ResultContribution`; `total_tokens` is the sum of those six. Ours come from the
+local `TokenAccountingPort`; the peer's come only from the peer's authenticated
+contribution.
+
+**An absent peer contribution is never replaced by zero.** Without it there is
+no `RESULT_APPROVAL_CORE`, no `result_sha256`, no `mutual_agreement`, and the
+normal reporting gate refuses — which is correct for a result nobody agreed.
+
+**Consequence you must plan for.** The pinned KIT external `receive_control` is
+a status signal returning `{"ok": true}` with no digest, so a peer on that wire
+contributes nothing. **Agree the result-agreement carriage with the partner
+before counted play**, exactly as `KIT_PAIRING_HANDOFF.md` says — otherwise the
+series will write its fourteen artifacts and be unreportable.
 
 ## 8. Reporting — counted only
 

@@ -26,6 +26,7 @@ from .app.public_network_workflow import PublicNetworkService
 from .app.series_declaration import SeriesDeclarationWriter
 from .app.step0_runtime import Step0Runtime
 from .artifact_documents import declaration_document
+from .compose_result_agreement import group_agreement
 from .compose_series_writer import series_writer
 from .composition import compose_agent
 from .composition_inputs import keyed_authenticator
@@ -37,6 +38,7 @@ from .infra.ngrok_process import NgrokProcess
 from .infra.ngrok_settings import NgrokSettings
 from .infra.rate_limit_file import load_rate_limits
 from .infra.settings import RuntimeSettings, load_runtime_settings
+from .kit_backend_boot import backend_client
 from .kit_public_launcher import KitPublicLauncher
 from .launch_input import read_launch_document
 from .operator_requests import PublicGatewayRequest
@@ -45,6 +47,7 @@ from .transport.codec_declaration import decode_step0
 from .transport.kit_backend_routes import KitBackendRoutes
 from .transport.kit_gateway import KitGroupGateway
 from .transport.negotiate_arguments import Step0Handler
+from .transport.peer_transport import FastMcpPeerTransport
 from .transport.step0_outbound import send_step0
 from .transport.wire_declaration import Step0ExchangeWire
 
@@ -84,8 +87,14 @@ def compose_public_gateway(request: PublicGatewayRequest) -> KitPublicLauncher:
         routes=routes.forwarders(),
         deadline=ROUTE_DEADLINE,
         counted=counted_run() if request.counted else rehearsal_run(),
-        write=series_writer(settings, request),
+        group_id=GROUP_CODE,
     )
+    if request.counted and settings.opponent is not None:
+        gateway.agreement = group_agreement(
+            gateway,
+            FastMcpPeerTransport(backend_client(settings.opponent.url, ROUTE_DEADLINE)),
+        )
+    gateway.write = series_writer(settings, request, agreement=gateway.agreement)
     gate = Gatekeeper(load_rate_limits())
     network = PublicNetworkService(
         ingress=NgrokPublicIngress(

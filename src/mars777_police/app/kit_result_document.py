@@ -29,7 +29,7 @@ from .protocol_errors import LocalDefectError
 Row = Mapping[str, Any]
 
 
-def _role_totals(rows: Sequence[Row]) -> tuple[int, int]:
+def role_totals(rows: Sequence[Row]) -> tuple[int, int]:
     """What the police side and the thief side scored across the whole series."""
     cop = thief = 0
     for row in rows:
@@ -42,7 +42,7 @@ def _role_totals(rows: Sequence[Row]) -> tuple[int, int]:
     return cop, thief
 
 
-def _outcome(cop: int, thief: int) -> str:
+def series_outcome_of(cop: int, thief: int) -> str:
     """The side the totals favour, or a tie. No enum is invented here."""
     if cop == thief:
         return "tie"
@@ -75,7 +75,7 @@ def kit_result_document(
         raise LocalDefectError(
             "the peer settled on a different digest; this series agreed on nothing",
         )
-    cop, thief = _role_totals(rows)
+    cop, thief = role_totals(rows)
     ordered = sorted(rows, key=lambda row: int(row["sub_game_number"]))
     document: dict[str, Any] = {
         "game_id": game_id,
@@ -87,7 +87,7 @@ def kit_result_document(
         "cumulative": {
             "cop_total": cop,
             "thief_total": thief,
-            "series_outcome": _outcome(cop, thief),
+            "series_outcome": series_outcome_of(cop, thief),
         },
         "total_tokens": dict(total_tokens),
         "timestamp": timestamp,

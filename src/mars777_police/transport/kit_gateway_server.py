@@ -15,13 +15,16 @@ advertised to the opponent and never written into a declaration artifact: the
 opponent sees one stable group URL for the whole series.
 """
 
-from fastmcp import FastMCP
+from fastmcp import Context, FastMCP
 
 from ..app.protocol_errors import LocalDefectError, MalformedMessageError
+from .codec_final import decode_result_agreement
 from .kit_admin_server import build_gateway_admin as build_gateway_admin
+from .kit_control_envelope import KitResultAgreementMessage, parse_kit_control
 from .kit_envelopes import KIT_OK, KitJson
 from .kit_gateway import KitGroupGateway
 from .negotiate_arguments import Step0Handler, step0_arguments
+from .session_state import inbound
 from .wire_errors import outbound
 
 GATEWAY_TOOLS = ("negotiate", "receive_turn", "submit_audit", "receive_control")
@@ -30,8 +33,10 @@ GATEWAY_TOOLS = ("negotiate", "receive_turn", "submit_audit", "receive_control")
 ADMIN_TOOLS = (
     "sub_game_settled",
     "contribute_row",
+    "contribute_entry",
     "contribute_artifact",
     "official_artifact",
+    "agree_result",
     "series_settled",
     "series_rows",
 )
@@ -113,9 +118,28 @@ def build_gateway_tools(
             raise outbound(failure) from None
 
     @server.tool
-    async def receive_control(message: KitJson) -> dict[str, bool]:
-        """Route a status signal. It moves no cursor and settles nothing."""
+    async def receive_control(message: KitJson, session: Context) -> dict[str, bool] | str:
+        """Route a status signal, or answer the group's one result agreement.
+
+        The status form still routes to a backend and still answers `{"ok": True}`.
+        The result agreement is a **series-wide** fact no backend holds, so it is
+        answered here, from the group's single agreement authority, and returns
+        `result_sha256` as 64 lowercase hex. The sender must be the peer this
+        session authenticated: `require_peer` refuses before any state is read.
+        """
+        bound = await inbound(session)
         try:
+            control = parse_kit_control(message)
+            if isinstance(control, KitResultAgreementMessage):
+                if gateway.agreement is None:
+                    raise LocalDefectError(
+                        "this gateway owns no result agreement, so a counted result"
+                        " cannot be agreed here; the run is not a counted one",
+                    )
+                agreed = decode_result_agreement(control.payload)
+                sender = bound.require_peer()
+                digest = await gateway.agreement.accept(agreed, sender, gateway.deadline)
+                return digest.value
             return await gateway.receive_control(message)
         except BaseException as failure:
             raise outbound(failure) from None

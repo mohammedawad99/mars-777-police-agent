@@ -4,6 +4,7 @@ from r16_builders import config
 
 from mars777_police.__main__ import ROLE
 from mars777_police.app.commitment_codecs import CommitmentCodec
+from mars777_police.app.kit_backend_contribution import BackendContribution
 from mars777_police.app.kit_backend_settlement import BackendSettlement
 from mars777_police.app.kit_friendly import KitFriendlySession
 from mars777_police.app.kit_messages import KitRole
@@ -37,11 +38,20 @@ def backend(first: KitRole) -> KitRoleBackend:
         deadline=5.0,
         first_role=first,
         settlement=BackendSettlement(contribute=collect, series_rows=nothing),
+        contribution=BackendContribution(played_commit="c" * 40, send=collect_entry),
     )
 
 
 ROWS: list[dict[str, object]] = []
 """Every finished row the builder's backends contributed, in the order they did."""
+
+ENTRIES: list[tuple[int, str, str, int]] = []
+"""Every participant-owned entry the builder's backends contributed, in order."""
+
+
+async def collect_entry(sub_game: int, role: str, github_commit: str, tokens: int) -> None:
+    """Take one backend's own entry, so a test can see what it contributed."""
+    ENTRIES.append((sub_game, role, github_commit, tokens))
 
 
 async def collect(row: dict[str, object]) -> None:

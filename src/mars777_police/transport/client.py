@@ -33,7 +33,7 @@ from ..app.capture_values import TurnOutcome
 from ..app.peer_supervision import PeerDeadline
 from ..app.protocol_errors import MalformedMessageError
 from ..app.protocol_values import InvalidDigestError, Sha256Digest
-from .call_arguments import strict_arguments as envelope
+from .call_arguments import arguments_for
 from .call_arguments import wire_json as wire_json
 from .codec_turn import decode_outcome
 from .session_deadline import session_transport
@@ -101,7 +101,7 @@ class PeerClient:
 
     async def call(self, tool: str, kind: str, payload: BaseModel | dict[str, object]) -> Any:
         """Invoke *tool* with the frozen envelope and return its raw result."""
-        return await self.invoke(tool, envelope(kind, payload, self._profile))
+        return await self.invoke(tool, arguments_for(kind, payload, self._profile))
 
     async def invoke(self, tool: str, request: dict[str, object]) -> Any:
         """Send one already-built argument object, inside the held session."""

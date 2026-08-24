@@ -5,14 +5,10 @@ the sub-games whose scheduled role is `POLICE`, refuses any other, and never
 imports, borrows or emulates the Thief. Alternation happens one level up, in
 the group gateway that routes each sub-game to the backend that owns it.
 
-**Driven by the routed greeting, not by a clock.** A backend waits until the
-gateway hands it a greeting for one of its own sub-games; only then does it send
-its own greeting, play, disclose, and report that it owes nothing more -
-explicitly, because a peer that is thinking looks exactly like one that finished.
-
-**Fresh per sub-game, series-wide where the contract says so.** Board, scent,
-private truth and message history are rebuilt for every gNN; the identity, the
-opponent, the convention and the agreed terms are the series'.
+**Driven by the routed greeting, not by a clock.** A backend waits for a
+greeting for one of its own sub-games, then plays, discloses and reports that it
+owes nothing more - explicitly, because a peer that is thinking looks exactly
+like one that finished.
 """
 
 from collections.abc import Awaitable, Callable
@@ -21,6 +17,7 @@ from dataclasses import dataclass, field
 from .app.commitment_codecs import CommitmentCodec
 from .app.friendly_backend_evidence import BackendWitness
 from .app.kit_backend_artifacts import BackendArtifacts
+from .app.kit_backend_contribution import BackendContribution
 from .app.kit_backend_maker import half_turn_maker, sub_game_for
 from .app.kit_backend_settlement import BackendSettlement
 from .app.kit_friendly import KitFriendlySession, pairing_of
@@ -71,6 +68,8 @@ class KitRoleBackend:
     witnessed: BackendWitness = field(default_factory=BackendWitness)
     settlement: BackendSettlement = field(default_factory=BackendSettlement)
     """Where finished rows go, where the series comes back, and the agreed window."""
+
+    contribution: BackendContribution = field(default_factory=BackendContribution)
 
     artifacts: BackendArtifacts = field(default_factory=BackendArtifacts)
     """Where this sub-game's official config and log documents go, if any do."""
@@ -146,6 +145,7 @@ class KitRoleBackend:
         await self.settlement.contribute(
             row_of(pairing_of(self.friendly), number, self.kit_role, outcome)
         )
+        await self.contribution.publish(number, self.kit_role)
         await self.artifacts.record(
             pairing=pairing_of(self.friendly),
             sub_game=number,

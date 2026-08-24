@@ -29,6 +29,9 @@ from .codec_kit_turn import encode_kit_turn
 from .kit_envelopes import KIT_ARGUMENT_NAMES, KitJson
 from .transport_profiles import TransportEnvelopeProfile
 
+RESULT_AGREEMENT = "result_agreement"
+"""The one `receive_control` kind, identical on both wires."""
+
 KitOutbound = KitGreeting | KitTurn | KitAuditReveal | KitControl
 """Every message this build can put on the pinned kit wire."""
 
@@ -83,3 +86,22 @@ def kit_call(
     _require(profile, TransportEnvelopeProfile.KIT_EXTERNAL)
     tool, encode = _KIT_CALLS[type(message)]
     return tool, {KIT_ARGUMENT_NAMES[tool]: encode(message)}
+
+
+def arguments_for(
+    kind: str,
+    payload: BaseModel | KitJson,
+    profile: TransportEnvelopeProfile = TransportEnvelopeProfile.STRICT_PROJECT,
+) -> KitJson:
+    """The arguments *kind* is sent as on *profile*, for the one shared tool.
+
+    The result agreement is the only semantic kind both wires carry: the tool
+    and the kind are identical, and only the argument name differs, because the
+    pinned surface takes `message` where the internal one takes `request`. Every
+    other kind belongs to the internal wire alone and is built exactly as it
+    always was - the strict rendering does not move one byte.
+    """
+    if kind == RESULT_AGREEMENT and profile is TransportEnvelopeProfile.KIT_EXTERNAL:
+        body = wire_json(payload) if isinstance(payload, BaseModel) else payload
+        return {"message": {"kind": RESULT_AGREEMENT, "payload": body}}
+    return strict_arguments(kind, payload, profile)

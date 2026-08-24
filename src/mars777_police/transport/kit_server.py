@@ -29,16 +29,22 @@ from ..app.kit_session import KitSessionContext
 from .codec_kit_pregame import decode_kit_audit, decode_kit_control, decode_kit_greeting
 from .codec_kit_turn import decode_kit_turn
 from .handlers import PeerOperations
+from .kit_control_envelope import KitResultAgreementMessage, parse_kit_control
 from .kit_envelopes import (
     KIT_OK,
     KitAuditPayload,
-    KitControlMessage,
     KitJson,
     KitNegotiateMessage,
     KitTurnMessage,
     parse_kit,
 )
-from .kit_router import route_kit_audit, route_kit_control, route_kit_negotiate, route_kit_turn
+from .kit_router import (
+    route_kit_audit,
+    route_kit_control,
+    route_kit_negotiate,
+    route_kit_result_agreement,
+    route_kit_turn,
+)
 from .session_state import inbound
 from .wire_errors import outbound
 
@@ -80,10 +86,22 @@ def build_kit_tools(operations: PeerOperations, context: KitSessionContext, name
         return KIT_OK
 
     @server.tool
-    async def receive_control(message: KitJson) -> dict[str, bool]:
-        """A status signal. It touches no game state and settles nothing."""
+    async def receive_control(message: KitJson, session: Context) -> dict[str, bool] | str:
+        """The pinned status signal, and the one result agreement kind.
+
+        Two forms, told apart by the `kind` the pinned message already carries.
+        The kit's four status words keep their exact behaviour and their exact
+        `{"ok": True}` answer; `result_agreement` reaches the same runtime the
+        internal surface reaches and answers with `result_sha256` as 64
+        lowercase hex. A body that is neither is refused before any state is
+        touched, so an unknown control form settles nothing.
+        """
+        bound = await inbound(session)
         try:
-            route_kit_control(context, decode_kit_control(parse_kit(KitControlMessage, message)))
+            control = parse_kit_control(message)
+            if isinstance(control, KitResultAgreementMessage):
+                return route_kit_result_agreement(operations, control, bound).value
+            route_kit_control(context, decode_kit_control(control))
         except BaseException as failure:
             raise outbound(failure) from None
         return KIT_OK

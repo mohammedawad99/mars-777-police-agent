@@ -13,6 +13,7 @@ from r16_builders import config
 
 from mars777_police.__main__ import ROLE
 from mars777_police.app.commitment_codecs import CommitmentCodec
+from mars777_police.app.kit_backend_contribution import BackendContribution
 from mars777_police.app.kit_backend_settlement import BackendSettlement
 from mars777_police.app.kit_friendly import KitFriendlySession
 from mars777_police.app.kit_messages import (
@@ -82,6 +83,7 @@ def backend_pair() -> tuple[KitRoleBackend, list[object], KitFriendlySession]:
         deadline=5.0,
         first_role=first,
         settlement=BackendSettlement(contribute=contribute, series_rows=series_rows),
+        contribution=BackendContribution(played_commit="c" * 40, send=_entry),
     )
     return backend, sent, friendly
 
@@ -126,3 +128,12 @@ def _peer_reveal() -> KitAuditReveal:
         (KitRecord(PeerPayload(payload), nonce, Sha256Digest(kit_commitment(payload, nonce))),),
         KitResultClaim.SURVIVAL,
     )
+
+
+ENTRIES: list[tuple[int, str, str, int]] = []
+"""Participant-owned entries these doubles' backends contributed, in order."""
+
+
+async def _entry(sub_game: int, role: str, github_commit: str, tokens: int) -> None:
+    """Take one backend's own entry; these doubles record rather than route."""
+    ENTRIES.append((sub_game, role, github_commit, tokens))

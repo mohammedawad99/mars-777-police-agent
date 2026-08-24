@@ -25,9 +25,12 @@ from ..app.kit_friendly import KitFriendlySession
 from ..app.kit_greeting import KitGreeting, KitPairing
 from ..app.kit_messages import KitAuditReveal, KitControl, KitTurn
 from ..app.kit_session import KitSessionContext
+from ..app.protocol_values import Sha256Digest
+from .codec_final import decode_result_agreement
 from .codec_kit_pregame import encode_kit_audit
 from .handlers import PeerOperations
 from .inbound_session import InboundSession
+from .kit_control_envelope import KitResultAgreementMessage
 
 
 def route_kit_negotiate(context: KitSessionContext, greeting: KitGreeting) -> KitPairing:
@@ -72,6 +75,20 @@ def route_kit_audit(
         friendly.deliver_audit(reveal)
         return
     operations.on_audit_disclosure(encode_kit_audit(reveal), session)
+
+
+def route_kit_result_agreement(
+    operations: PeerOperations,
+    message: KitResultAgreementMessage,
+    session: InboundSession,
+) -> Sha256Digest:
+    """Answer the one control kind with the digest the existing runtime computes.
+
+    Identical to `route_receive_control` on the internal surface, and
+    deliberately so: the KIT wire changes how the request arrives, never what it
+    means or who decides it.
+    """
+    return operations.on_result_agreement(decode_result_agreement(message.payload), session)
 
 
 def route_kit_control(context: KitSessionContext, control: KitControl) -> None:

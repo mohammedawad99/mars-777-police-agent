@@ -21,6 +21,7 @@ from .app.friendly_backend_evidence import backend_rows
 from .app.friendly_evidence import DevelopmentEvidenceStore
 from .app.friendly_merge import contribution_document, friendly_contribution_name
 from .app.kit_backend_artifacts import BackendArtifacts
+from .app.kit_backend_contribution import BackendContribution
 from .app.kit_backend_settlement import BackendSettlement
 from .app.kit_friendly import KitFriendlySession
 from .app.kit_messages import KitRole
@@ -40,7 +41,7 @@ from .infra.clock import SystemClock
 from .infra.settings import load_runtime_settings
 from .kit_backend import KitRoleBackend
 from .kit_backend_boot import KitBackendBoot, backend_client
-from .launch_input import LaunchInputError, read_launch_document
+from .launch_input import LaunchDocument, LaunchInputError, read_launch_document
 from .operator_requests import RoleBackendRequest
 from .protocol.secure_nonce import SecretsNonceSource
 from .transport.peer_transport import FastMcpPeerTransport
@@ -95,9 +96,25 @@ def compose_role_backend(request: RoleBackendRequest) -> KitBackendBoot:
         codec=CommitmentCodec.KIT_CORE_COMMITMENT_V1,
         deadline=BACKEND_DEADLINE,
         first_role=series_first_role(GROUP_CODE, request.first_role),
+        contribution=BackendContribution(played_commit=_played_commit(document)),
         artifacts=_artifacts(document.config, settings.key_id),
     )
     return KitBackendBoot(backend, context, client, request.gateway_admin, request.port)
+
+
+def _played_commit(document: LaunchDocument) -> str:
+    """The commit this repository declared for the role it plays, from the launch.
+
+    Read from our own subtree rather than chosen here: the gateway checks every
+    contributed entry against the merged declaration, so a backend that invented
+    one would be refused at the moment it contributed.
+    """
+    ours = (
+        document.identity.declaration.teams.group_a or document.identity.declaration.teams.group_b
+    )
+    if ours is None:  # pragma: no cover - a launch document always carries our subtree
+        raise LaunchInputError("the launch document carries no subtree for this group")
+    return str(ours.github_commits.for_role(ROLE.value).value)
 
 
 async def _unwired(sub_game: int) -> None:  # pragma: no cover - replaced before play

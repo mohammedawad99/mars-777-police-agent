@@ -78,9 +78,25 @@ class KitBackendBoot:
         """
         self.backend.settled = admin.settled
         self.backend.settlement.contribute = admin.contribute
+        self.backend.contribution.send = admin.contribute_entry
         self.backend.settlement.series_rows = self._series_rows(admin)
         self.backend.artifacts.contribute = admin.contribute_artifact
-        self.backend.settlement.report_series = admin.series_settled
+        self.backend.settlement.report_series = self._settle_then_agree(admin)
+
+    @staticmethod
+    def _settle_then_agree(admin: KitAdminClient) -> "Callable[[str], Awaitable[None]]":
+        """Report the settlement, then ask the group to agree its one result.
+
+        The backend that owned the final sub-game is the process that knows the
+        settlement completed, so it is the one that asks - but the agreement
+        itself belongs to the gateway, because no backend holds a whole series.
+        """
+
+        async def settled(consensus_sha256: str) -> None:
+            await admin.series_settled(consensus_sha256)
+            await admin.agree_result()
+
+        return settled
 
     @staticmethod
     def _series_rows(

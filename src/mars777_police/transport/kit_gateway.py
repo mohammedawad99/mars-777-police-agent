@@ -24,8 +24,10 @@ from dataclasses import dataclass, field
 
 from ..app.counted_mode import CountedRun, rehearsal
 from ..app.declaration_values import Declaration
+from ..app.kit_contribution_entries import ContributionCollector, accept
 from ..app.kit_handoff import SeriesHandoff
 from ..app.kit_messages import KitRole
+from ..app.kit_result_agreement import GroupResultAgreement
 from ..app.kit_series_rows import SeriesRowCollector
 from ..app.official_artifacts import OfficialArtifactCollector
 from ..app.protocol_errors import StaleMessageError
@@ -67,12 +69,16 @@ class KitGroupGateway:
     Held here for the third time for the same reason: the group's series-wide
     facts have no other place both backends can reach."""
 
-    collected: SeriesRowCollector = field(default_factory=SeriesRowCollector)
-    """The group's finished rows, contributed by both backends while both are alive.
+    group_id: str = field(default="")
+    """Which participant this group is. Supplied by composition, never imported."""
 
-    Kept here for the same reason the routing cursor is: this is the only part of
-    the group both backends can reach. It stores rows and judges none of them.
-    """
+    agreement: "GroupResultAgreement | None" = field(default=None)
+    """The group's one result-agreement authority, or `None` for a rehearsal."""
+
+    contributed: ContributionCollector = field(default_factory=ContributionCollector)
+
+    collected: SeriesRowCollector = field(default_factory=SeriesRowCollector)
+    """The group's finished rows, from both backends. It judges none of them."""
 
     async def negotiate(self, message: KitJson) -> dict[str, bool]:
         """Assign a sub-game to the backend that will play it, then acknowledge.
@@ -114,6 +120,13 @@ class KitGroupGateway:
         """Take one finished row from the backend that played it."""
         self.collected.record(row)
         write_series(self)
+
+    def contribute_entry(self, sub_game: int, role: KitRole, commit: str, tokens: int) -> None:
+        """Take one backend's participant-owned entry, admitted before it is stored."""
+        first = self.handoff.first_role
+        accept(
+            self.contributed, self.declaration, self.group_id, first, role, sub_game, commit, tokens
+        )
 
     def contribute_artifact(self, kind: str, sub_game: int, document: KitJson) -> None:
         """Take one official per-sub-game document from the backend that built it.

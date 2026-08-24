@@ -778,3 +778,77 @@ assembled by a rule independent of who assembles it, canonicalization is Layer 1
 so both peers produce identical canonical bytes and therefore an identical
 `result_sha256`. **`RESULT-APPROVAL-CORE-JOINT-DERIVABILITY` remains
 RESOLVED-PROJECT**, now without the timestamp hole.
+
+---
+
+## Stage 9C — the alternating counted path, and what a token count means
+
+### 9C-1 — two result writers, one contract
+
+A **fixed-role** series is played by one process that sees all six sub-games, so
+`SeriesDriver` builds the `RESULT_APPROVAL_CORE` from a `ResultExchange` and
+`series_runtime.persist_result` renders it through `artifact_documents.result_document`.
+
+An **alternating** series (`REFERENCE_ODD_EVEN_ALTERNATION`, the agreed counted
+convention) is not. This group plays three sub-games in each of two backend
+processes, and only the gateway ever holds the whole series — which is why
+`SeriesResultOwner` exists at all. Its core is therefore assembled by
+`counted_result_core.approval_core` from the merged declaration and the six
+settled rows, and digested by the **same** `protocol.result_core.ResultDigester`.
+
+**No second hashing scheme exists.** Both paths compute
+`result_sha256 = SHA256(canonical_bytes(RESULT_APPROVAL_CORE))`.
+
+### 9C-2 — `result_sha256` is not `series_consensus_sha256`
+
+They are different facts over different scopes and they are never aliased:
+
+| member | covers | agreed with the peer? |
+|---|---|---|
+| `series_consensus_sha256` | the settlement scope — `{game_id, aggregate, sub_games}`, five aggregate keys and five row keys, spaced canonical form | **yes**, bidirectionally |
+| `result_sha256` | the `RESULT_APPROVAL_CORE`, compact canonical form | computed locally; unkeyed and non-self-referential |
+
+`mutual_agreement: true` is rendered **only** because `SeriesResultOwner.result`
+refuses a series whose settlement never agreed. It records that the settlement
+agreed — not that the peer independently rebuilt this approval core.
+
+### 9C-3 — token counts are participant-owned and are never manufactured
+
+`sub_games[].tokens` and `total_tokens` carry **both participants' own reported
+counts**, and each participant contributes only its own six values inside its own
+`ResultContribution`. `total_tokens.<slot>` is **derived** as the sum of that
+participant's six contributed values, so one fact has exactly one representation.
+
+**There is no substitution for an absent contribution.** A stage of this project
+briefly mapped "the peer's wire carries no token field" to "the peer reported
+zero". That was wrong: it manufactured a participant-owned value the participant
+never authored, and it silently hid a real protocol gap. It has been removed.
+
+The rule, restated:
+
+| source | admissible because |
+|---|---|
+| our own count | the local `TokenAccountingPort` answered — production impl `SeriesTokenLedger`. A zero from it is legitimate *because the authority answered zero*, not because a field was missing. |
+| the peer's count | it arrived inside the peer's own authenticated `ResultContribution`. Nothing else is accepted. |
+| absent | the result agreement is **incomplete**. No `RESULT_APPROVAL_CORE` is built, no `result_sha256` exists, `mutual_agreement` never becomes true, and the normal reporting gate refuses. |
+
+Appendix E rule 35 scores an unagreed series 0 for both groups; recording that
+honestly is the correct outcome, and is strictly better than reporting a result
+built on values nobody contributed.
+
+### 9C-4 — the alternating carriage gap, stated plainly
+
+`ResultAgreement` already travels on a **public** tool: `TOOL_KINDS` frozen
+matrix pairs `receive_control` with the single kind `result_agreement`, the
+client calls it and the server returns `result_sha256` as 64 lowercase hex.
+
+That carriage exists on the **internal** `STRICT_PROJECT` surface only. On
+`TransportEnvelopeProfile.KIT_EXTERNAL`, `build_kit_tools` registers
+`receive_control(message) -> {"ok": true}` — a status signal that *"touches no
+game state and settles nothing"*, carrying no contribution and returning no
+digest.
+
+So against a peer on the pinned KIT wire there is today **no carriage for the
+result agreement**, and an alternating counted series against such a peer cannot
+become reportable. This is the item `KIT_PAIRING_HANDOFF.md` already lists as
+needing to be agreed with a partner before counted play.

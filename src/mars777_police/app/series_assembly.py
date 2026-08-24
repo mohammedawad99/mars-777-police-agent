@@ -17,7 +17,7 @@ writer would otherwise be handed a fifteenth file to place. So the assembled set
 counts it rather than producing it again.
 """
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -26,6 +26,13 @@ from .declaration_values import Declaration
 from .kit_schedule import SUB_GAMES
 from .official_artifacts import OfficialArtifactCollector
 from .series_result_owner import SeriesResultOwner
+
+ReportingFields = Callable[[Declaration, Sequence[Mapping[str, Any]], str], Mapping[str, object]]
+"""Renders the members the normal reporting gate reads, or is absent.
+
+A port rather than a computation, because the canonical result digest lives in
+`protocol` and this module is `app`: the composition root is the only layer that
+may reach both, so it supplies this and `app` stays where the rules are."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,24 +63,36 @@ def assemble(
     declaration_document: Any,
     total_tokens: Mapping[str, int],
     timestamp: str,
+    reporting_fields: ReportingFields | None = None,
 ) -> tuple[str, ...] | None:
     """Write the whole set once every part is present, or answer `None`.
 
     `None` is not a failure. A group mid-series has parts outstanding by
     definition, and treating that as an error would make every sub-game boundary
     look like a fault.
+
+    *reporting_fields* renders what the normal reporting gate reads -
+    `mutual_agreement`, `result_sha256` and `reported_by`. It is asked **after**
+    `SeriesResultOwner.result`, which refuses a series whose settlement never
+    agreed, so those members can only ever describe an agreement that actually
+    happened. A caller that supplies none writes the result without them, and
+    that result is correctly ineligible to report.
     """
     if not parts.ready:
         return None
     declared = parts.declaration
     if declared is None:  # pragma: no cover - `ready` already established it
         return None
-    result = parts.settlement.result(
-        declaration=declared,
-        rows=parts.rows,
-        total_tokens=total_tokens,
-        timestamp=timestamp,
+    result = dict(
+        parts.settlement.result(
+            declaration=declared,
+            rows=parts.rows,
+            total_tokens=total_tokens,
+            timestamp=timestamp,
+        )
     )
+    if reporting_fields is not None:
+        result.update(reporting_fields(declared, parts.rows, timestamp))
     return writer.write(
         declaration=declaration_document(declared),
         collected=parts.collected,
