@@ -20,6 +20,7 @@ SETTLED_TOOL = "sub_game_settled"
 CONTRIBUTE_TOOL = "contribute_row"
 ROWS_TOOL = "series_rows"
 ARTIFACT_TOOL = "contribute_artifact"
+SETTLED_SERIES_TOOL = "series_settled"
 """The three private operations. None of them is a KIT message or reaches a peer."""
 
 
@@ -66,6 +67,10 @@ class KitAdminClient:
         await self._open().call_tool(
             ARTIFACT_TOOL, {"kind": kind, "sub_game": sub_game, "document": document}
         )
+
+    async def series_settled(self, consensus_sha256: str) -> None:
+        """Report the whole-series digest, so the group can render its result."""
+        await self._open().call_tool(SETTLED_SERIES_TOOL, {"consensus_sha256": consensus_sha256})
 
     async def series_rows(self) -> list[dict[str, Any]]:
         """The group's six finished rows, for whichever backend settles the series."""

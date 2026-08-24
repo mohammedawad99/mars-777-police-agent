@@ -18,6 +18,7 @@ opponent sees one stable group URL for the whole series.
 from fastmcp import FastMCP
 
 from ..app.protocol_errors import LocalDefectError, MalformedMessageError
+from .kit_admin_server import build_gateway_admin as build_gateway_admin
 from .kit_envelopes import KIT_OK, KitJson
 from .kit_gateway import KitGroupGateway
 from .negotiate_arguments import Step0Handler, step0_arguments
@@ -31,6 +32,7 @@ ADMIN_TOOLS = (
     "contribute_row",
     "contribute_artifact",
     "official_artifact",
+    "series_settled",
     "series_rows",
 )
 """The private surface, loopback only, and never part of the KIT contract.
@@ -115,56 +117,6 @@ def build_gateway_tools(
         """Route a status signal. It moves no cursor and settles nothing."""
         try:
             return await gateway.receive_control(message)
-        except BaseException as failure:
-            raise outbound(failure) from None
-
-    return server
-
-
-def build_gateway_admin(gateway: KitGroupGateway, name: str = "mars777-group-admin") -> FastMCP:
-    """The loopback-only surface a role backend uses to report its settlement."""
-    server: FastMCP = FastMCP(name, strict_input_validation=True)
-
-    @server.tool
-    async def sub_game_settled(sub_game: int) -> dict[str, bool]:
-        """The backend that played *sub_game* owes nothing more for it."""
-        try:
-            gateway.settle(sub_game)
-        except BaseException as failure:
-            raise outbound(failure) from None
-        return KIT_OK
-
-    @server.tool
-    async def contribute_row(row: KitJson) -> dict[str, bool]:
-        """Hand the group one finished row, so the series can be settled as a whole."""
-        try:
-            gateway.contribute(row)
-        except BaseException as failure:
-            raise outbound(failure) from None
-        return KIT_OK
-
-    @server.tool
-    async def contribute_artifact(kind: str, sub_game: int, document: KitJson) -> dict[str, bool]:
-        """Hand the group one official per-sub-game document it must write out."""
-        try:
-            gateway.contribute_artifact(kind, sub_game, document)
-        except BaseException as failure:
-            raise outbound(failure) from None
-        return KIT_OK
-
-    @server.tool
-    async def official_artifact(kind: str, sub_game: int) -> KitJson | None:
-        """One collected document, or `None` where none has been contributed."""
-        try:
-            return gateway.official_artifact(kind, sub_game)
-        except BaseException as failure:
-            raise outbound(failure) from None
-
-    @server.tool
-    async def series_rows() -> list[KitJson]:
-        """The group's six finished rows, for whichever backend settles the series."""
-        try:
-            return list(gateway.series_rows())
         except BaseException as failure:
             raise outbound(failure) from None
 

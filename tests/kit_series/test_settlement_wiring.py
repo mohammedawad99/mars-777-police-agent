@@ -13,7 +13,6 @@ from fastmcp import Client
 
 from mars777_police.app.kit_backend_settlement import (
     BackendSettlement,
-    row_of,
     unavailable,
     uncollected,
 )
@@ -21,6 +20,7 @@ from mars777_police.app.kit_greeting import KitPairing
 from mars777_police.app.kit_handoff import SeriesHandoff
 from mars777_police.app.kit_messages import KitAuditReveal, KitResultClaim, KitRole
 from mars777_police.app.kit_schedule import SUB_GAMES
+from mars777_police.app.kit_settled_row import row_of
 from mars777_police.app.protocol_errors import LocalDefectError, StaleMessageError
 from mars777_police.app.series_consensus import consensus_scope, consensus_sha256
 from mars777_police.domain.terminal import Outcome
@@ -30,6 +30,14 @@ from mars777_police.transport.kit_gateway_server import build_gateway_admin
 
 OURS, THEIRS = "MaRs-777", "sparring-s82kma9e"
 GAME_ID = "MaRs-777-vs-sparring-s82kma9e"
+
+
+async def _reported(consensus_sha256: str) -> None:
+    """Where an agreed whole-series digest goes: the group, never this backend."""
+    SETTLED.append(consensus_sha256)
+
+
+SETTLED: list[str] = []
 
 
 def pairing() -> KitPairing:
@@ -157,7 +165,9 @@ def test_a_complete_series_is_settled_through_the_backend_wiring() -> None:
         sent.append(envelope)
         return True
 
-    settlement = BackendSettlement(series_rows=series, window=1.0, retry=0.05)
+    settlement = BackendSettlement(
+        series_rows=series, window=1.0, retry=0.05, report_series=_reported
+    )
     theirs = KitAuditReveal(KitRole.POLICE, (), KitResultClaim.SERIES_CONSENSUS, digest)
     agreed = asyncio.run(settlement.settle(pairing(), KitRole.THIEF, send, lambda: theirs))
     assert agreed == digest

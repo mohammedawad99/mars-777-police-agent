@@ -11,12 +11,10 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, Final
 
-from ..domain.terminal import Outcome
 from ..infra.game_contract import consensus_retry, consensus_window
 from .kit_greeting import KitPairing
 from .kit_messages import KitAuditReveal, KitRole
 from .kit_schedule import SUB_GAMES
-from .kit_settled_row import settled_row
 from .kit_settlement import SettlementExchange
 from .protocol_errors import LocalDefectError
 from .series_consensus import consensus_scope, consensus_sha256
@@ -30,22 +28,14 @@ async def uncollected(row: dict[str, Any]) -> None:  # pragma: no cover - replac
     raise LocalDefectError("this backend was never given a group to contribute its rows to")
 
 
+async def unreported(consensus_sha256: str) -> None:  # pragma: no cover - replaced before play
+    """The default sink: a backend wired to no group cannot report a settlement."""
+    raise LocalDefectError("this backend was never given a group to report its settlement to")
+
+
 async def unavailable() -> tuple[dict[str, Any], ...]:  # pragma: no cover - replaced before play
     """The default reader: a backend wired to no group cannot see the series."""
     raise LocalDefectError("this backend was never given a way to read the group's series")
-
-
-def row_of(
-    pairing: "KitPairing", sub_game: int, our_role: "KitRole", outcome: "Outcome"
-) -> dict[str, Any]:
-    """One finished sub-game as a settlement reads it, from the pairing's own names."""
-    return settled_row(
-        sub_game=sub_game,
-        ours=pairing.our_group,
-        theirs=pairing.peer_group,
-        our_role=our_role,
-        outcome=outcome,
-    )
 
 
 @dataclass(slots=True)
@@ -88,6 +78,13 @@ class BackendSettlement:
     retry: float = field(default_factory=consensus_retry)
     agreed: str | None = None
     """The digest the series settled on, or `None` when it settled on nothing."""
+
+    report_series: "Callable[[str], Awaitable[None]]" = field(default=unreported)
+    """Where the agreed whole-series digest goes, so the group can render a result.
+
+    Reported rather than rendered here: the result needs the merged declaration,
+    which only the gateway holds. A backend rendering its own copy would give one
+    file two authors."""
 
     async def settle(
         self,
@@ -138,6 +135,8 @@ class BackendSettlement:
         self.agreed = await settler.settle(
             pairing.game_id, pairing.our_group, pairing.peer_group, our_role.value
         )
+        if self.agreed is not None:
+            await self.report_series(self.agreed)
         await self._linger(received, deadline)
         return self.agreed
 
@@ -152,6 +151,8 @@ class BackendSettlement:
 
         Receive-only: with no assembled series there is no digest of ours to
         offer, but the peer's audit and settlement still have to land somewhere.
+        Ends on the first arrival, because that arrival is what it was waiting
+        for; the post-exchange wait ends on silence instead.
         """
         while self._remaining(deadline) > 0 and received() is None:
             await asyncio.sleep(min(self.retry, self._remaining(deadline)))
@@ -162,7 +163,7 @@ class BackendSettlement:
         """Stay reachable after the exchange until the peer has gone quiet.
 
         Bounded twice, and the second bound is why a settled series still ends
-        promptly: this stops as soon as the peer has sent nothing for
+        promptly: it stops as soon as the peer has sent nothing for
         `QUIET_RETRIES` of its own resend cadence, rather than always paying out
         the remainder of the window.
         """

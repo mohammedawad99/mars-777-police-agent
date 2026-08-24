@@ -15,10 +15,11 @@ agreed, and no longer than the peer keeps sending.
 import asyncio
 from typing import Any
 
-from mars777_police.app.kit_backend_settlement import QUIET_RETRIES, BackendSettlement, row_of
+from mars777_police.app.kit_backend_settlement import QUIET_RETRIES, BackendSettlement
 from mars777_police.app.kit_greeting import KitPairing
 from mars777_police.app.kit_messages import KitAuditReveal, KitResultClaim, KitRole
 from mars777_police.app.kit_schedule import SUB_GAMES
+from mars777_police.app.kit_settled_row import row_of
 from mars777_police.app.series_consensus import consensus_scope, consensus_sha256
 from mars777_police.domain.terminal import Outcome
 
@@ -55,11 +56,19 @@ def settlement(window: float) -> BackendSettlement:
     async def series() -> tuple[dict[str, Any], ...]:
         return tuple(rows())
 
-    return BackendSettlement(series_rows=series, window=window, retry=RETRY)
+    return BackendSettlement(series_rows=series, window=window, retry=RETRY, report_series=report)
 
 
 async def ignore(envelope: dict[str, Any]) -> bool:
     return True
+
+
+REPORTED: list[str] = []
+
+
+async def report(consensus_sha256: str) -> None:
+    """Stand in for the gateway, which is where an agreed digest actually goes."""
+    REPORTED.append(consensus_sha256)
 
 
 def test_the_settled_side_keeps_listening_after_the_exchange_succeeds() -> None:
@@ -114,3 +123,27 @@ def test_the_digest_is_what_the_exchange_agreed_not_what_arrived_later() -> None
     live = settlement(0.2)
     asyncio.run(live.settle(pairing(), KitRole.THIEF, ignore, theirs))
     assert live.agreed == digest()
+
+
+def test_an_agreed_digest_is_reported_to_the_group() -> None:
+    """The result needs the merged declaration, which no backend holds.
+
+    So the digest travels rather than the result: the g06 owner reports what it
+    agreed, and the gateway - which received Step-0 - renders the one file.
+    """
+    REPORTED.clear()
+    live = settlement(0.2)
+    asyncio.run(live.settle(pairing(), KitRole.THIEF, ignore, theirs))
+    assert [digest()] == REPORTED
+
+
+def test_a_series_that_agreed_nothing_reports_nothing() -> None:
+    """Reporting an unmatched settlement would license a result rule 35 forbids."""
+    REPORTED.clear()
+
+    async def refused(envelope: dict[str, Any]) -> bool:
+        return False
+
+    live = settlement(0.15)
+    assert asyncio.run(live.settle(pairing(), KitRole.THIEF, refused, theirs)) is None
+    assert REPORTED == []

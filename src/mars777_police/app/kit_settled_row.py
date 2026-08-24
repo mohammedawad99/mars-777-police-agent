@@ -20,6 +20,7 @@ from typing import Any
 
 from ..domain.scoring import score_for
 from ..domain.terminal import Outcome
+from .kit_greeting import KitPairing
 from .kit_messages import KitRole
 
 
@@ -42,3 +43,16 @@ def settled_row(
             theirs: thief if we_were_police else police,
         },
     }
+
+
+def row_of(
+    pairing: "KitPairing", sub_game: int, our_role: "KitRole", outcome: "Outcome"
+) -> dict[str, Any]:
+    """One finished sub-game as a settlement reads it, from the pairing's own names."""
+    return settled_row(
+        sub_game=sub_game,
+        ours=pairing.our_group,
+        theirs=pairing.peer_group,
+        our_role=our_role,
+        outcome=outcome,
+    )

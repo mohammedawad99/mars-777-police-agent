@@ -27,6 +27,7 @@ from ..app.kit_messages import KitRole
 from ..app.kit_series_rows import SeriesRowCollector
 from ..app.official_artifacts import OfficialArtifactCollector
 from ..app.protocol_errors import StaleMessageError
+from ..app.series_result_owner import SeriesResultOwner
 from .kit_envelopes import KIT_ARGUMENT_NAMES, KIT_OK, KitJson, KitNegotiateMessage, parse_kit
 
 Forward = Callable[[str, KitJson], Awaitable[None]]
@@ -46,6 +47,12 @@ class KitGroupGateway:
     Kept beside the rows and for the same reason: this is the only part of the
     group both backends can reach. It stores documents and judges none of them.
     """
+
+    settlement: SeriesResultOwner = field(default_factory=SeriesResultOwner)
+    """The consensus digest the g06 owner agreed, and the result it licenses.
+
+    Held here for the third time for the same reason: the group's series-wide
+    facts have no other place both backends can reach."""
 
     collected: SeriesRowCollector = field(default_factory=SeriesRowCollector)
     """The group's finished rows, contributed by both backends while both are alive.
@@ -102,6 +109,10 @@ class KitGroupGateway:
         so the halves have to meet where both backends can reach.
         """
         self.artifacts.record(kind, sub_game, document)
+
+    def series_settled(self, consensus_sha256: str) -> None:
+        """Take the digest the backend that owns the final sub-game agreed."""
+        self.settlement.settle(consensus_sha256)
 
     def official_artifact(self, kind: str, sub_game: int) -> KitJson | None:
         """One collected document, for whichever process writes the series out."""

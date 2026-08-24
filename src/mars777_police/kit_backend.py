@@ -22,13 +22,14 @@ from .app.commitment_codecs import CommitmentCodec
 from .app.friendly_backend_evidence import BackendWitness
 from .app.kit_backend_artifacts import BackendArtifacts
 from .app.kit_backend_maker import half_turn_maker, sub_game_for
-from .app.kit_backend_settlement import BackendSettlement, row_of
+from .app.kit_backend_settlement import BackendSettlement
 from .app.kit_friendly import KitFriendlySession, pairing_of
 from .app.kit_messages import KitRole
 from .app.kit_peer_audit import peer_chain_verified
 from .app.kit_records import KitRecordChain
 from .app.kit_schedule import owned_by, require_ours
 from .app.kit_session import KitSessionContext
+from .app.kit_settled_row import row_of
 from .app.kit_settlement import plays_final_sub_game
 from .app.nonce_source import NonceSourcePort
 from .app.ports import TimestampPort
@@ -117,8 +118,7 @@ class KitRoleBackend:
         inbox = self.friendly.open_sub_game()
         await self.friendly.await_greeting(self.deadline)
         await self.transport.send_kit(self.context.our_greeting(self.nonces.fresh().value, number))
-        chain = KitRecordChain(self.codec, self.nonces)
-        self.chains[number] = chain
+        chain = self.chains[number] = KitRecordChain(self.codec, self.nonces)
         game = sub_game_for(
             maker=half_turn_maker(
                 role=self.kit_role,

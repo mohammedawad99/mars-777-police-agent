@@ -15,8 +15,8 @@ import pytest
 from kit_backend_builders import backend
 from kit_backend_doubles import _pairing
 
-from mars777_police.app.kit_backend_settlement import row_of
 from mars777_police.app.kit_messages import KitAuditReveal, KitResultClaim, KitRole
+from mars777_police.app.kit_settled_row import row_of
 from mars777_police.app.series_consensus import consensus_scope, consensus_sha256
 from mars777_police.domain.terminal import Outcome
 
@@ -57,6 +57,7 @@ def test_only_the_backend_that_owns_the_last_sub_game_settles(first: KitRole) ->
         async def send_settlement(self, envelope: dict[str, object]) -> bool:
             return await send(envelope)
 
+    held.settlement.report_series = _reported
     held.transport = Transport()  # type: ignore[assignment]
     held.settlement.series_rows = series
     held.friendly.deliver_audit(
@@ -85,3 +86,11 @@ def test_only_the_backend_that_owns_the_last_sub_game_settles(first: KitRole) ->
     else:
         assert held.settlement.agreed is None
         assert not sent
+
+
+REPORTED: list[str] = []
+
+
+async def _reported(consensus_sha256: str) -> None:
+    """Where an agreed whole-series digest goes: the group, never this backend."""
+    REPORTED.append(consensus_sha256)
