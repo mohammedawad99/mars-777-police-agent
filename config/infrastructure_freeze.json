@@ -146,6 +146,7 @@
   "src/mars777_police/app/semantic_review.py": "6fafc48ae91f284232cc278d42e2bbbabd62e196c0d76dc254725a3e447f34c8",
   "src/mars777_police/app/semantic_values.py": "3bc3870f8a5e1e9c112a1f9831342e5dbd9a02afa1d30327d28577cda7d10fe3",
   "src/mars777_police/app/series_agreements.py": "e45d735cf32253892a59d652a85818d68e1ff90bf4d35b1001bbee5e1c6fc1e6",
+  "src/mars777_police/app/series_assembly.py": "3725669af830d28ae87d9d461b3d90224d53191554674f0ff99072e8ef8f88f6",
   "src/mars777_police/app/series_audit_gate.py": "2b1b3471d8e069e9ff0f2e75666b054adaaf1ebbbe4685695230e031d97194bf",
   "src/mars777_police/app/series_consensus.py": "eae36c0146d667aba65cb3982be7f4bf892a87b2cc129c99a14e92253798b946",
   "src/mars777_police/app/series_declaration.py": "e6d99da5483dba750099bc87c54b3ffe74976abc430b716e35656a650fda210a",
