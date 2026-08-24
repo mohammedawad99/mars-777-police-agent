@@ -22,13 +22,17 @@ broadcast to both backends.
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
+from ..app.counted_mode import CountedRun, rehearsal
+from ..app.declaration_values import Declaration
 from ..app.kit_handoff import SeriesHandoff
 from ..app.kit_messages import KitRole
 from ..app.kit_series_rows import SeriesRowCollector
 from ..app.official_artifacts import OfficialArtifactCollector
 from ..app.protocol_errors import StaleMessageError
+from ..app.series_assembly import SeriesParts
 from ..app.series_result_owner import SeriesResultOwner
 from .kit_envelopes import KIT_ARGUMENT_NAMES, KIT_OK, KitJson, KitNegotiateMessage, parse_kit
+from .kit_series_writeout import write_series
 
 Forward = Callable[[str, KitJson], Awaitable[None]]
 """Send one already-built KIT call to one backend, over a real transport."""
@@ -47,6 +51,15 @@ class KitGroupGateway:
     Kept beside the rows and for the same reason: this is the only part of the
     group both backends can reach. It stores documents and judges none of them.
     """
+
+    counted: CountedRun = field(default_factory=rehearsal)
+    """What this run is worth. Only a counted run writes the official set."""
+
+    declaration: Declaration | None = field(default=None)
+    """The merged Step-0 declaration, once one has arrived. Series-wide, like the result."""
+
+    write: "Callable[[SeriesParts], tuple[str, ...] | None] | None" = field(default=None)
+    """How the group writes its fourteen files, or `None` when it does not write."""
 
     settlement: SeriesResultOwner = field(default_factory=SeriesResultOwner)
     """The consensus digest the g06 owner agreed, and the result it licenses.
@@ -100,6 +113,7 @@ class KitGroupGateway:
     def contribute(self, row: KitJson) -> None:
         """Take one finished row from the backend that played it."""
         self.collected.record(row)
+        write_series(self)
 
     def contribute_artifact(self, kind: str, sub_game: int, document: KitJson) -> None:
         """Take one official per-sub-game document from the backend that built it.
@@ -109,10 +123,12 @@ class KitGroupGateway:
         so the halves have to meet where both backends can reach.
         """
         self.artifacts.record(kind, sub_game, document)
+        write_series(self)
 
     def series_settled(self, consensus_sha256: str) -> None:
-        """Take the digest the backend that owns the final sub-game agreed."""
+        """Take the digest the g06 owner agreed, then try to write the series."""
         self.settlement.settle(consensus_sha256)
+        write_series(self)
 
     def official_artifact(self, kind: str, sub_game: int) -> KitJson | None:
         """One collected document, for whichever process writes the series out."""

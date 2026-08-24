@@ -26,6 +26,7 @@ from .app.public_network_workflow import PublicNetworkService
 from .app.series_declaration import SeriesDeclarationWriter
 from .app.step0_runtime import Step0Runtime
 from .artifact_documents import declaration_document
+from .compose_series_writer import series_writer
 from .composition import compose_agent
 from .composition_inputs import keyed_authenticator
 from .first_role_source import series_first_role
@@ -82,6 +83,8 @@ def compose_public_gateway(request: PublicGatewayRequest) -> KitPublicLauncher:
         handoff=SeriesHandoff(series_first_role(GROUP_CODE, request.first_role)),
         routes=routes.forwarders(),
         deadline=ROUTE_DEADLINE,
+        counted=counted_run() if request.counted else rehearsal_run(),
+        write=series_writer(settings, request),
     )
     gate = Gatekeeper(load_rate_limits())
     network = PublicNetworkService(
@@ -98,7 +101,9 @@ def compose_public_gateway(request: PublicGatewayRequest) -> KitPublicLauncher:
         backend_endpoints=tuple(endpoints.values()),
         evidence_root=str(request.evidence_root),
         routes=routes,
-        step0=None if request.launch is None else _step0_receiver(settings, request.launch),
+        step0=(
+            None if request.launch is None else _step0_receiver(settings, request.launch, gateway)
+        ),
         declared_endpoint=None if request.launch is None else _declared_endpoint(request.launch),
         counted=counted_run() if request.counted else rehearsal_run(),
     )
@@ -116,7 +121,9 @@ def _declared_endpoint(launch: Path) -> str:
     return ours.mcp_endpoint
 
 
-def _step0_receiver(settings: RuntimeSettings, launch: Path) -> Step0Handler:
+def _step0_receiver(
+    settings: RuntimeSettings, launch: Path, gateway: KitGroupGateway
+) -> Step0Handler:
     """The counted Step-0 receiver, verified against **our own** declaration.
 
     Composed here rather than routed to a backend because Step-0 is a
@@ -143,6 +150,7 @@ def _step0_receiver(settings: RuntimeSettings, launch: Path) -> Step0Handler:
         wire = Step0ExchangeWire.model_validate(payload)
         composition.pregame.accept_step0(decode_step0(wire))
         declared.write(composition.pregame.declaration)
+        gateway.declaration = composition.pregame.declaration
         await send_step0(opponent, composition.pregame.step0.outbound(ours))
 
     return receive
