@@ -148,8 +148,18 @@ def working_banks() -> tuple[SeedBank, ...]:
 
 
 def banks() -> tuple[SeedBank, ...]:
-    """Every bank that exists, both sealed ones included, for the manifest only."""
-    return (*working_banks(), final_holdout_bank(), final_holdout_v2_bank())
+    """Every bank that exists, all three sealed ones included, for the manifest only.
+
+    A sealed bank appears here whether or not it has been consumed. The manifest
+    is the record of what was available to a cycle, and a spent bank that
+    vanished from it would make an earlier evaluation unauditable.
+    """
+    return (
+        *working_banks(),
+        final_holdout_bank(),
+        final_holdout_v2_bank(),
+        final_holdout_v3_bank(),
+    )
 
 
 def disjoint(first: SeedBank, second: SeedBank) -> bool:
