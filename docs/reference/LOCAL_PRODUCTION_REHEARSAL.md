@@ -32,17 +32,40 @@ handshake, but the local harness had nothing equivalent. The gateway now serves
 its admin surface first, waits for both backend ports, and opens the public gate
 only then — so the rehearsal cannot pass for the wrong reason.
 
-**2. The fourteen-artifact assembly has no production caller.** Every component
-works and every one is unit-tested: the backends build and contribute both
+**2. The fourteen-artifact assembly had no production caller.** Every component
+worked and every one was unit-tested — the backends build and contribute both
 documents per sub-game, the gateway collects all twelve, the declaration writer
 runs at Step-0 merge, the result owner holds the agreed digest, and
 `series_assembly.assemble` writes exactly fourteen files or refuses. Nothing
-invokes the last of these. Our side wrote its two development contribution files
-and stopped.
+invoked the last of these, so our side wrote its two development contribution
+files and stopped. A writer nothing calls is not a record, exactly as a guard
+nothing calls is not a guard.
 
-That is the same class of defect this project has hit before — a writer nothing
-calls is not a record, exactly as a guard nothing calls is not a guard — and it
-is the one remaining gap on the counted artifact path.
+## Fixed, and re-run in counted mode — the official set reaches disk
+
+```
+official artifacts : 14   (1 declaration, 6 config, 6 log, 1 result)
+development files  :  1   (friendly contribution — outside the official set)
+consensus digest   : 482d0d0a320b82074c5d7d9936360d61b448adbe24c0008c8a9901421626519f
+peer logged        : 482d0d0a320b82074c5d7d9936360d61b448adbe24c0008c8a9901421626519f
+```
+
+The result carries six sub-games, `cumulative` cop 30 / thief 60 with outcome
+`thief`, and `declaration_ref` naming the declaration written at Step-0 merge.
+`log_g06` holds 140 entries with `peer_chain_reproduces: true` over 35 records
+each side. Every config artifact carries its three sections — the agreed core,
+the nonce-bound `terms_agreement`, and the scent-model evidence.
+
+## Two harness facts, so this is not read as more than it is
+
+The harness merges the peer's half of the declaration itself, because it runs no
+Step-0 receiver; production learns the merged declaration from
+`compose_gateway._step0_receiver`. And the launch document names the real
+opponent while the process answering is the reference peer, so `game_id` and the
+`teams` entry disagree on the peer's name.
+
+Neither is a production defect. Both are why this is `LOCAL_PRODUCTION_REHEARSAL`
+and not a real-peer proof.
 
 ## Not covered
 
