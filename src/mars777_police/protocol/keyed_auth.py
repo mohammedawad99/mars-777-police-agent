@@ -31,7 +31,19 @@ from .canonical import canonical_json_bytes
 
 STEP0_CONTEXT = "step0"
 CONFIG_CONTEXT = "config"
-_CONTEXTS = (STEP0_CONTEXT, CONFIG_CONTEXT)
+RESULT_CONTEXT = "result"
+"""The project's own third context, for a result agreement's own request bytes.
+
+Not a source context: the book names `"step0"` and `"config"` and says nothing
+about authenticating a result request, so this is PROJECT-CONTRACT and exists
+because a peer whose client opens a session per call cannot be recognised by the
+session its Step-0 arrived on. It is a **separate** context for the same reason
+the first two are separate - no prefix of another, so a Step-0 proof can never
+be replayed as a result proof - and it authenticates the request only. The
+`RESULT_APPROVAL_CORE` bytes and their digest are untouched by it.
+"""
+
+_CONTEXTS = (STEP0_CONTEXT, CONFIG_CONTEXT, RESULT_CONTEXT)
 
 
 def auth_input(context: str, core: object) -> bytes:

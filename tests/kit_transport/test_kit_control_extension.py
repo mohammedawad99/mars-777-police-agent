@@ -156,3 +156,36 @@ def test_an_unauthenticated_session_can_never_reach_result_state() -> None:
     assert unbound.is_authenticated is False
     with pytest.raises(AuthFailureError):
         unbound.require_peer()
+
+
+def test_the_result_agreement_may_carry_a_sibling_auth_proof() -> None:
+    """`auth` rides beside `payload`, never inside the bytes it authenticates."""
+    body = dict(AGREEMENT)
+    body["auth"] = {"profile": "HMAC_SHA256", "key_id": "k-1", "value": "a" * 64}
+
+    parsed = parse_kit_control(body)
+
+    assert isinstance(parsed, KitResultAgreementMessage)
+    assert parsed.auth is not None
+    assert parsed.auth.key_id == "k-1"
+    assert "auth" not in body["payload"]  # type: ignore[operator]
+
+
+def test_a_result_agreement_without_auth_still_parses() -> None:
+    """A peer that completed Step-0 on this session sends no proof and is unaffected."""
+    parsed = parse_kit_control(dict(AGREEMENT))
+
+    assert isinstance(parsed, KitResultAgreementMessage)
+    assert parsed.auth is None
+
+
+def test_a_malformed_auth_proof_is_the_senders_fault() -> None:
+    """A short tag or an unknown profile is refused before any state is read."""
+    for broken in (
+        {"profile": "HMAC_SHA256", "key_id": "k-1", "value": "too-short"},
+        {"profile": "NOT_A_PROFILE", "key_id": "k-1", "value": "a" * 64},
+    ):
+        body = dict(AGREEMENT)
+        body["auth"] = broken
+        with pytest.raises(MalformedMessageError):
+            parse_kit_control(body)

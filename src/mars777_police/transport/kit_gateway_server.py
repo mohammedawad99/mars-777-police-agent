@@ -17,7 +17,9 @@ opponent sees one stable group URL for the whole series.
 
 from fastmcp import Context, FastMCP
 
-from ..app.protocol_errors import LocalDefectError, MalformedMessageError
+from ..app.protocol_errors import AuthFailureError, LocalDefectError, MalformedMessageError
+from ..app.series_result_authority import authenticated_sender, raw_payload
+from .codec_auth import decode_auth
 from .codec_final import decode_result_agreement
 from .kit_admin_server import build_gateway_admin as build_gateway_admin
 from .kit_control_envelope import KitResultAgreementMessage, parse_kit_control
@@ -141,7 +143,19 @@ def build_gateway_tools(
                         " cannot be agreed here; the run is not a counted one",
                     )
                 agreed = decode_result_agreement(control.payload)
-                sender = bound.require_peer()
+                if bound.peer is None and gateway.requests is None:
+                    raise AuthFailureError(
+                        "this run provisioned no request authenticator, so a result"
+                        " agreement on an unauthenticated session cannot be verified",
+                    )
+                sender = authenticated_sender(
+                    bound.peer,
+                    raw_payload(message),
+                    None if control.auth is None else decode_auth(control.auth),
+                    gateway.declaration,
+                    gateway.group_id,
+                    gateway.requests,  # type: ignore[arg-type]
+                )
                 digest = await gateway.agreement.accept(agreed, sender, gateway.deadline)
                 return digest.value
             return await gateway.receive_control(message)

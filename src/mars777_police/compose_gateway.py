@@ -42,7 +42,7 @@ from .kit_backend_boot import backend_client
 from .kit_public_launcher import KitPublicLauncher
 from .launch_input import read_launch_document
 from .operator_requests import PublicGatewayRequest
-from .protocol.declaration import Step0Authenticator, locate
+from .protocol.declaration import RequestAuthenticator, Step0Authenticator, locate
 from .transport.codec_declaration import decode_step0
 from .transport.kit_backend_routes import KitBackendRoutes
 from .transport.kit_gateway import KitGroupGateway
@@ -88,6 +88,7 @@ def compose_public_gateway(request: PublicGatewayRequest) -> KitPublicLauncher:
         deadline=ROUTE_DEADLINE,
         counted=counted_run() if request.counted else rehearsal_run(),
         group_id=GROUP_CODE,
+        requests=RequestAuthenticator(keyed),
     )
     if request.counted and settings.opponent is not None:
         gateway.agreement = group_agreement(

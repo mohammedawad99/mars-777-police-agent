@@ -32,6 +32,7 @@ from ..app.kit_series_rows import SeriesRowCollector
 from ..app.official_artifacts import OfficialArtifactCollector
 from ..app.protocol_errors import StaleMessageError
 from ..app.series_assembly import SeriesParts
+from ..app.series_result_authority import RequestAuthPort
 from ..app.series_result_owner import SeriesResultOwner
 from .kit_envelopes import KIT_ARGUMENT_NAMES, KIT_OK, KitJson, KitNegotiateMessage, parse_kit
 from .kit_series_writeout import write_series
@@ -74,6 +75,10 @@ class KitGroupGateway:
 
     agreement: "GroupResultAgreement | None" = field(default=None)
     """The group's one result-agreement authority, or `None` for a rehearsal."""
+
+    # How a request carrying its own keyed proof is verified, or `None` when the
+    # run provisions no authenticator and every such request must be refused.
+    requests: "RequestAuthPort | None" = field(default=None)
 
     contributed: ContributionCollector = field(default_factory=ContributionCollector)
 

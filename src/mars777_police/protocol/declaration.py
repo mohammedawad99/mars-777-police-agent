@@ -28,7 +28,7 @@ from ..app.declaration_values import Declaration
 from ..app.participant_slots import PARTICIPANT_SLOTS
 from ..app.protocol_errors import LocalDefectError
 from ..app.team_declaration_values import HardwareDeclaration, TeamDeclaration
-from .keyed_auth import STEP0_CONTEXT, KeyedAuthenticator
+from .keyed_auth import RESULT_CONTEXT, STEP0_CONTEXT, KeyedAuthenticator
 
 STEP0_CORE_MEMBERS: Final[int] = 20
 """The frozen member count, with `hardware.vram_gb` present (§R12-FIX-2)."""
@@ -102,3 +102,20 @@ class Step0Authenticator:
             step0_core(declaration, group_id),
             proof,
         )
+
+
+class RequestAuthenticator:
+    """The `RequestAuthPort` adapter: one request's own bytes, in its own context.
+
+    Adds no cryptography and holds no key of its own - it is the same provisioned
+    `KeyedAuthenticator` Step-0 uses, asked a different question. The context
+    differs, so a Step-0 proof presented here fails and a request proof presented
+    at Step-0 fails, which is what domain separation is for.
+    """
+
+    def __init__(self, authenticator: KeyedAuthenticator) -> None:
+        self._authenticator = authenticator
+
+    def verify_request(self, payload: object, proof: AuthProof) -> bool:
+        """Return whether *proof* verifies over *payload* in the request context."""
+        return self._authenticator.verify(RESULT_CONTEXT, payload, proof)

@@ -30,6 +30,7 @@ from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
 from ..app.protocol_errors import MalformedMessageError
 from .kit_envelopes import KIT_WIRE, KitControlMessage, KitJson
+from .wire_config import AuthProofWire
 from .wire_final import ResultAgreementWire
 
 
@@ -45,6 +46,18 @@ class KitResultAgreementMessage(BaseModel):
 
     kind: Literal["result_agreement"]
     payload: ResultAgreementWire
+    auth: AuthProofWire | None = None
+    """The request's own keyed proof, and deliberately a **sibling** of `payload`.
+
+    Optional on the wire so a peer that completed Step-0 on this same session is
+    unaffected, and required by the receiver when that session proves nothing -
+    the transport does not decide policy, it only carries the evidence.
+
+    It is outside `payload` because `RESULT_APPROVAL_CORE` is a closed contract
+    whose digest two implementations already agreed byte-for-byte; authentication
+    metadata inside the bytes it authenticates would change them and break that
+    agreement, quite apart from being self-referential.
+    """
 
 
 KitControlEnvelope = Annotated[

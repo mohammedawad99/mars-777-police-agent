@@ -17,6 +17,7 @@ from mars777_police.app.protocol_errors import AuthFailureError
 from mars777_police.protocol.canonical import canonical_json_bytes
 from mars777_police.protocol.keyed_auth import (
     CONFIG_CONTEXT,
+    RESULT_CONTEXT,
     STEP0_CONTEXT,
     HmacSha256Provider,
     KeyedAuthenticator,
@@ -50,9 +51,29 @@ def test_the_two_contexts_are_domain_separated() -> None:
 
 
 def test_an_unknown_context_is_refused_rather_than_authenticated() -> None:
-    for bad in ("STEP0", "step-0", "result", ""):
+    """`"result"` left this list when it became a real context; the rule did not."""
+    for bad in ("STEP0", "step-0", "RESULT", "results", "result ", ""):
         with pytest.raises(AuthFailureError):
             auth_input(bad, CORE)
+
+
+def test_the_result_context_is_separate_from_the_other_two() -> None:
+    """Domain separation across all three: no proof verifies in another context.
+
+    A result agreement is authenticated over its own request bytes so a peer
+    whose client opens a session per call can still be recognised. That is only
+    safe while a Step-0 proof cannot be replayed as a result proof, which is what
+    a distinct context buys and what this pins.
+    """
+    auth = authenticator()
+    contexts = (STEP0_CONTEXT, CONFIG_CONTEXT, RESULT_CONTEXT)
+    assert len(set(contexts)) == 3
+    for context in contexts:
+        proof = auth.prove(context, CORE)
+        assert auth.verify(context, CORE, proof)
+        for other in contexts:
+            if other != context:
+                assert not auth.verify(other, CORE, proof)
 
 
 def test_the_hmac_matches_an_independently_computed_vector() -> None:
