@@ -71,6 +71,7 @@
   "src/mars777_police/app/kit_play.py": "32b0ae7e3d3b741c831c657cd796f02845c77361375fd11e3ffde82974efc548",
   "src/mars777_police/app/kit_preset.py": "fc7a6adde49b5f739d0d8519be37ab58ce7da3f881231648c55ab739cd594dd6",
   "src/mars777_police/app/kit_records.py": "54e853876951893c7c9b10e492c55ba7d538e167b191699e6be6fe3444d85dea",
+  "src/mars777_police/app/kit_result_document.py": "26801fcd6c5b3babd701c2382bb9d298e7548ed6f3fc8b94c0f9730a0bba61f8",
   "src/mars777_police/app/kit_schedule.py": "4a78fdbc6d53d67d650b0ae8f232476d6a49577dfb3d58cc7a6605e093cfd127",
   "src/mars777_police/app/kit_series_rows.py": "ede4afe0ac971dedda11241b463719f571373916dd1143d95447b76f7f2c9f41",
   "src/mars777_police/app/kit_session.py": "e334d6e49e3f552124cfdc2c3ac4ab4f115a304646dbadae69175e37c26806be",
