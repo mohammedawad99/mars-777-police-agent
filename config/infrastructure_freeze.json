@@ -30,6 +30,7 @@
   "src/mars777_police/app/config_lock_runtime.py": "560ea7932214610f0563c80afdf2d604827bb019d2e8335ca4aac5a8bb5909e4",
   "src/mars777_police/app/config_negotiation_runtime.py": "2ebcb57f444a49a252773c0c995577a9bd5e33d176edd16cbde46dac79812c86",
   "src/mars777_police/app/config_rules.py": "027d28b46939c29a175bdfd54a47154e1f10d9e22ac1b615561449c463029949",
+  "src/mars777_police/app/counted_mode.py": "2bd68ba359cf5ffbf86565e017ed966a883ee26974ecde677a1c184f6faccc5d",
   "src/mars777_police/app/counted_series_writer.py": "11cb721bc777df7fa13f9bb46608a3c421a35d38c5c096c4cb61c6dfd81c2256",
   "src/mars777_police/app/decimal_text.py": "54a8534efd629068e71bd3795d51cd23b761663b4972cb5273b3ff6f85623548",
   "src/mars777_police/app/declaration_values.py": "d9ab82392ef1996e4200dcaedb23ad66da7e5572c1e0bcc611ad1ed826b493f3",
