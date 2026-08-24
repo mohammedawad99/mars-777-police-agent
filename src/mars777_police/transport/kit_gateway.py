@@ -80,7 +80,7 @@ class KitGroupGateway:
     collected: SeriesRowCollector = field(default_factory=SeriesRowCollector)
     """The group's finished rows, from both backends. It judges none of them."""
 
-    async def negotiate(self, message: KitJson) -> dict[str, bool]:
+    async def negotiate(self, message: KitJson) -> KitJson:
         """Assign a sub-game to the backend that will play it, then acknowledge.
 
         The acknowledgement means **assigned**. A greeting for the next
@@ -89,17 +89,19 @@ class KitGroupGateway:
         the opponent burn its whole connect budget on our own politeness.
         """
         greeting = parse_kit(KitNegotiateMessage, message)
-        number = (
-            self.handoff.sub_game
-            if greeting.sub_game_number is None
-            else (greeting.sub_game_number)
-        )
+        asked = greeting.sub_game_number
+        number = self.handoff.sub_game if asked is None else asked
         expected = self.handoff.role_of(number)
         self._require_complementary(greeting.role, expected)
         await self.handoff.await_assignable(number, self.deadline)
         self.handoff.open(number)
         await self._forward("negotiate", message)
-        return KIT_OK
+        # A peer learns our identity from nothing else: the pinned answer is a
+        # bare `{"ok": true}`, we accept `group_id` from them and sent none back,
+        # so a correct peer derived `<them>-vs-opponent` and every digest of the
+        # series was void against ours. An unconfigured gateway still answers
+        # exactly the pinned object rather than an empty slug.
+        return {**KIT_OK} if not self.group_id else {**KIT_OK, "group_id": self.group_id}
 
     async def receive_turn(self, message: KitJson) -> dict[str, bool]:
         """Route a half-turn to the one backend that owns the live sub-game."""
@@ -122,7 +124,13 @@ class KitGroupGateway:
         write_series(self)
 
     def contribute_entry(self, sub_game: int, role: KitRole, commit: str, tokens: int) -> None:
-        """Take one backend's participant-owned entry, admitted before it is stored."""
+        """Take one backend's entry; a rehearsal owes no result and keeps none."""
+        # A rehearsal builds no result core and holds no Step-0 declaration to
+        # admit an entry against, so taking one killed a friendly's own backend
+        # after sub-game one. The counted refusal below is deliberately
+        # untouched: a counted run with no declaration still raises.
+        if not self.counted.is_counted:
+            return
         first = self.handoff.first_role
         accept(
             self.contributed, self.declaration, self.group_id, first, role, sub_game, commit, tokens

@@ -80,8 +80,12 @@ def build_gateway_tools(
         request: KitJson | None = None,
         kind: str | None = None,
         payload: KitJson | None = None,
-    ) -> dict[str, bool]:
-        """Accept a sub-game greeting or the one authenticated Step-0."""
+    ) -> KitJson:
+        """Accept a sub-game greeting or the one authenticated Step-0.
+
+        The greeting answer carries our `group_id` beside the pinned `ok`, so a
+        peer can derive the same `game_id` we do. Step-0 keeps the bare object.
+        """
         try:
             exchange = step0_arguments(message, request, kind, payload)
             if exchange is not None:
@@ -91,7 +95,7 @@ def build_gateway_tools(
                         " Step-0 has nowhere to go; a counted series must not proceed",
                     )
                 await step0(exchange)
-                return KIT_OK
+                return {**KIT_OK}
             if message is None:
                 raise MalformedMessageError(
                     "negotiate needs message={...} for a sub-game greeting, or"
