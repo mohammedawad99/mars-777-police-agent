@@ -26,8 +26,8 @@ a launch document, a secret being present, or an endpoint answering.
 
 **Ours, at the time this runbook was written:**
 
-- police `7b04fb5b21ecb3c898dc46ee2452f12a0946e14c`
-- thief  `58703506ab1aa06fb85c84c7d22a02ccd2287296`
+- police `621eb1ced16aa5693772e56106590172ebc51aca`
+- thief  `09848e5353e891f1c71f3ed7fedeb1a6960a6427`
 
 **Read HEAD again at launch** and put *those* values in the declaration. The
 frozen interop vector pins historical commits by design; the live declaration
@@ -161,6 +161,11 @@ starting a backend against a dead origin exits it immediately.
 | `config_<game_id>_gNN.json` | per sub-game | 6 |
 | `log_<game_id>_gNN.json` | per sub-game | 6 |
 | `result_<game_id>.json` | after mutual consensus | 1 |
+
+Proven locally end to end: a four-process rehearsal in counted mode wrote all
+fourteen and reached the same consensus digest as the peer — see
+`LOCAL_PRODUCTION_REHEARSAL.md`. The gateway writes the set when the last part
+lands, whichever part that is; no step in this runbook triggers it by hand.
 
 Reporting-delivery evidence is **outside** the official fourteen. A set that is
 short is refused whole rather than written partially.
