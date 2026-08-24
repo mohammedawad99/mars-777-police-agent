@@ -1,0 +1,178 @@
+[08/24/26 22:42:50] INFO     Starting MCP server                transport.py:361
+                             'mars777-police-backend' with                      
+                             transport 'http' on                                
+                             http://127.0.0.1:8811/mcp                          
+INFO:     Started server process [2417340]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:44392 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44406 - "POST /mcp HTTP/1.1" 202 Accepted
+INFO:     127.0.0.1:44412 - "GET /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44426 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44428 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44438 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44440 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44456 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40654 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40670 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40680 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40682 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40688 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42758 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42766 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42780 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42788 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42796 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42802 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58566 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58576 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58582 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58590 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58594 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41404 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41412 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41426 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41428 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41444 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43546 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43560 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43574 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43584 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43598 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43614 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57650 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57658 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57674 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57680 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57684 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42548 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36110 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36122 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36138 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36148 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34340 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34346 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34358 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34364 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34378 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34388 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43268 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43282 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43294 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43296 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43308 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33040 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33056 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33072 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33080 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33082 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46162 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46178 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46180 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46196 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46210 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46224 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35926 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35928 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35942 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35944 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35958 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46054 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46056 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46062 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46072 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46082 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43438 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49970 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49972 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49984 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49988 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50000 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50676 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50690 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50692 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50694 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50702 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50708 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51444 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51454 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51464 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51478 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51494 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40068 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40082 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40098 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40108 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40114 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47916 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47926 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47934 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47948 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47962 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47976 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41220 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41228 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41234 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41238 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41254 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49786 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49796 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49812 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49820 - "POST /mcp HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49834 - "POST /mcp HTTP/1.1" 200 OK
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/uvicorn/protocols/http/h11_impl.py", line 416, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/starlette/applications.py", line 96, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/fastmcp/server/http.py", line 378, in __call__
+    await self.app(scope, receive, send)
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/starlette/routing.py", line 670, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/starlette/routing.py", line 690, in app
+    await route.handle(scope, receive, send)
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/starlette/routing.py", line 280, in handle
+    await self.app(scope, receive, send)
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/fastmcp/server/http.py", line 90, in __call__
+    await self.session_manager.handle_request(scope, receive, send)
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/mcp/server/streamable_http_manager.py", line 171, in handle_request
+    await self.asgi_app(scope, receive, send)
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/mcp/server/streamable_http_manager.py", line 375, in __call__
+    await self.app(scope, receive, send)
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/mcp/server/streamable_http_manager.py", line 186, in _handle_request
+    await self._handle_stateful_request(scope, receive, send)
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/mcp/server/streamable_http_manager.py", line 281, in _handle_stateful_request
+    await transport.handle_request(scope, receive, send)
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/mcp/server/streamable_http.py", line 426, in handle_request
+    await self._handle_get_request(request, send)
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/mcp/server/streamable_http.py", line 747, in _handle_get_request
+    await response(request.scope, request.receive, send)
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/sse_starlette/sse.py", line 479, in __call__
+    async with anyio.create_task_group() as task_group:
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 819, in __aexit__
+    raise exc_val
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 788, in __aexit__
+    await self._on_completed_fut
+asyncio.exceptions.CancelledError
+ERROR:    Traceback (most recent call last):
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/starlette/routing.py", line 655, in lifespan
+    await receive()
+  File "/home/awad_moha/police-thief-final-2026/mars-777-police-agent/.venv/lib/python3.12/site-packages/uvicorn/lifespan/on.py", line 137, in receive
+    return await self.receive_queue.get()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/queues.py", line 158, in get
+    await getter
+asyncio.exceptions.CancelledError
+
+contribution written to /home/awad_moha/police-thief-final-2026/counted-evidence/ahk-yosi-counted/evidence/friendly_MaRs-777-vs-ahk-yosi_police.json

@@ -758,3 +758,27 @@ git-ignored path. See `docs/SOURCES.md`.
    `rate_limits.version` and no local versioned configuration file yet; the
    binding game configuration is negotiated and locked with the peer instead
    (`docs/GUIDELINE_ALIGNMENT.md` §8.1).
+
+## Final counted-run evidence and known incident
+
+The final counted game — **MaRs-777 vs `ahk-yosi`, 2026-08-24** — was played to
+six windows and is preserved in full under
+[`docs/evidence/counted/2026-08-24-ahk-yosi/`](docs/evidence/counted/2026-08-24-ahk-yosi/).
+
+**It did not produce a reportable result, and the automatic reporter did not
+send.** That is recorded rather than concealed:
+
+| | |
+|---|---|
+| incident report | [`07_incident/INCIDENT_REPORT.md`](docs/evidence/counted/2026-08-24-ahk-yosi/07_incident/INCIDENT_REPORT.md) |
+| evidence manifest | [`08_manifest/EVIDENCE_MANIFEST.md`](docs/evidence/counted/2026-08-24-ahk-yosi/08_manifest/EVIDENCE_MANIFEST.md) |
+| reporting record | [`06_reporting/REPORTING_RECORD.md`](docs/evidence/counted/2026-08-24-ahk-yosi/06_reporting/REPORTING_RECORD.md) |
+
+In short: Step-0 authenticated and the declaration merged; all six windows were
+played and the opponent's commitment chain verified in every one; the settled
+rows never reached the gateway's result assembler, so no `RESULT_APPROVAL_CORE`,
+no `result_sha256` and no result artifact were produced. **The official set is
+1 of 14.** Automatic reporting was therefore never eligible and did not send; the
+operator sent the lecturer report manually. No `mutual_agreement`,
+`result_sha256` or `reported_by` was fabricated, and no artifact written during
+the live run was modified.

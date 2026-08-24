@@ -1,0 +1,153 @@
+{
+  "game_id": "MaRs-777-vs-ahk-yosi",
+  "game_uid": "5ed16f3b-4e6b-4e9d-65bf-8f5abab699f2",
+  "opponent": "ahk-yosi",
+  "police_commit": "feeee6542810d5a87eca001a4f9320ff0475b574",
+  "thief_commit": "e49faa5184601037bdc4d872124c1e2ad8073c3b",
+  "opponent_commit": "093d55122d8e44ed20f9e0a69cd3f63d8eaed402",
+  "evidence_root_original": "counted-evidence/ahk-yosi-counted",
+  "official_artifact_set": {
+    "expected": 14,
+    "present": 1,
+    "present_files": [
+      "declaration_MaRs-777-vs-ahk-yosi.json"
+    ],
+    "missing": "6 config, 6 log, 1 result - no placeholder created"
+  },
+  "automatic_reporting": "DID NOT SEND",
+  "manual_reporting": "sent by operator; message_id UNKNOWN / not captured",
+  "fabricated_values": "NONE",
+  "sanitization": "none required; explicit secret-value scan found no credential in any retained file",
+  "files": [
+    {
+      "path": "01_launch/launch_police.json",
+      "classification": "RAW",
+      "original_source": "counted-evidence/ahk-yosi-counted/launch_police.json",
+      "sha256": "33b0df99e501eb9696b229a258d3eb0cf4d0ae93ee15552691e82015eccd9b28",
+      "bytes": 3606,
+      "generated": "LIVE_GAME",
+      "sanitized": false,
+      "purpose": "launch inputs and operator start scripts"
+    },
+    {
+      "path": "01_launch/launch_thief.json",
+      "classification": "RAW",
+      "original_source": "counted-evidence/ahk-yosi-counted/launch_thief.json",
+      "sha256": "33b0df99e501eb9696b229a258d3eb0cf4d0ae93ee15552691e82015eccd9b28",
+      "bytes": 3606,
+      "generated": "LIVE_GAME",
+      "sanitized": false,
+      "purpose": "launch inputs and operator start scripts"
+    },
+    {
+      "path": "01_launch/start_backends.sh",
+      "classification": "RAW",
+      "original_source": "counted-evidence/ahk-yosi-counted/start_backends.sh",
+      "sha256": "11f827d727bcb71637534185ba2ab3232e2d5cbd289d88a029d1f4824be0c776",
+      "bytes": 1727,
+      "generated": "LIVE_GAME",
+      "sanitized": false,
+      "purpose": "launch inputs and operator start scripts"
+    },
+    {
+      "path": "01_launch/start_counted.sh",
+      "classification": "RAW",
+      "original_source": "counted-evidence/ahk-yosi-counted/start_counted.sh",
+      "sha256": "645bfb0f4ef1aec54039b3a7d59174c8caf139d36598467ee848062dde643420",
+      "bytes": 4256,
+      "generated": "LIVE_GAME",
+      "sanitized": false,
+      "purpose": "launch inputs and operator start scripts"
+    },
+    {
+      "path": "02_protocol/declaration_MaRs-777-vs-ahk-yosi.json",
+      "classification": "RAW",
+      "original_source": "counted-evidence/ahk-yosi-counted/artifacts/declaration_MaRs-777-vs-ahk-yosi.json",
+      "sha256": "ada8369ef25c7ea456ffff8302514d2b9e6710a72f248e8e4d30582f4ff41805",
+      "bytes": 1330,
+      "generated": "LIVE_GAME",
+      "sanitized": false,
+      "purpose": "authenticated Step-0 merged declaration"
+    },
+    {
+      "path": "03_subgames/friendly_MaRs-777-vs-ahk-yosi_police.json",
+      "classification": "RAW",
+      "original_source": "counted-evidence/ahk-yosi-counted/evidence/friendly_MaRs-777-vs-ahk-yosi_police.json",
+      "sha256": "b0962699e34f0cf581b1c2cff7aacb0a91b4cbed9cd453a8f5072f453171815f",
+      "bytes": 7902,
+      "generated": "LIVE_GAME",
+      "sanitized": false,
+      "purpose": "per-sub-game backend evidence: commitments, audits, scores"
+    },
+    {
+      "path": "03_subgames/friendly_MaRs-777-vs-ahk-yosi_thief.json",
+      "classification": "RAW",
+      "original_source": "counted-evidence/ahk-yosi-counted/evidence/friendly_MaRs-777-vs-ahk-yosi_thief.json",
+      "sha256": "ba98ec444eec51785fbdd42bdce0692ef4520dd75191d03ba9f1a19f63a04f55",
+      "bytes": 3805,
+      "generated": "LIVE_GAME",
+      "sanitized": false,
+      "purpose": "per-sub-game backend evidence: commitments, audits, scores"
+    },
+    {
+      "path": "04_runtime/gateway.log",
+      "classification": "RAW",
+      "original_source": "counted-evidence/ahk-yosi-counted/logs/gateway.log",
+      "sha256": "796f1feee51c77b2bae074c2f3176bd17019e7fc5a9c0c485d73e4832f341f83",
+      "bytes": 91864,
+      "generated": "LIVE_GAME",
+      "sanitized": false,
+      "purpose": "process stdout/stderr for the live run"
+    },
+    {
+      "path": "04_runtime/police.log",
+      "classification": "RAW",
+      "original_source": "counted-evidence/ahk-yosi-counted/logs/police.log",
+      "sha256": "f687231142990fcb47eee6c0d157f4cd79bb5ba249ba6824848520d8bc95774f",
+      "bytes": 12028,
+      "generated": "LIVE_GAME",
+      "sanitized": false,
+      "purpose": "process stdout/stderr for the live run"
+    },
+    {
+      "path": "04_runtime/thief.log",
+      "classification": "RAW",
+      "original_source": "counted-evidence/ahk-yosi-counted/logs/thief.log",
+      "sha256": "f63e7f539234aaf302796e4cdaf0efb401e6166755f95751f3998f58c3aee430",
+      "bytes": 8309,
+      "generated": "LIVE_GAME",
+      "sanitized": false,
+      "purpose": "process stdout/stderr for the live run"
+    },
+    {
+      "path": "05_result/MaRs-777_account_MaRs-777-vs-ahk-yosi.json",
+      "classification": "DERIVED_SUMMARY",
+      "original_source": "generated after the game from preserved evidence",
+      "sha256": "a84778d732c77973e4a4e574d74ea8fb877fd768231de64c42fc477069d91468",
+      "bytes": 4456,
+      "generated": "POST_GAME",
+      "sanitized": false,
+      "purpose": "MaRs-777 participant account (NOT an agreed result)"
+    },
+    {
+      "path": "06_reporting/REPORTING_RECORD.md",
+      "classification": "DERIVED_SUMMARY",
+      "original_source": "generated after the game from preserved evidence",
+      "sha256": "2e33731cb19e14d24cae0b8a2852dd0488ca65dd18c22cfb4d2630ddaa82a91e",
+      "bytes": 1724,
+      "generated": "POST_GAME",
+      "sanitized": false,
+      "purpose": "record that automatic reporting did not send"
+    },
+    {
+      "path": "07_incident/INCIDENT_REPORT.md",
+      "classification": "DERIVED_SUMMARY",
+      "original_source": "generated after the game from preserved evidence",
+      "sha256": "b7ce950e2825c26d096a005d94689469805062915bfddfdcddae5bc7dae29037",
+      "bytes": 5694,
+      "generated": "POST_GAME",
+      "sanitized": false,
+      "purpose": "incident report"
+    }
+  ]
+}

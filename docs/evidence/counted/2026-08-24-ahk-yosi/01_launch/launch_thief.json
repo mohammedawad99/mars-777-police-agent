@@ -1,0 +1,143 @@
+{
+  "declaration": {
+    "game_id": "MaRs-777-vs-ahk-yosi",
+    "game_uid": "5ed16f3b-4e6b-4e9d-65bf-8f5abab699f2",
+    "token_budget_per_series": 200000,
+    "times": {
+      "game_start": "2026-08-24T19:15:00Z",
+      "game_end": null
+    },
+    "teams": {
+      "group_a": {
+        "group_id": "MaRs-777",
+        "group_name": "MaRs-777",
+        "members": [
+          "Mohamed Awad",
+          "Rawey Sleiman"
+        ],
+        "repos": {
+          "police": "https://github.com/mohammedawad99/mars-777-police-agent",
+          "thief": "https://github.com/mohammedawad99/mars-777-thief-agent"
+        },
+        "mcp_endpoint": "https://exposure-nimble-wackiness.ngrok-free.dev/mcp",
+        "hardware": {
+          "os": "Linux",
+          "cpu_cores": 8,
+          "cpu_freq_ghz": "2.4",
+          "ram_gb": 16,
+          "gpu": false,
+          "vram_gb": null
+        },
+        "llm_model": "none-deterministic-agent",
+        "code_version": "1.02",
+        "github_commits": {
+          "police": "feeee6542810d5a87eca001a4f9320ff0475b574",
+          "thief": "e49faa5184601037bdc4d872124c1e2ad8073c3b"
+        }
+      },
+      "group_b": null
+    }
+  },
+  "profiles": {
+    "series_convention": "FIXED_ROLE",
+    "auth_profile": "HMAC_SHA256",
+    "key_id": "mars777-ahk-yosi-20260824-02",
+    "commitment_codec": "STRICT_PROJECT_COMMITMENT",
+    "result_profile": "STRICT_PROJECT_RESULT",
+    "compatibility_profile": "STRICT_COUNTED_MATCH_TURN_OUTCOME_SCENT_V2",
+    "tool_name_profile": "PROJECT_LOGICAL_OPERATIONS",
+    "canonicalization_profile": "CANONICAL_JSON_V1",
+    "sealed_record_profile": "SEALED_RECORD_V1",
+    "state_representation_profile": "SEALED_STATE_V1",
+    "nonce_representation_profile": "LOWER_HEX_32"
+  },
+  "config": {
+    "schema_version": "mars777-1",
+    "agreed_between": [
+      "MaRs-777",
+      "ahk-yosi"
+    ],
+    "board_and_agents": {
+      "grid_size": 7,
+      "num_agents": 2,
+      "thief_start": [
+        3,
+        3
+      ],
+      "cop_start": [
+        0,
+        0
+      ],
+      "axis_origin_corner": "top_left",
+      "axis_start_index": 0
+    },
+    "world": {
+      "map_area": "Haifa",
+      "hint_max_words": 15
+    },
+    "movement_and_barriers": {
+      "move_set": [
+        "N",
+        "S",
+        "E",
+        "W",
+        "STAY"
+      ],
+      "max_barriers": 14,
+      "max_moves": 35,
+      "survival_threshold": 35
+    },
+    "scoring": {
+      "capture_cop": 20,
+      "capture_thief": 5,
+      "survival_cop": 5,
+      "survival_thief": 10,
+      "tie_score": 2,
+      "technical_loss": 0
+    },
+    "pheromones": {
+      "pheromone_center_intensity": "0.9",
+      "pheromone_decay": "0.10",
+      "pheromone_grid_size": 5
+    },
+    "network_and_league": {
+      "response_timeout_sec": 30,
+      "watchdog_timeout_sec": 60,
+      "num_games": 6,
+      "diversity_reward": 10,
+      "min_games_to_pass": 2,
+      "max_games_per_team": 10,
+      "token_budget_per_series": 200000
+    },
+    "rate_limiter_gatekeeper": {
+      "requests_per_minute": 30,
+      "concurrent_requests": 2,
+      "retry_backoff_sec": 5,
+      "max_retries": 3,
+      "queue_depth": 100
+    }
+  },
+  "first_sub_game": 1,
+  "kit_terms": {
+    "axis_origin_corner": "top-left",
+    "axis_start_index": 0,
+    "barriers_max": 14,
+    "board_size": 7,
+    "cop_start": [
+      0,
+      0
+    ],
+    "decay_per_step": 0.1,
+    "emit_intensity": 0.9,
+    "hint_max_words": 15,
+    "max_steps": 35,
+    "min_center_intensity": 0.5,
+    "num_games": 6,
+    "setting": "Haifa",
+    "smell_grid_size": 5,
+    "thief_start": [
+      3,
+      3
+    ]
+  }
+}

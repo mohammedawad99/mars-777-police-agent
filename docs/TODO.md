@@ -437,3 +437,19 @@ pinned reference kit and our own public loopback, and never presented as more.
   would invalidate the evidence that justified the promotion.
 - A per-grid weighting candidate — the highest overfitting risk in the study,
   and it stays untried on purpose.
+
+## Known issue — counted run 2026-08-24 (open, documented, not fixed)
+
+**Settled sub-game rows do not reach the gateway result assembler in a counted
+alternating series.** Observed live against `ahk-yosi`: all six windows played
+and audited, the gateway collected zero rows, so no `RESULT_APPROVAL_CORE`,
+no `result_sha256`, no result artifact, and automatic reporting was never
+eligible. Official set 1 of 14.
+
+Deliberately **not** fixed under the submission deadline: an untested patch to
+the counted path is worse than a documented defect. Evidence and analysis:
+`docs/evidence/counted/2026-08-24-ahk-yosi/07_incident/INCIDENT_REPORT.md`.
+
+Narrowly scoped future work: verify the backend -> gateway admin row bridge
+(`contribute_row`) end to end in a counted run, with a regression test that
+fails when the gateway finishes a series holding fewer than six rows.
